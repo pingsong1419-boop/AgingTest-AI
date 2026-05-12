@@ -1,0 +1,324 @@
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+                               QProgressBar, QTreeWidget, QTreeWidgetItem, QTextEdit, 
+                               QPushButton, QFrame)
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QColor
+
+class MonitorDialog(QDialog):
+    """
+    单个通道的详细测试监控对话框 (支持子工步与判定详情)
+    """
+    def __init__(self, parent=None, channel_id=1, engine=None):
+        super().__init__(parent)
+        self.channel_id = channel_id
+        self.engine = engine
+        self.setWindowTitle(f"通道 CH-{channel_id:02d} 详细监控")
+        self.resize(900, 700)
+        self.setStyleSheet("""
+            QDialog { background-color: #1A1A2E; color: #E0E0E0; }
+            QLabel { font-size: 14px; }
+            QTreeWidget { 
+                background-color: #16213E; 
+                border: 1px solid #0F3460; 
+                color: #E0E0E0; 
+                font-size: 13px; 
+            }
+            QTreeWidget::item { height: 25px; border-bottom: 1px solid #1F1F35; }
+            QTreeWidget::indicator {
+                width: 18px;
+                height: 18px;
+                border: 2px solid #4ECCA3;
+                border-radius: 3px;
+                background-color: #1A1A2E;
+            }
+            QTreeWidget::indicator:checked {
+                background-color: #4ECCA3;
+                border: 2px solid #4ECCA3;
+            }
+            QTreeWidget::indicator:unchecked:hover {
+                border: 2px solid #00E5FF;
+            }
+            QProgressBar {
+                border: 2px solid #0F3460;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #16213E;
+                color: white;
+            }
+            QProgressBar::chunk { background-color: #4ECCA3; }
+            QTextEdit {
+                background-color: #16213E;
+                border: 1px solid #0F3460;
+                color: #00E5FF;
+                font-family: 'Consolas', monospace;
+            }
+        """)
+        
+        self.step_items = {} # 用于快速索引树节点 (step_idx -> item)
+        self.sub_step_items = {} # (step_idx, sub_idx) -> item
+        
+        self._init_ui()
+        self._connect_signals()
+
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        
+        # 1. 顶部：通道基本信息
+        header = QHBoxLayout()
+        self.lbl_title = QLabel(f"<b>通道: CH-{self.channel_id:02d}</b>")
+        self.lbl_title.setStyleSheet("font-size: 18px; color: #4ECCA3;")
+        header.addWidget(self.lbl_title)
+        
+        self.lbl_status = QLabel("状态: 等待中")
+        self.lbl_status.setStyleSheet("font-size: 16px; font-weight: bold;")
+        header.addStretch()
+        header.addWidget(self.lbl_status)
+        layout.addLayout(header)
+        
+        # 2. 进度条
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        layout.addWidget(self.progress_bar)
+        
+        # 3. 中部：工步详情树
+        layout.addWidget(QLabel("测试序列与实时判定详情:"))
+        self.step_tree = QTreeWidget()
+        self.step_tree.setHeaderLabels(["测试项 / 子动作", "下限", "上限", "测量值", "状态 / 判定"])
+        self.step_tree.setColumnWidth(0, 300)
+        self.step_tree.setColumnWidth(1, 100)
+        self.step_tree.setColumnWidth(2, 100)
+        self.step_tree.setColumnWidth(3, 120)
+        layout.addWidget(self.step_tree)
+        
+        # 4. 底部：日志
+        layout.addWidget(QLabel("实时执行日志:"))
+        self.log_text = QTextEdit()
+        self.log_text.setReadOnly(True)
+        layout.addWidget(self.log_text)
+        
+        # 5. 按钮
+        btn_layout = QHBoxLayout()
+        
+        self.btn_run = QPushButton("启动勾选项")
+        self.btn_run.clicked.connect(self.run_selected_test)
+        self.btn_run.setStyleSheet("background-color: #17A2B8; color: white; padding: 10px; border-radius: 5px; font-weight: bold;")
+        btn_layout.addWidget(self.btn_run)
+        
+        self.btn_start_all = QPushButton("开启全部测试")
+        self.btn_start_all.clicked.connect(self.run_all_test)
+        self.btn_start_all.setStyleSheet("background-color: #28A745; color: white; padding: 10px; border-radius: 5px; font-weight: bold;")
+        btn_layout.addWidget(self.btn_start_all)
+
+        self.btn_stop = QPushButton("结束/停止测试")
+        self.btn_stop.clicked.connect(self.stop_test)
+        self.btn_stop.setStyleSheet("background-color: #E94560; color: white; padding: 10px; border-radius: 5px; font-weight: bold;")
+        btn_layout.addWidget(self.btn_stop)
+        
+        btn_layout.addStretch()
+        
+        btn_close = QPushButton("关闭窗口")
+        btn_close.clicked.connect(self.close)
+        btn_close.setStyleSheet("background-color: #533483; color: white; padding: 10px; border-radius: 5px;")
+        btn_layout.addWidget(btn_close)
+        layout.addLayout(btn_layout)
+
+    def run_selected_test(self):
+        """执行勾选的测试项"""
+        if not self.engine: return
+        
+        selected_data = []
+        # 从树中提取勾选的项
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            if item.checkState(0) == Qt.Checked:
+                # 重新构建该项的数据包
+                step_data = item.data(0, Qt.UserRole)
+                if step_data:
+                    selected_data.append(step_data)
+        
+        if not selected_data:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "提示", "请先勾选要执行的测试项！")
+            return
+            
+        self.log_text.append(f"--- 启动单通道手动测试: CH-{self.channel_id} (勾选项) ---")
+        self.engine.start_channel_test(self.channel_id, selected_data)
+        self._connect_signals() # 重新绑定信号以获取最新 worker
+
+    def run_all_test(self):
+        """执行全部测试项"""
+        if not self.engine: return
+        
+        all_data = []
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            step_data = item.data(0, Qt.UserRole)
+            if step_data:
+                all_data.append(step_data)
+        
+        if not all_data:
+            return
+            
+        self.log_text.append(f"--- 启动单通道完整测试: CH-{self.channel_id} ---")
+        self.engine.start_channel_test(self.channel_id, all_data)
+        self._connect_signals()
+
+    def stop_test(self):
+        """强制结束测试"""
+        if not self.engine: return
+        self.engine.stop_channel_test(self.channel_id)
+        self.log_text.append(f"<font color='red'>--- 用户手动停止测试: CH-{self.channel_id} ---</font>")
+        self.lbl_status.setText("状态: 已停止")
+        self.lbl_status.setStyleSheet("color: #FF4C29; font-weight: bold;")
+        self.progress_bar.setValue(0)
+
+    def _connect_signals(self):
+        if not self.engine: return
+        worker = self.engine.workers.get(self.channel_id)
+        
+        # 如果已经连接过同一个 worker，则不再重复连接
+        if hasattr(self, '_current_worker') and self._current_worker == worker:
+            return
+            
+        if worker:
+            # 如果之前连接过别的 worker，尝试断开（虽然旧 worker 可能已经失效）
+            if hasattr(self, '_current_worker') and self._current_worker:
+                try:
+                    self._current_worker.step_started.disconnect(self.on_step_started)
+                    self._current_worker.step_finished.disconnect(self.on_step_finished)
+                    self._current_worker.sub_step_finished.disconnect(self.on_sub_step_finished)
+                    self._current_worker.log_message.disconnect(self.on_log_message)
+                    self._current_worker.progress_updated.disconnect(self.on_progress_updated)
+                except:
+                    pass
+
+            self._current_worker = worker
+            worker.step_started.connect(self.on_step_started)
+            worker.step_finished.connect(self.on_step_finished)
+            worker.sub_step_finished.connect(self.on_sub_step_finished)
+            worker.log_message.connect(self.on_log_message)
+            worker.progress_updated.connect(self.on_progress_updated)
+            self.load_steps(worker.steps)
+            self.lbl_status.setText("状态: 运行中")
+            self.lbl_status.setStyleSheet("color: #4ECCA3; font-weight: bold;")
+        else:
+            self._current_worker = None
+            if self.parent() and hasattr(self.parent(), "get_recipe_for_channel"):
+                cached_steps = self.parent().get_recipe_for_channel(self.channel_id)
+                if cached_steps:
+                    self.load_steps_from_data(cached_steps)
+                    self.lbl_status.setText("状态: 已下发(待启动)")
+                    self.lbl_status.setStyleSheet("color: #AAAAAA;")
+
+    def load_steps(self, steps):
+        """加载 TestStep 对象列表 (转换为 dict 存储以便重跑)"""
+        self.step_tree.clear()
+        self.step_items = {}
+        self.sub_step_items = {}
+        for i, step in enumerate(steps):
+            # 将对象还原为 dict 格式以便后续 run_selected_test 使用
+            sub_data_list = []
+            for sub in step.sub_steps:
+                sub_info = sub.params.copy()
+                sub_info['type'] = sub.type.value
+                sub_info['fail_strategy'] = sub.fail_strategy.value
+                sub_data_list.append(sub_info)
+            
+            step_data = {
+                "name": step.name,
+                "min": step.min_limit if step.min_limit else "--",
+                "max": step.max_limit if step.max_limit else "--",
+                "strategy": step.ng_strategy.value,
+                "sub_steps": sub_data_list
+            }
+            
+            parent = QTreeWidgetItem([
+                step.name, 
+                str(step.min_limit) if step.min_limit else "--", 
+                str(step.max_limit) if step.max_limit else "--", 
+                "--", 
+                "等待执行"
+            ])
+            parent.setCheckState(0, Qt.Unchecked)
+            parent.setData(0, Qt.UserRole, step_data)
+            parent.setBackground(0, QColor("#1F1F35"))
+            self.step_tree.addTopLevelItem(parent)
+            self.step_items[i] = parent
+            
+            for j, sub in enumerate(step.sub_steps):
+                child = QTreeWidgetItem([
+                    f"  └─ {sub.params.get('name', sub.type.value)}", 
+                    "--", "--", "--", "等待"
+                ])
+                parent.addChild(child)
+                self.sub_step_items[(i, j)] = child
+        self.step_tree.expandAll()
+
+    def load_steps_from_data(self, steps_data):
+        """加载原始 JSON 数据列表"""
+        self.step_tree.clear()
+        self.step_items = {}
+        self.sub_step_items = {}
+        for i, step in enumerate(steps_data):
+            parent = QTreeWidgetItem([
+                step.get('name', '未命名'), 
+                step.get('min', '--'), 
+                step.get('max', '--'), 
+                "--", 
+                "待命"
+            ])
+            parent.setCheckState(0, Qt.Unchecked)
+            parent.setData(0, Qt.UserRole, step) # 直接存原始 dict
+            parent.setBackground(0, QColor("#1F1F35"))
+            self.step_tree.addTopLevelItem(parent)
+            self.step_items[i] = parent
+            
+            for j, sub in enumerate(step.get('sub_steps', [])):
+                child = QTreeWidgetItem([
+                    f"  └─ {sub.get('name', sub.get('action', '动作'))}", 
+                    "--", "--", "--", "待命"
+                ])
+                parent.addChild(child)
+                self.sub_step_items[(i, j)] = child
+        self.step_tree.expandAll()
+
+    @Slot(int, str)
+    def on_step_started(self, ch_id, step_name):
+        if ch_id != self.channel_id: return
+        self.lbl_status.setText("状态: 运行中")
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            if step_name in item.text(0):
+                item.setText(4, "执行中...")
+                item.setForeground(4, QColor("#00E5FF"))
+                self.step_tree.scrollToItem(item)
+
+    @Slot(int, str, bool)
+    def on_step_finished(self, ch_id, step_name, is_pass):
+        if ch_id != self.channel_id: return
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            if step_name in item.text(0):
+                item.setText(4, "PASS" if is_pass else "NG")
+                item.setForeground(4, QColor("#4ECCA3") if is_pass else QColor("#FF4C29"))
+
+    @Slot(int, int, int, str, object)
+    def on_sub_step_finished(self, ch_id, step_idx, sub_idx, status, result):
+        if ch_id != self.channel_id: return
+        item = self.sub_step_items.get((step_idx, sub_idx))
+        if item:
+            item.setText(4, status)
+            if result is not None:
+                item.setText(3, str(result))
+                item.setForeground(3, QColor("#00E5FF"))
+            item.setForeground(4, QColor("#4ECCA3") if status == "PASS" else QColor("#FF4C29"))
+
+    @Slot(int, str)
+    def on_log_message(self, ch_id, message):
+        if ch_id != self.channel_id: return
+        self.log_text.append(message)
+
+    @Slot(int, float, dict)
+    def on_progress_updated(self, ch_id, progress, data):
+        if ch_id != self.channel_id: return
+        self.progress_bar.setValue(int(progress))

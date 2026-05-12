@@ -1,0 +1,39 @@
+{
+    "name": "BMS1",
+    "topology": "1主3从",
+    "items": [
+        {
+            "name": "电压检测",
+            "mode": "范围判定",
+            "min": "11.0",
+            "max": "12.0",
+            "strategy": "任何NG停止",
+            "sub_steps": [
+                {
+                    "name": "电池模拟器 (Simulator)-设置参数 (0.0V / 0.0A)",
+                    "action": "设置参数",
+                    "params": "0.0V / 0.0A",
+                    "device": "电池模拟器 (Simulator)",
+                    "type": "设置仪表",
+                    "is_judgment": true
+                }
+            ]
+        },
+        {
+            "name": "2",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "sub_steps": []
+        },
+        {
+            "name": "3",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "sub_steps": []
+        }
+    ]
+}

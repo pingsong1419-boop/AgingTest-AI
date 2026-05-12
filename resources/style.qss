@@ -1,0 +1,136 @@
+/* 全局深色底色和字体 */
+QWidget {
+    background-color: #171827; /* 极深的蓝紫背景 */
+    color: #FFFFFF;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: 13px;
+}
+
+/* 顶层窗口无边框效果时可加，此处暂用作普通窗口 */
+QMainWindow {
+    background-color: #171827;
+}
+
+/* 各类模拟图片中的半透明圆角面板 */
+QFrame, QScrollArea, QTabWidget::pane {
+    background-color: #292942; /* 面板底色，稍微偏亮一点的紫色 */
+    border: 1px solid #3E3E5C;
+    border-radius: 6px;
+}
+
+/* Tab标签页样式 */
+QTabBar::tab {
+    background-color: #1F1F35;
+    color: #A0A0B0;
+    padding: 10px 24px;
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    border: 1px solid #3E3E5C;
+    border-bottom: none;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #292942;
+    color: #FFFFFF;
+    font-weight: bold;
+    border-top: 3px solid #00FFCC; /* 亮青色提示线 */
+}
+
+QTabBar::tab:hover:!selected {
+    background-color: #31314C;
+}
+
+/* 按钮样式 */
+QPushButton {
+    background-color: #3A3A5A;
+    color: #FFFFFF;
+    border: 1px solid #555577;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #4F4F70;
+    border: 1px solid #00FFCC; /* 鼠标悬停显示青色边框 */
+}
+
+QPushButton:pressed {
+    background-color: #1F1F35;
+}
+
+/* 红色停止按钮类定制 (如果在代码中指定此类) */
+QPushButton#btnStop {
+    background-color: #B23A48;
+    border: 1px solid #FF5050;
+}
+QPushButton#btnStop:hover {
+    background-color: #D34555;
+}
+
+/* 表格和树状控件 */
+QTreeWidget, QTableWidget {
+    background-color: #1F1F35;
+    alternate-background-color: #252540; /* 交替行颜色 */
+    border: 1px solid #3E3E5C;
+    border-radius: 4px;
+    gridline-color: #3E3E5C;
+    outline: none; /* 去除虚线框 */
+}
+
+/* 表头样式 */
+QHeaderView::section {
+    background-color: #31314C;
+    color: #A0A0B0;
+    padding: 6px;
+    border: none;
+    border-right: 1px solid #3E3E5C;
+    border-bottom: 1px solid #3E3E5C;
+    font-weight: bold;
+}
+
+/* 选中项样式 */
+QTreeWidget::item:selected, QTableWidget::item:selected {
+    background-color: rgba(0, 255, 204, 0.3); /* 亮青色半透明选中 */
+    color: #FFFFFF;
+}
+
+QTreeWidget::item:hover, QTableWidget::item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 滚动条深色美化 */
+QScrollBar:vertical {
+    background: #171827;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+}
+QScrollBar::handle:vertical {
+    background: #3E3E5C;
+    min-height: 20px;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #4F4F70;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: #171827;
+    height: 12px;
+    margin: 0px 0px 0px 0px;
+}
+QScrollBar::handle:horizontal {
+    background: #3E3E5C;
+    min-width: 20px;
+    border-radius: 6px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #4F4F70;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
