@@ -1,12 +1,15 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                               QLabel, QPushButton, QTreeWidget, QTreeWidgetItem, QComboBox, QMessageBox)
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtCore import Qt
+                               QLabel, QPushButton, QTreeWidget, QTreeWidgetItem, 
+                               QComboBox, QMessageBox, QAbstractItemView, QMenu)
+from PySide6.QtGui import QColor, QFont, QAction, QKeySequence, QShortcut
+from PySide6.QtCore import Qt, Signal
+from typing import List
 
 class ConfigTab(QWidget):
     def __init__(self, db_manager):
         super().__init__()
         self.db_manager = db_manager
+        self.clipboard_data = None  # 用于存储复制的节点数据
         self._init_ui()
         self.refresh_recipe_list()
         
@@ -43,12 +46,17 @@ class ConfigTab(QWidget):
         right_panel.addWidget(QLabel("测试项目与工步流 (树状结构):"))
         self.step_tree = QTreeWidget()
         self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略"])
-        self.step_tree.setColumnWidth(0, 200)
-        from PySide6.QtWidgets import QAbstractItemView
+        self.step_tree.setColumnWidth(0, 250)
+        
+        # 启用拖拽排序
+        self.step_tree.setDragEnabled(True)
+        self.step_tree.setAcceptDrops(True)
         self.step_tree.setDragDropMode(QAbstractItemView.InternalMove)
-        self.step_tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.step_tree.setSelectionMode(QAbstractItemView.SingleSelection)
+        
+        # 启用右键菜单
         self.step_tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.step_tree.customContextMenuRequested.connect(self.show_context_menu)
+        self.step_tree.customContextMenuRequested.connect(self.on_context_menu)
         
         right_panel.addWidget(self.step_tree)
         
@@ -69,92 +77,39 @@ class ConfigTab(QWidget):
         
         btn_save_recipe = QPushButton("保存配方")
         btn_save_recipe.clicked.connect(self.save_recipe)
+        btn_save_recipe.setStyleSheet("background-color: #28A745; color: white;")
+        
+        btn_dry_run = QPushButton("仿真运行 (Dry Run)")
+        btn_dry_run.clicked.connect(self.dry_run)
+        btn_dry_run.setStyleSheet("background-color: #FF8C00; color: white;")
         
         btn_layout.addWidget(btn_add_item)
         btn_layout.addWidget(btn_add_step)
         btn_layout.addWidget(btn_edit)
         btn_layout.addWidget(btn_del)
         btn_layout.addWidget(btn_save_recipe)
+        btn_layout.addWidget(btn_dry_run)
         right_panel.addLayout(btn_layout)
         
         layout.addLayout(right_panel, 3)
-
+        
         # 绑定双击编辑
         self.step_tree.itemDoubleClicked.connect(lambda item, col: self.edit_node())
-        
-        # 重写 dropEvent 以支持拖拽复制 (Ctrl 键)
-        self.step_tree.dropEvent = self._step_tree_drop_event
 
-    def _step_tree_drop_event(self, event):
-        from PySide6.QtCore import Qt
-        from PySide6.QtWidgets import QAbstractItemView
-        
-        # 获取当前选中的所有项
-        selected_items = self.step_tree.selectedItems()
-        if not selected_items:
-            QTreeWidget.dropEvent(self.step_tree, event)
-            return
-
-        # 检查是否按下了 Ctrl 键或事件动作是 CopyAction
-        is_copy = (event.keyboardModifiers() & Qt.ControlModifier) or (event.dropAction() == Qt.CopyAction)
-        
-        if is_copy:
-            # 找到落点
-            target_item = self.step_tree.itemAt(event.pos())
-            
-            for item in selected_items:
-                # 递归克隆项目
-                def clone_item(old_item):
-                    # 注意：不要使用 QTreeWidgetItem(old_item) 构造函数，它会自动建立父子关系导致递归死循环
-                    new_item = QTreeWidgetItem()
-                    # 复制文本
-                    for col in range(old_item.columnCount()):
-                        new_item.setText(col, old_item.text(col))
-                        
-                    # 复制 Data (元数据 - 关键：设备ID和参数都在这里)
-                    for i in range(50): # 遍历可能的 Role
-                        val = old_item.data(0, Qt.UserRole + i)
-                        if val is not None:
-                            new_item.setData(0, Qt.UserRole + i, val)
-                    
-                    # 递归克隆子节点
-                    for i in range(old_item.childCount()):
-                        new_item.addChild(clone_item(old_item.child(i)))
-                    return new_item
-
-                cloned = clone_item(item)
-                
-                if item.parent(): # 如果是子工步
-                    # 尝试放到落点测试项下，如果没有落点则放到原父节点下
-                    if target_item:
-                        parent = target_item if not target_item.parent() else target_item.parent()
-                        parent.addChild(cloned)
-                        parent.setExpanded(True)
-                    else:
-                        item.parent().addChild(cloned)
-                else: # 如果是测试项
-                    self.step_tree.addTopLevelItem(cloned)
-            
-            event.setDropAction(Qt.CopyAction)
-            event.accept()
-        else:
-            # 默认移动逻辑
-            QTreeWidget.dropEvent(self.step_tree, event)
+        # 绑定快捷键
+        QShortcut(QKeySequence("Ctrl+C"), self.step_tree, self.copy_node)
+        QShortcut(QKeySequence("Ctrl+V"), self.step_tree, self.paste_node)
+        QShortcut(QKeySequence("Delete"), self.step_tree, self.delete_node)
 
     def refresh_recipe_list(self):
         """从本地磁盘刷新配方列表"""
         self.recipe_tree.clear()
-        self.step_tree.clear() # 初始清空右侧
         recipes = self.db_manager.list_recipes()
         for name in recipes:
             self.recipe_tree.addTopLevelItem(QTreeWidgetItem([name]))
-        
-        # 初始状态下禁用编辑按钮或显示提示
-        self.step_tree.setEnabled(False)
 
     def on_recipe_selected(self, item, column):
         """点击左侧配方时加载数据"""
-        self.step_tree.setEnabled(True)
         name = item.text(0)
         data = self.db_manager.load_recipe_json(name)
         if data:
@@ -198,8 +153,285 @@ class ConfigTab(QWidget):
                 parent.addChild(child)
         self.step_tree.expandAll()
 
+    def on_context_menu(self, pos):
+        item = self.step_tree.itemAt(pos)
+        if not item: return
+        
+        menu = QMenu()
+        copy_act = QAction("复制", self)
+        copy_act.triggered.connect(self.copy_node)
+        
+        paste_act = QAction("粘贴", self)
+        paste_act.setEnabled(self.clipboard_data is not None)
+        paste_act.triggered.connect(self.paste_node)
+        
+        dup_act = QAction("克隆", self)
+        dup_act.triggered.connect(self.duplicate_node)
+
+        bulk_act = QAction("批量修改参数...", self)
+        bulk_act.triggered.connect(self.bulk_edit_nodes)
+        
+        del_act = QAction("删除", self)
+        del_act.triggered.connect(self.delete_node)
+        
+        menu.addAction(copy_act)
+        menu.addAction(paste_act)
+        menu.addSeparator()
+
+        # 屏蔽/取消屏蔽操作 (保留并集成到右键菜单)
+        is_skipped = item.text(0).strip().startswith("#") or "└─ #" in item.text(0)
+        skip_action = QAction("取消屏蔽" if is_skipped else "屏蔽该项 (添加#)", self)
+        skip_action.triggered.connect(lambda: self.toggle_skip(item))
+        menu.addAction(skip_action)
+
+        prefix_action = QAction("添加自定义前缀", self)
+        prefix_action.triggered.connect(lambda: self.add_prefix(item))
+        menu.addAction(prefix_action)
+
+        menu.addSeparator()
+        menu.addAction(dup_act)
+        menu.addAction(bulk_act)
+        menu.addSeparator()
+        menu.addAction(del_act)
+        menu.exec_(self.step_tree.viewport().mapToGlobal(pos))
+
+    def toggle_skip(self, item):
+        """切换屏蔽状态：在名称前添加或移除 #"""
+        text = item.text(0)
+        if "#" in text:
+            # 移除所有 #
+            item.setText(0, text.replace("#", ""))
+            item.setForeground(0, QColor("#FFFFFF") if item.parent() else QColor("#00E5FF"))
+        else:
+            # 添加 #
+            if "└─ " in text:
+                parts = text.split("└─ ")
+                item.setText(0, f"{parts[0]}└─ #{parts[1]}")
+            else:
+                item.setText(0, "#" + text)
+            item.setForeground(0, QColor("#808080")) # 屏蔽后显示为灰色
+
+    def add_prefix(self, item):
+        """为工步名称添加自定义前缀"""
+        from PySide6.QtWidgets import QInputDialog
+        text, ok = QInputDialog.getText(self, "添加前缀", "请输入前缀内容:")
+        if ok and text:
+            old_text = item.text(0)
+            if "└─ " in old_text:
+                parts = old_text.split("└─ ")
+                item.setText(0, f"{parts[0]}└─ {text}_{parts[1]}")
+            else:
+                item.setText(0, f"{text}_{old_text}")
+
+    def _get_node_data(self, item):
+        """序列化单个节点及其子节点"""
+        is_parent = item.parent() is None
+        if is_parent:
+            data = {
+                "type": "item",
+                "name": item.text(0),
+                "mode": item.text(1),
+                "min": item.text(2),
+                "max": item.text(3),
+                "strategy": item.text(4),
+                "sub_steps": []
+            }
+            for i in range(item.childCount()):
+                data["sub_steps"].append(self._get_node_data(item.child(i)))
+            return data
+        else:
+            return {
+                "type": "step",
+                "name": item.text(0).replace("  └─ ", ""),
+                "action": item.text(1),
+                "params": item.text(2),
+                "device": item.data(0, Qt.UserRole),
+                "stype": item.data(1, Qt.UserRole),
+                "is_judgment": item.data(2, Qt.UserRole),
+                "fail_strategy": item.text(4)
+            }
+
+    def copy_node(self):
+        item = self.step_tree.currentItem()
+        if item:
+            self.clipboard_data = self._get_node_data(item)
+
+    def paste_node(self):
+        if not self.clipboard_data: return
+        
+        current = self.step_tree.currentItem()
+        data = self.clipboard_data
+        
+        if data["type"] == "item":
+            # 粘贴为顶层测试项
+            new_item = QTreeWidgetItem([
+                data['name'], data['mode'], data['min'], data['max'], data['strategy']
+            ])
+            new_item.setForeground(0, QColor("#00E5FF"))
+            font = QFont()
+            font.setBold(True)
+            new_item.setFont(0, font)
+            
+            for sub in data.get("sub_steps", []):
+                child = QTreeWidgetItem([
+                    f"  └─ {sub['name']}", sub['action'], sub['params'],
+                    "参与判定" if sub.get("is_judgment") else "--",
+                    sub.get("fail_strategy", "失败停止")
+                ])
+                child.setData(0, Qt.UserRole, sub.get("device"))
+                child.setData(1, Qt.UserRole, sub.get("stype"))
+                child.setData(2, Qt.UserRole, sub.get("is_judgment"))
+                if sub.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
+                new_item.addChild(child)
+            
+            if current:
+                idx = self.step_tree.indexOfTopLevelItem(current if not current.parent() else current.parent())
+                self.step_tree.insertTopLevelItem(idx + 1, new_item)
+            else:
+                self.step_tree.addTopLevelItem(new_item)
+                
+        elif data["type"] == "step":
+            # 粘贴为子工步
+            parent = current if (current and not current.parent()) else (current.parent() if current else None)
+            if not parent: return
+            
+            child = QTreeWidgetItem([
+                f"  └─ {data['name']}", data['action'], data['params'],
+                "参与判定" if data.get("is_judgment") else "--",
+                data.get("fail_strategy", "失败停止")
+            ])
+            child.setData(0, Qt.UserRole, data.get("device"))
+            child.setData(1, Qt.UserRole, data.get("stype"))
+            child.setData(2, Qt.UserRole, data.get("is_judgment"))
+            if data.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
+            
+            if current and current.parent():
+                idx = parent.indexOfChild(current)
+                parent.insertChild(idx + 1, child)
+            else:
+                parent.addChild(child)
+            parent.setExpanded(True)
+
+    def duplicate_node(self):
+        self.copy_node()
+        self.paste_node()
+
+    def bulk_edit_nodes(self):
+        # 1. 提取当前树中出现的所有设备名
+        devices = set()
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            for j in range(item.childCount()):
+                d = item.child(j).data(0, Qt.UserRole)
+                if d: devices.add(d)
+        
+        from ui.dialogs.bulk_edit_dialog import BulkEditDialog
+        dialog = BulkEditDialog(sorted(list(devices)), self)
+        if dialog.exec():
+            cfg = dialog.get_config()
+            count = 0
+            
+            # 2. 遍历树进行修改
+            for i in range(self.step_tree.topLevelItemCount()):
+                item = self.step_tree.topLevelItem(i)
+                for j in range(item.childCount()):
+                    sub = item.child(j)
+                    dev = sub.data(0, Qt.UserRole) or ""
+                    act = sub.text(1)
+                    
+                    # 匹配过滤条件
+                    match_dev = (cfg["device_filter"] == "-- 全部设备 --") or (dev == cfg["device_filter"])
+                    match_act = (not cfg["action_filter"]) or (cfg["action_filter"] in act)
+                    
+                    if match_dev and match_act:
+                        if cfg["mode"] == 0: # 查找并替换
+                            new_params = sub.text(2).replace(cfg["find_text"], cfg["replace_text"])
+                            sub.setText(2, new_params)
+                        elif cfg["mode"] == 1: # 统一设置
+                            sub.setText(2, cfg["replace_text"])
+                        elif cfg["mode"] == 2: # 修改策略
+                            sub.setText(4, cfg["strategy"])
+                        count += 1
+            
+            QMessageBox.information(self, "完成", f"批量修改完成，共影响 {count} 个工步。")
+
+    def dry_run(self):
+        """仿真运行：使用 Mock 设备管理器运行当前编辑的配方"""
+        # 1. 序列化当前 UI 中的配方数据
+        items = []
+        for i in range(self.step_tree.topLevelItemCount()):
+            node = self.step_tree.topLevelItem(i)
+            item_data = {
+                "name": node.text(0),
+                "strategy": node.text(4),
+                "min": node.text(2),
+                "max": node.text(3),
+                "sub_steps": []
+            }
+            for j in range(node.childCount()):
+                sub = node.child(j)
+                item_data["sub_steps"].append({
+                    "name": sub.text(0).replace("  └─ ", ""),
+                    "type": sub.data(1, Qt.UserRole),
+                    "device": sub.data(0, Qt.UserRole),
+                    "action": sub.text(1),
+                    "params": sub.text(2),
+                    "is_judgment": sub.data(2, Qt.UserRole),
+                    "fail_strategy": sub.text(4)
+                })
+            items.append(item_data)
+            
+        if not items:
+            QMessageBox.warning(self, "提醒", "配方为空，无法运行仿真。")
+            return
+
+        # 2. 初始化 Mock 硬件和临时引擎
+        from devices.mock_manager import MockDeviceManager
+        from core.engine import TestEngine
+        from ui.dialogs.monitor_dialog import MonitorDialog
+        
+        mock_mgr = MockDeviceManager()
+        # 注意：这里我们不传真实 db_manager，防止仿真数据污染数据库
+        temp_engine = TestEngine(device_manager=mock_mgr, db_manager=None)
+        
+        # 3. 弹出监控窗口（使用通道 1 进行演示）
+        dialog = MonitorDialog(channel_id=1, engine=temp_engine, parent=self)
+        dialog.setWindowTitle("🧪 配方仿真运行 - 通道 1 (虚拟硬件)")
+        
+        # 启动测试
+        temp_engine.start_channel_test(1, items)
+        dialog.exec()
+        
+        # 结束后清理
+        temp_engine.stop_all()
+
+    def validate_recipe(self) -> List[str]:
+        """逻辑校验：返回错误列表"""
+        errors = []
+        if self.step_tree.topLevelItemCount() == 0:
+            errors.append("配方中没有任何测试项。")
+            
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            if item.childCount() == 0:
+                errors.append(f"测试项【{item.text(0)}】下没有任何子工步。")
+            
+            for j in range(item.childCount()):
+                sub = item.child(j)
+                if "设置" in sub.text(1) and not sub.text(2):
+                    errors.append(f"工步【{sub.text(0)}】参数为空。")
+                    
+        return errors
+
     def save_recipe(self):
         """将当前树状图序列化并保存为 JSON"""
+        # 执行逻辑校验
+        errors = self.validate_recipe()
+        if errors:
+            msg = "配方校验发现以下问题：\n\n" + "\n".join(errors[:5])
+            if len(errors) > 5: msg += f"\n...等共 {len(errors)} 个问题"
+            QMessageBox.warning(self, "校验未通过", msg)
+
         recipe_item = self.recipe_tree.currentItem()
         if not recipe_item:
             QMessageBox.warning(self, "提醒", "请先在左侧选择或新建一个配方。")
@@ -348,58 +580,6 @@ class ConfigTab(QWidget):
                     item.setForeground(0, QColor("#FFD700"))
                 else:
                     item.setForeground(0, QColor("#FFFFFF"))
-
-    def show_context_menu(self, position):
-        from PySide6.QtWidgets import QMenu
-        from PySide6.QtGui import QAction
-        
-        item = self.step_tree.itemAt(position)
-        if not item:
-            return
-            
-        menu = QMenu(self)
-        
-        # 屏蔽/取消屏蔽操作
-        is_skipped = item.text(0).startswith("#")
-        skip_action = QAction("取消屏蔽" if is_skipped else "屏蔽测试项 (添加#)", self)
-        skip_action.triggered.connect(lambda: self.toggle_skip(item))
-        menu.addAction(skip_action)
-        
-        # 自定义前缀操作
-        prefix_action = QAction("添加自定义前缀", self)
-        prefix_action.triggered.connect(lambda: self.add_prefix(item))
-        menu.addAction(prefix_action)
-        
-        # 也可以放个删除在这里
-        menu.addSeparator()
-        delete_action = QAction("删除", self)
-        delete_action.triggered.connect(self.delete_node)
-        menu.addAction(delete_action)
-        
-        menu.exec_(self.step_tree.viewport().mapToGlobal(position))
-
-    def toggle_skip(self, item):
-        text = item.text(0)
-        if text.startswith("#"):
-            item.setText(0, text[1:]) # 去掉第一个字符
-        else:
-            # 如果是子工步，需要保留缩进，比如 "  └─ name" 变成 "  └─ #name"
-            if "└─ " in text:
-                parts = text.split("└─ ")
-                item.setText(0, f"{parts[0]}└─ #{parts[1]}")
-            else:
-                item.setText(0, "#" + text)
-
-    def add_prefix(self, item):
-        from PySide6.QtWidgets import QInputDialog
-        text, ok = QInputDialog.getText(self, "添加前缀", "请输入前缀内容:")
-        if ok and text:
-            old_text = item.text(0)
-            if "└─ " in old_text:
-                parts = old_text.split("└─ ")
-                item.setText(0, f"{parts[0]}└─ {text}_{parts[1]}")
-            else:
-                item.setText(0, f"{text}_{old_text}")
 
     def delete_node(self):
         item = self.step_tree.currentItem()

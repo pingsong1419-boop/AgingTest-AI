@@ -40,11 +40,19 @@ class PowerBoardRU12:
                         retries=1
                     )
                 if self.client.connect():
-                    self.is_connected = True
-                    return True
+                    # 握手验证
+                    result = self.client.read_input_registers(100, count=1, device_id=self.unit_id)
+                    if result and not result.isError():
+                        self.is_connected = True
+                        return True
+                    else:
+                        self.client.close()
+                        self.is_connected = False
+                        return False
                 return False
             except Exception as e:
                 logger.error(f"Connect error: {e}")
+                self.is_connected = False
                 return False
 
     def disconnect(self):

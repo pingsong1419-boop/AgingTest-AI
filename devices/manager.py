@@ -2,13 +2,13 @@ from .lingtu_66100 import Lingtu66100
 from .ngi_n3618 import NGIN3618
 from .afe_power_ru36 import AFEPowerRU36
 from .mainboard_power_ru60 import MainboardPowerRU60
-from .can_bus import CANBus
+from .mainboard_power_ru60 import MainboardPowerRU60
 from .aging_board_driver import AgingBoardController
 from .ca550_driver import CA550Controller
 from .easy320_driver import Easy320Controller
 from .afe_power_driver import AFEPowerController
-from .rn_can_driver import RNCANDriver
 from .power_board_ru12 import PowerBoardRU12
+from .control_board import ControlBoard
 
 
 class DeviceManager:
@@ -23,14 +23,14 @@ class DeviceManager:
         self.afe_power_1 = None
         self.afe_pwr_standalone = None
         self.afe_pwr_3 = None
-        self.mainboard_power = None
-        self.power_board_ru12 = None
+        self.dut_power = None
+        self.ctrl_board_power = None
         self.ca550 = None
         self.easy320 = None
         
-        self.can_bus = CANBus(channel="CAN1")
-        self.aging_board = AgingBoardController(ip="192.168.1.10")
-        self.rn_can = RNCANDriver(ip="192.168.1.10")
+        
+        
+        self.boards = {} # {channel_id: ControlBoard}
         
         self.update_config()
 
@@ -72,15 +72,15 @@ class DeviceManager:
         afe3_port = int(cfg.get("afe3_port", 10001))
         self.afe_pwr_3 = AFEPowerController(afe3_ip, afe3_port)
 
-        # 4. 主机板电源
-        main_ip = cfg.get("main_ip", "192.168.1.201")
-        main_port = int(cfg.get("main_port", 2000))
-        self.mainboard_power = MainboardPowerRU60(main_ip, main_port)
+        # 4. 被测物供电电源 (DUT Power)
+        dut_ip = cfg.get("dut_pwr_ip", "192.168.1.201")
+        dut_port = int(cfg.get("dut_pwr_port", 2000))
+        self.dut_power = MainboardPowerRU60(dut_ip, dut_port)
 
-        # 5. 功能测试板电源
-        pb_ip = cfg.get("pwr_board_ip", "192.168.1.202")
-        pb_port = int(cfg.get("pwr_board_port", 10001))
-        self.power_board_ru12 = PowerBoardRU12(pb_ip, pb_port)
+        # 5. 老化控制板供电电源 (Control Board Power)
+        ctrl_pwr_ip = cfg.get("ctrl_pwr_ip", "192.168.1.202")
+        ctrl_pwr_port = int(cfg.get("ctrl_pwr_port", 10001))
+        self.ctrl_board_power = PowerBoardRU12(ctrl_pwr_ip, ctrl_pwr_port)
 
         # 6. CA550
         ca_com = cfg.get("ca550_com", "COM5")
@@ -89,6 +89,21 @@ class DeviceManager:
         # 7. Easy320
         e320_ip = cfg.get("easy320_ip", "192.168.1.88")
         self.easy320 = Easy320Controller(e320_ip)
+
+        # 8. 60路老化控制板 (分布式)
+        ch_configs = []
+        if self.db_manager:
+            ch_configs = self.db_manager.load_channel_config() or []
+        
+        base_ip = cfg.get("board_base_ip", "192.168.1.")
+        start_suffix = int(cfg.get("board_start_suffix", 101))
+        
+        # 建立一个映射字典供快速查询
+        db_ips = {c["channel_id"]: c["board_ip"] for c in ch_configs if c.get("board_ip")}
+
+        for i in range(1, 61):
+            ip = db_ips.get(i) or f"{base_ip}{start_suffix + i - 1}"
+            self.boards[i] = ControlBoard(ip, i)
 
     def _get_sim_and_ch(self, global_ch: int):
         """
@@ -182,19 +197,66 @@ class DeviceManager:
             return False
         return success
 
-    def init_all_devices(self):
-        """初始化连接所有硬件"""
-        results = []
-        results.append(self.can_bus.connect())
-        results.append(self.aging_board.connect())
-        results.append(self.easy320.connect())
-        # CA550 串口连接
-        results.append(self.ca550.connect())
+    def init_all_devices(self, logger=None):
+        """初始化连接所有硬件，支持日志输出"""
+        if logger: logger("[*] 开始系统硬件全量初始化...")
         
-        for sim in self.simulators:
-            results.append(sim.connect())
+        # 1. 通讯类 (已整合入老化板)
+        pass
+        
+        # 2. 控制板类 (分布式初始化，后续可改为异步按需)
+        # 这里为了防止卡顿，建议在 UI 线程外调用或分批
+        # 为了演示先全量初始化
+        # for board in self.boards.values():
+        #     board.connect()
+        
+        if self.easy320: self.easy320.connect()
+        if self.ca550: self.ca550.connect()
+        
+        # 3. 电源类
+        if self.hv_source: self.hv_source.connect()
+        if self.afe_power_1: self.afe_power_1.connect()
+        if self.afe_pwr_standalone: self.afe_pwr_standalone.connect()
+        if self.afe_pwr_3: self.afe_pwr_3.connect()
+        if self.dut_power: self.dut_power.connect()
+        if self.ctrl_board_power: self.ctrl_board_power.connect()
+        
+        # 4. 模拟器类
+        for i, sim in enumerate(self.simulators):
+            sim.connect()
             
-        return all(results)
+        if logger: logger("[*] 硬件初始化指令已下发完毕。")
+        return True
+
+    def get_all_device_status(self):
+        """获取所有设备的连接状态列表，供 UI 展示"""
+        status_list = []
+        
+        # 定义辅助函数
+        def add_status(name, device, info=""):
+            is_conn = getattr(device, "is_connected", False) if device else False
+            status_list.append({
+                "name": name,
+                "info": info or (getattr(device, "ip", "") if device else ""),
+                "status": "已联机" if is_conn else "离线",
+                "color": "#28A745" if is_conn else "#DC3545"
+            })
+
+        connected_boards = sum(1 for b in self.boards.values() if b.is_connected)
+        add_status("老化控制板 (分布式)", None, f"已联机: {connected_boards} / 60")
+        
+        if self.hv_source: add_status("NGI 高压源", self.hv_source)
+        if self.afe_power_1: add_status("1# AFE 供电电源", self.afe_power_1)
+        if self.afe_pwr_standalone: add_status("2# AFE 调试电源", self.afe_pwr_standalone)
+        if self.dut_power: add_status("被测物供电电源 (DUT)", self.dut_power)
+        if self.ctrl_board_power: add_status("控制板供电电源 (Ctrl Board)", self.ctrl_board_power)
+        if self.ca550: add_status("CA550 校准源", self.ca550, self.ca550.port)
+        if self.easy320: add_status("Easy320 继电器", self.easy320)
+        
+        for i, sim in enumerate(self.simulators):
+            add_status(f"{i+1}# 电池模拟器 (18CH)", sim)
+            
+        return status_list
 
     def disconnect_all(self):
         """安全断开所有硬件连接"""
@@ -203,14 +265,15 @@ class DeviceManager:
             sim.disconnect()
         if self.hv_source: self.hv_source.disconnect()
         if self.afe_power_1: self.afe_power_1.disconnect()
-        if self.mainboard_power: self.mainboard_power.disconnect()
-        self.can_bus.disconnect()
-        self.aging_board.disconnect()
+        if self.afe_pwr_standalone: self.afe_pwr_standalone.disconnect()
+        if self.afe_pwr_3: self.afe_pwr_3.disconnect()
+        if self.dut_power: self.dut_power.disconnect()
+        if self.ctrl_board_power: self.ctrl_board_power.disconnect()
+        for board in self.boards.values():
+            board.disconnect()
+            
         if self.easy320: self.easy320.disconnect()
         if self.ca550: self.ca550.disconnect()
-        if self.afe_pwr_standalone: self.afe_pwr_standalone.disconnect()
-        self.rn_can.disconnect()
-        if self.power_board_ru12: self.power_board_ru12.disconnect()
 
     def emergency_stop(self):
         """紧急停止：关闭所有电源输出"""
@@ -218,5 +281,7 @@ class DeviceManager:
         self.broadcast_output(False)
         if self.afe_power_1 and self.afe_power_1.is_connected:
             self.afe_power_1.output_control(False)
-        if self.mainboard_power and self.mainboard_power.is_connected:
-            self.mainboard_power.output_control(False)
+        if self.dut_power and self.dut_power.is_connected:
+            self.dut_power.output_control(False)
+        if self.hv_source and self.hv_source.is_connected:
+            self.hv_source.output_control(False)

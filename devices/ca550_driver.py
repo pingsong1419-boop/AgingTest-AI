@@ -22,7 +22,7 @@ class CA550Controller:
         self.is_connected = False
 
     def connect(self) -> bool:
-        """建立串口连接"""
+        """建立串口连接并执行握手验证"""
         try:
             # 物理层连接
             self.ser = serial.Serial(
@@ -31,7 +31,7 @@ class CA550Controller:
                 bytesize=self.bytesize,
                 parity=self.parity,
                 stopbits=self.stopbits,
-                timeout=1.5 # 适当减小超时
+                timeout=1.5
             )
             # 激活 DTR/RTS 信号
             self.ser.dtr = True
@@ -39,12 +39,21 @@ class CA550Controller:
             
             self.is_connected = self.ser.is_open
             if self.is_connected:
-                logger.info(f"成功建立物理连接: {self.port} ({self.baudrate}, {self.bytesize}{self.parity}{self.stopbits})")
-                # 强制等待硬件就绪
-                time.sleep(0.2)
-            return self.is_connected
+                # 强制等待硬件就绪并执行握手验证
+                time.sleep(0.3)
+                idn = self.get_idn()
+                if idn and "ERROR" not in idn:
+                    logger.info(f"成功连接并验证 CA550: {self.port} (IDN: {idn})")
+                    return True
+                else:
+                    self.ser.close()
+                    self.is_connected = False
+                    logger.error(f"CA550 握手失败 (无响应或响应错误): {self.port}")
+                    return False
+            return False
         except Exception as e:
-            logger.error(f"建立物理连接异常: {e}")
+            self.is_connected = False
+            logger.error(f"CA550 连接异常: {e}")
             return False
 
     def disconnect(self):

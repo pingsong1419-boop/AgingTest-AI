@@ -33,17 +33,26 @@ class Easy320Controller:
         self.start_address = 0xFC08 
 
     def connect(self) -> bool:
-        """建立连接"""
+        """建立连接并执行握手验证"""
         try:
             if self.client.connect():
-                self.is_connected = True
-                logger.info(f"成功连接至 Easy320: {self.ip}:{self.port}")
-                return True
+                # 握手验证：尝试读取第 1 路继电器的线圈状态
+                result = self.client.read_coils(address=self.start_address, count=1, device_id=self.slave_id)
+                if result and not result.isError():
+                    self.is_connected = True
+                    logger.info(f"成功连接并验证 Easy320: {self.ip}:{self.port}")
+                    return True
+                else:
+                    self.client.close()
+                    self.is_connected = False
+                    logger.error(f"Easy320 握手失败: {self.ip}:{self.port}")
+                    return False
             else:
                 logger.error(f"连接 Easy320 失败: {self.ip}:{self.port}")
                 return False
         except Exception as e:
             logger.error(f"连接发生异常: {e}")
+            self.is_connected = False
             return False
 
     def disconnect(self):
