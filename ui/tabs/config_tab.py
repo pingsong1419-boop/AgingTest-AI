@@ -44,6 +44,11 @@ class ConfigTab(QWidget):
         self.step_tree = QTreeWidget()
         self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略"])
         self.step_tree.setColumnWidth(0, 200)
+        from PySide6.QtWidgets import QAbstractItemView
+        self.step_tree.setDragDropMode(QAbstractItemView.InternalMove)
+        self.step_tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.step_tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.step_tree.customContextMenuRequested.connect(self.show_context_menu)
         
         right_panel.addWidget(self.step_tree)
         
@@ -76,16 +81,80 @@ class ConfigTab(QWidget):
 
         # 绑定双击编辑
         self.step_tree.itemDoubleClicked.connect(lambda item, col: self.edit_node())
+        
+        # 重写 dropEvent 以支持拖拽复制 (Ctrl 键)
+        self.step_tree.dropEvent = self._step_tree_drop_event
+
+    def _step_tree_drop_event(self, event):
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QAbstractItemView
+        
+        # 获取当前选中的所有项
+        selected_items = self.step_tree.selectedItems()
+        if not selected_items:
+            QTreeWidget.dropEvent(self.step_tree, event)
+            return
+
+        # 检查是否按下了 Ctrl 键或事件动作是 CopyAction
+        is_copy = (event.keyboardModifiers() & Qt.ControlModifier) or (event.dropAction() == Qt.CopyAction)
+        
+        if is_copy:
+            # 找到落点
+            target_item = self.step_tree.itemAt(event.pos())
+            
+            for item in selected_items:
+                # 递归克隆项目
+                def clone_item(old_item):
+                    # 注意：不要使用 QTreeWidgetItem(old_item) 构造函数，它会自动建立父子关系导致递归死循环
+                    new_item = QTreeWidgetItem()
+                    # 复制文本
+                    for col in range(old_item.columnCount()):
+                        new_item.setText(col, old_item.text(col))
+                        
+                    # 复制 Data (元数据 - 关键：设备ID和参数都在这里)
+                    for i in range(50): # 遍历可能的 Role
+                        val = old_item.data(0, Qt.UserRole + i)
+                        if val is not None:
+                            new_item.setData(0, Qt.UserRole + i, val)
+                    
+                    # 递归克隆子节点
+                    for i in range(old_item.childCount()):
+                        new_item.addChild(clone_item(old_item.child(i)))
+                    return new_item
+
+                cloned = clone_item(item)
+                
+                if item.parent(): # 如果是子工步
+                    # 尝试放到落点测试项下，如果没有落点则放到原父节点下
+                    if target_item:
+                        parent = target_item if not target_item.parent() else target_item.parent()
+                        parent.addChild(cloned)
+                        parent.setExpanded(True)
+                    else:
+                        item.parent().addChild(cloned)
+                else: # 如果是测试项
+                    self.step_tree.addTopLevelItem(cloned)
+            
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+        else:
+            # 默认移动逻辑
+            QTreeWidget.dropEvent(self.step_tree, event)
 
     def refresh_recipe_list(self):
         """从本地磁盘刷新配方列表"""
         self.recipe_tree.clear()
+        self.step_tree.clear() # 初始清空右侧
         recipes = self.db_manager.list_recipes()
         for name in recipes:
             self.recipe_tree.addTopLevelItem(QTreeWidgetItem([name]))
+        
+        # 初始状态下禁用编辑按钮或显示提示
+        self.step_tree.setEnabled(False)
 
     def on_recipe_selected(self, item, column):
         """点击左侧配方时加载数据"""
+        self.step_tree.setEnabled(True)
         name = item.text(0)
         data = self.db_manager.load_recipe_json(name)
         if data:
@@ -279,6 +348,58 @@ class ConfigTab(QWidget):
                     item.setForeground(0, QColor("#FFD700"))
                 else:
                     item.setForeground(0, QColor("#FFFFFF"))
+
+    def show_context_menu(self, position):
+        from PySide6.QtWidgets import QMenu
+        from PySide6.QtGui import QAction
+        
+        item = self.step_tree.itemAt(position)
+        if not item:
+            return
+            
+        menu = QMenu(self)
+        
+        # 屏蔽/取消屏蔽操作
+        is_skipped = item.text(0).startswith("#")
+        skip_action = QAction("取消屏蔽" if is_skipped else "屏蔽测试项 (添加#)", self)
+        skip_action.triggered.connect(lambda: self.toggle_skip(item))
+        menu.addAction(skip_action)
+        
+        # 自定义前缀操作
+        prefix_action = QAction("添加自定义前缀", self)
+        prefix_action.triggered.connect(lambda: self.add_prefix(item))
+        menu.addAction(prefix_action)
+        
+        # 也可以放个删除在这里
+        menu.addSeparator()
+        delete_action = QAction("删除", self)
+        delete_action.triggered.connect(self.delete_node)
+        menu.addAction(delete_action)
+        
+        menu.exec_(self.step_tree.viewport().mapToGlobal(position))
+
+    def toggle_skip(self, item):
+        text = item.text(0)
+        if text.startswith("#"):
+            item.setText(0, text[1:]) # 去掉第一个字符
+        else:
+            # 如果是子工步，需要保留缩进，比如 "  └─ name" 变成 "  └─ #name"
+            if "└─ " in text:
+                parts = text.split("└─ ")
+                item.setText(0, f"{parts[0]}└─ #{parts[1]}")
+            else:
+                item.setText(0, "#" + text)
+
+    def add_prefix(self, item):
+        from PySide6.QtWidgets import QInputDialog
+        text, ok = QInputDialog.getText(self, "添加前缀", "请输入前缀内容:")
+        if ok and text:
+            old_text = item.text(0)
+            if "└─ " in old_text:
+                parts = old_text.split("└─ ")
+                item.setText(0, f"{parts[0]}└─ {text}_{parts[1]}")
+            else:
+                item.setText(0, f"{text}_{old_text}")
 
     def delete_node(self):
         item = self.step_tree.currentItem()

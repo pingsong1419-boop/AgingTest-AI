@@ -31,7 +31,7 @@ class MainWindow(QMainWindow):
         from devices.manager import DeviceManager
         
         self.db_manager = DBManager()
-        self.device_manager = DeviceManager()
+        self.device_manager = DeviceManager(self.db_manager)
         self.engine = TestEngine(self.device_manager, self.db_manager)
         
         self._init_ui()

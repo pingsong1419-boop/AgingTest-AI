@@ -3,37 +3,76 @@
     "topology": "1主3从",
     "items": [
         {
-            "name": "电压检测",
+            "name": "6V_电压检测",
             "mode": "范围判定",
             "min": "11.0",
             "max": "12.0",
             "strategy": "任何NG停止",
             "sub_steps": [
                 {
-                    "name": "电池模拟器 (Simulator)-设置参数 (0.0V / 0.0A)",
+                    "name": "电池模拟器 (Simulator)-设置参数 (3.7V / 1.0A)",
                     "action": "设置参数",
-                    "params": "0.0V / 0.0A",
+                    "params": "3.7V / 1.0A",
                     "device": "电池模拟器 (Simulator)",
                     "type": "设置仪表",
-                    "is_judgment": true
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "电池模拟器 (Simulator)-全部通道开启 (3.6V / 1.0A)",
+                    "action": "全部通道开启",
+                    "params": "3.6V / 1.0A",
+                    "device": "电池模拟器 (Simulator)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "NGI 高压源 (HV Source)-设置参数 (100.0V / 0.1A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 0.1A / 开启输出",
+                    "device": "NGI 高压源 (HV Source)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "主机板电源 (Main Power)-设置参数 (12.0V / 10.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 10.0A / 开启输出",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "主机板电源 (Main Power)-全部通道开启 (10.0V / 1.0A)",
+                    "action": "全部通道开启",
+                    "params": "10.0V / 1.0A",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "设置仪表",
+                    "is_judgment": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "功能测试板电源 (Power Board)-设置参数 (24.0V / 10.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "24.0V / 10.0A / 开启输出",
+                    "device": "功能测试板电源 (Power Board)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "CA550 校准仪 (CA550)-设置输出参数 (Type:V / Val:5.0)",
+                    "action": "设置输出参数",
+                    "params": "Type:V / Val:5.0",
+                    "device": "CA550 校准仪 (CA550)",
+                    "type": "校准仪设置",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
                 }
             ]
-        },
-        {
-            "name": "2",
-            "mode": "范围判定",
-            "min": "0.0",
-            "max": "0.0",
-            "strategy": "任何NG停止",
-            "sub_steps": []
-        },
-        {
-            "name": "3",
-            "mode": "范围判定",
-            "min": "0.0",
-            "max": "0.0",
-            "strategy": "任何NG停止",
-            "sub_steps": []
         }
     ]
 }

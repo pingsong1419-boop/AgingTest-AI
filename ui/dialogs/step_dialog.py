@@ -78,8 +78,14 @@ class StepDialog(QDialog):
         self.device_combo.addItems([
             "电池模拟器 (Simulator)", 
             "NGI 高压源 (HV Source)", 
-            "1# AFE 电源 (AFE)", 
+            "1# AFE 电源 (AFE 1)", 
+            "2# AFE 电源 (AFE 2)", 
+            "3# AFE 电源 (AFE 3)", 
             "主机板电源 (Main Power)",
+            "CA550 校准仪 (CA550)",
+            "Easy320 继电器 (Easy320)",
+            "老化功能板继电器 (Aging Board)",
+            "功能测试板电源 (Power Board)",
             "CAN 交互",
             "等待 (Wait)"
         ])
@@ -180,6 +186,27 @@ class StepDialog(QDialog):
         self.param_stack.addWidget(self.page_can)   # 1: CAN
         self.param_stack.addWidget(self.page_wait)  # 2: 等待
         self.param_stack.addWidget(self.page_read)  # 3: 读取
+
+        # --- 页面 4: 继电器参数 ---
+        self.page_relay = QWidget()
+        r_form = QFormLayout(self.page_relay)
+        self.r_channel = QSpinBox()
+        self.r_channel.setRange(1, 256)
+        r_form.addRow("目标通道 (CH):", self.r_channel)
+        self.param_stack.addWidget(self.page_relay)
+
+        # --- 页面 5: CA550 参数 ---
+        self.page_ca550 = QWidget()
+        ca_form = QFormLayout(self.page_ca550)
+        self.ca_type = QComboBox()
+        self.ca_type.addItems(["TC_K (K型热电偶)", "TC_J (J型热电偶)", "TC_T", "TC_E", "TC_N", "TC_R", "TC_S", "TC_B", "V", "mV", "mA", "OHM"])
+        self.ca_val = QDoubleSpinBox()
+        self.ca_val.setRange(-1000, 2000)
+        self.ca_val.setDecimals(3)
+        ca_form.addRow("输出类型:", self.ca_type)
+        ca_form.addRow("输出设定值:", self.ca_val)
+        self.param_stack.addWidget(self.page_ca550)
+
         main_layout.addWidget(self.param_stack)
         
         main_layout.addStretch()
@@ -299,6 +326,27 @@ class StepDialog(QDialog):
         elif "读取电流" in params_str:
             self.rb_curr.setChecked(True)
 
+        if "CH:" in params_str:
+            import re
+            ch_match = re.search(r'CH:(\d+)', params_str)
+            if ch_match:
+                self.r_channel.setValue(int(ch_match.group(1)))
+                
+        if "Type:" in params_str:
+            import re
+            type_match = re.search(r'Type:([^\s/]+)', params_str)
+            if type_match:
+                type_str = type_match.group(1)
+                for i in range(self.ca_type.count()):
+                    if self.ca_type.itemText(i).startswith(type_str):
+                        self.ca_type.setCurrentIndex(i)
+                        break
+        if "Val:" in params_str:
+            import re
+            val_match = re.search(r'Val:([\d.-]+)', params_str)
+            if val_match:
+                self.ca_val.setValue(float(val_match.group(1)))
+
     def on_device_changed(self, index):
         self.action_combo.clear()
         device_text = self.device_combo.currentText()
@@ -307,8 +355,15 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据"])
         elif "等待" in device_text:
             self.action_combo.addItems(["固定延时"])
-        else: # 模拟器, NGI, AFE, Main
-            self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
+        elif "继电器" in device_text:
+            self.action_combo.addItems(["闭合指定通道", "断开指定通道", "全部断开"])
+        elif "CA550" in device_text:
+            self.action_combo.addItems(["设置输出参数", "开启输出", "关闭输出"])
+        else: # 电源类: 模拟器, NGI, AFE, Main, Power Board
+            if "Simulator" in device_text:
+                self.action_combo.addItems(["设置参数", "全部通道设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
+            else:
+                self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
         
         self.on_action_changed()
 
@@ -320,7 +375,17 @@ class StepDialog(QDialog):
             self.param_stack.setCurrentIndex(1)
         elif "等待" in device:
             self.param_stack.setCurrentIndex(2)
-        elif "设置" in action:
+        elif "继电器" in device:
+            if "指定通道" in action:
+                self.param_stack.setCurrentIndex(4)
+            else:
+                self.param_stack.setCurrentIndex(-1)
+        elif "CA550" in device:
+            if "设置输出" in action:
+                self.param_stack.setCurrentIndex(5)
+            else:
+                self.param_stack.setCurrentIndex(-1)
+        elif "设置参数" in action:
             self.param_stack.setCurrentIndex(0)
         elif "回读" in action or "读取数据" in action:
             self.param_stack.setCurrentIndex(3)
@@ -349,6 +414,13 @@ class StepDialog(QDialog):
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")
+        elif idx == 4: # 继电器
+            step_type = "继电器控制"
+            params.append(f"CH:{self.r_channel.value()}")
+        elif idx == 5: # CA550
+            step_type = "校准仪设置"
+            params.append(f"Type:{self.ca_type.currentText().split(' ')[0]}")
+            params.append(f"Val:{self.ca_val.value()}")
         elif "全部" in action:
             params.append("--")
 

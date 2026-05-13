@@ -20,28 +20,62 @@ class HardwareTab(QWidget):
         
         # 使用表单布局排列全局设备
         form_left = QFormLayout()
-        self.edit_hv_ip = QLineEdit("192.168.1.190")
-        self.edit_afe_ip = QLineEdit("192.168.1.200")
-        form_left.addRow("NGI 高压源 IP:", self.edit_hv_ip)
-        form_left.addRow("1# AFE 电源 IP:", self.edit_afe_ip)
+        self.edit_afe1_ip = QLineEdit("192.168.1.200")
+        self.edit_afe1_port = QLineEdit("2000")
+        self.edit_afe2_ip = QLineEdit("192.168.1.203")
+        self.edit_afe2_port = QLineEdit("10001")
+        self.edit_afe3_ip = QLineEdit("192.168.1.203")
+        self.edit_afe3_port = QLineEdit("10001")
+        self.edit_main_ip = QLineEdit("192.168.1.201")
+        self.edit_main_port = QLineEdit("2000")
+        self.edit_pwr_board_ip = QLineEdit("192.168.1.202")
+        self.edit_pwr_board_port = QLineEdit("10001")
+        
+        form_left.addRow("1# AFE 电源 IP:", self.edit_afe1_ip)
+        form_left.addRow("1# AFE 端口:", self.edit_afe1_port)
+        form_left.addRow("2# AFE 电源 IP:", self.edit_afe2_ip)
+        form_left.addRow("2# AFE 端口:", self.edit_afe2_port)
+        form_left.addRow("3# AFE 电源 IP:", self.edit_afe3_ip)
+        form_left.addRow("3# AFE 端口:", self.edit_afe3_port)
+        form_left.addRow("主机板电源 IP:", self.edit_main_ip)
+        form_left.addRow("主机板端口:", self.edit_main_port)
+        form_left.addRow("功能板电源 IP:", self.edit_pwr_board_ip)
+        form_left.addRow("功能板端口:", self.edit_pwr_board_port)
         
         form_right = QFormLayout()
-        self.edit_main_ip = QLineEdit("192.168.1.201")
-        self.edit_voice_com = QLineEdit("COM3")
-        self.edit_scanner_com = QLineEdit("COM4")
-        form_right.addRow("主机板电源 IP:", self.edit_main_ip)
-        form_right.addRow("语音模块端口:", self.edit_voice_com)
-        form_right.addRow("扫码枪端口:", self.edit_scanner_com)
+        self.edit_hv_ip = QLineEdit("192.168.1.190")
+        self.edit_hv_port = QLineEdit("7000")
+        self.edit_ca550_com = QLineEdit("")
+        self.edit_easy320_ip = QLineEdit("192.168.1.88")
+        self.edit_sim1_ip = QLineEdit("192.168.1.210")
+        self.edit_sim1_port = QLineEdit("5025")
+        self.edit_sim2_ip = QLineEdit("192.168.1.211")
+        self.edit_sim2_port = QLineEdit("5025")
+        self.edit_sim3_ip = QLineEdit("192.168.1.212")
+        self.edit_sim3_port = QLineEdit("5025")
+        
+        form_right.addRow("NGI 高压源 IP:", self.edit_hv_ip)
+        form_right.addRow("NGI 端口:", self.edit_hv_port)
+        form_right.addRow("CA550 串口:", self.edit_ca550_com)
+        form_right.addRow("Easy320 IP:", self.edit_easy320_ip)
+        form_right.addRow("1# 模拟电池 IP:", self.edit_sim1_ip)
+        form_right.addRow("1# 电池端口:", self.edit_sim1_port)
+        form_right.addRow("2# 模拟电池 IP:", self.edit_sim2_ip)
+        form_right.addRow("2# 电池端口:", self.edit_sim2_port)
+        form_right.addRow("3# 模拟电池 IP:", self.edit_sim3_ip)
+        form_right.addRow("3# 电池端口:", self.edit_sim3_port)
         
         global_layout.addLayout(form_left)
         global_layout.addLayout(form_right)
         
         btn_v_layout = QVBoxLayout()
-        self.btn_save_global = QPushButton("保存全局配置")
-        self.btn_save_global.setFixedWidth(120)
+        self.btn_save_global = QPushButton("💾 保存全局配置")
+        self.btn_save_global.setFixedWidth(130)
+        self.btn_save_global.setFixedHeight(50)
         self.btn_save_global.clicked.connect(self.save_global_config)
-        self.btn_save_global.setStyleSheet("background-color: #007BFF; font-weight: bold;")
+        self.btn_save_global.setStyleSheet("background-color: #007BFF; font-weight: bold; font-size: 14px;")
         btn_v_layout.addWidget(self.btn_save_global)
+        btn_v_layout.addStretch()
         global_layout.addLayout(btn_v_layout)
         
         global_group.setLayout(global_layout)
@@ -107,11 +141,26 @@ class HardwareTab(QWidget):
         # 加载全局配置
         sys_cfg = self.db_manager.load_sys_config()
         if sys_cfg:
-            self.edit_hv_ip.setText(sys_cfg.get("hv_ip", ""))
-            self.edit_afe_ip.setText(sys_cfg.get("afe_ip", ""))
-            self.edit_main_ip.setText(sys_cfg.get("main_ip", ""))
-            self.edit_voice_com.setText(sys_cfg.get("voice_com", "COM3"))
-            self.edit_scanner_com.setText(sys_cfg.get("scanner_com", "COM4"))
+            self.edit_afe1_ip.setText(sys_cfg.get("afe1_ip", "192.168.1.200"))
+            self.edit_afe1_port.setText(str(sys_cfg.get("afe1_port", "2000")))
+            self.edit_afe2_ip.setText(sys_cfg.get("afe2_ip", "192.168.1.203"))
+            self.edit_afe2_port.setText(str(sys_cfg.get("afe2_port", "10001")))
+            self.edit_afe3_ip.setText(sys_cfg.get("afe3_ip", "192.168.1.203"))
+            self.edit_afe3_port.setText(str(sys_cfg.get("afe3_port", "10001")))
+            self.edit_main_ip.setText(sys_cfg.get("main_ip", "192.168.1.201"))
+            self.edit_main_port.setText(str(sys_cfg.get("main_port", "2000")))
+            self.edit_pwr_board_ip.setText(sys_cfg.get("pwr_board_ip", "192.168.1.202"))
+            self.edit_pwr_board_port.setText(str(sys_cfg.get("pwr_board_port", "10001")))
+            self.edit_hv_ip.setText(sys_cfg.get("hv_ip", "192.168.1.190"))
+            self.edit_hv_port.setText(str(sys_cfg.get("hv_port", "7000")))
+            self.edit_ca550_com.setText(sys_cfg.get("ca550_com", ""))
+            self.edit_easy320_ip.setText(sys_cfg.get("easy320_ip", "192.168.1.88"))
+            self.edit_sim1_ip.setText(sys_cfg.get("sim1_ip", "192.168.1.210"))
+            self.edit_sim1_port.setText(str(sys_cfg.get("sim1_port", "5025")))
+            self.edit_sim2_ip.setText(sys_cfg.get("sim2_ip", "192.168.1.211"))
+            self.edit_sim2_port.setText(str(sys_cfg.get("sim2_port", "5025")))
+            self.edit_sim3_ip.setText(sys_cfg.get("sim3_ip", "192.168.1.212"))
+            self.edit_sim3_port.setText(str(sys_cfg.get("sim3_port", "5025")))
             
         # 加载通道配置
         ch_cfgs = self.db_manager.load_channel_config()
@@ -125,14 +174,43 @@ class HardwareTab(QWidget):
 
     def save_global_config(self):
         data = {
-            "hv_ip": self.edit_hv_ip.text(),
-            "afe_ip": self.edit_afe_ip.text(),
+            "afe1_ip": self.edit_afe1_ip.text(),
+            "afe1_port": self.edit_afe1_port.text(),
+            "afe2_ip": self.edit_afe2_ip.text(),
+            "afe2_port": self.edit_afe2_port.text(),
+            "afe3_ip": self.edit_afe3_ip.text(),
+            "afe3_port": self.edit_afe3_port.text(),
             "main_ip": self.edit_main_ip.text(),
-            "voice_com": self.edit_voice_com.text(),
-            "scanner_com": self.edit_scanner_com.text()
+            "main_port": self.edit_main_port.text(),
+            "pwr_board_ip": self.edit_pwr_board_ip.text(),
+            "pwr_board_port": self.edit_pwr_board_port.text(),
+            "hv_ip": self.edit_hv_ip.text(),
+            "hv_port": self.edit_hv_port.text(),
+            "ca550_com": self.edit_ca550_com.text(),
+            "easy320_ip": self.edit_easy320_ip.text(),
+            "sim1_ip": self.edit_sim1_ip.text(),
+            "sim1_port": self.edit_sim1_port.text(),
+            "sim2_ip": self.edit_sim2_ip.text(),
+            "sim2_port": self.edit_sim2_port.text(),
+            "sim3_ip": self.edit_sim3_ip.text(),
+            "sim3_port": self.edit_sim3_port.text()
         }
         if self.db_manager.save_sys_config(data):
-            QMessageBox.information(self, "成功", "全局设备配置已保存。")
+            # 动态通知设备管理器更新配置
+            try:
+                from PySide6.QtWidgets import QApplication
+                main_win = None
+                for widget in QApplication.topLevelWidgets():
+                    if hasattr(widget, "device_manager"):
+                        main_win = widget
+                        break
+                if main_win:
+                    main_win.device_manager.update_config()
+                    QMessageBox.information(self, "成功", "全局设备配置已保存并实时生效。")
+                else:
+                    QMessageBox.information(self, "成功", "全局设备配置已保存（下次启动生效）。")
+            except Exception as e:
+                QMessageBox.warning(self, "保存成功但更新失败", f"配置已保存，但实时更新失败: {e}")
 
     def save_channel_config(self):
         configs = []

@@ -93,6 +93,12 @@ class ChannelWorker(QObject):
             return
 
         step = self.steps[self.current_step_index]
+        if step.name.strip().startswith("#"):
+            self.log_message.emit(self.channel_id, f"[*] 测试项被屏蔽，跳过执行: {step.name}")
+            self.current_step_index += 1
+            self.run_next_step()
+            return
+            
         self.step_started.emit(self.channel_id, step.name)
         self.current_sub_step_index = 0
         self.current_step_results = []
@@ -141,17 +147,30 @@ class ChannelWorker(QObject):
             if sub_step.type == SubStepType.SET_INSTRUMENT:
                 device = params.get("device", "").lower()
                 p_str = str(params.get("params", ""))
+                action = params.get("action", "")
                 
                 if "simulator" in device:
-                    if "全部开启" in params.get("action", ""): success = mgr.broadcast_output(True)
-                    elif "全部关闭" in params.get("action", ""): success = mgr.broadcast_output(False)
+                    if "全部" in action:
+                        if "开启" in action: success = mgr.broadcast_output(True, logger=hw_logger)
+                        elif "关闭" in action: success = mgr.broadcast_output(False, logger=hw_logger)
+                        else:
+                            # 全部通道设置参数
+                            if "V" in p_str:
+                                val = self._parse_numeric(p_str.split("V")[0])
+                                success = success and mgr.broadcast_voltage(val, logger=hw_logger)
+                            if "A" in p_str:
+                                a_match = re.search(r"([\d\.]+)\s*A", p_str)
+                                if a_match:
+                                    val = float(a_match.group(1))
+                                    success = success and mgr.broadcast_current(val, logger=hw_logger)
+                            if "开启输出" in p_str: success = success and mgr.broadcast_output(True, logger=hw_logger)
+                            elif "关闭输出" in p_str: success = success and mgr.broadcast_output(False, logger=hw_logger)
                     else:
-                        # 改进的参数解析
+                        # 改进的参数解析 (单通道)
                         if "V" in p_str:
                             val = self._parse_numeric(p_str.split("V")[0])
                             success = success and mgr.set_voltage(self.channel_id, val, logger=hw_logger)
                         if "A" in p_str:
-                            # 提取 A 前面的数字
                             a_match = re.search(r"([\d\.]+)\s*A", p_str)
                             if a_match:
                                 val = float(a_match.group(1))
@@ -159,9 +178,51 @@ class ChannelWorker(QObject):
                         if "开启输出" in p_str: success = success and mgr.output_control(self.channel_id, True, logger=hw_logger)
                         elif "关闭输出" in p_str: success = success and mgr.output_control(self.channel_id, False, logger=hw_logger)
                 
-                elif "afe" in device: success = mgr.afe_power_1.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
-                elif "main_power" in device: success = mgr.mainboard_power.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
-                elif "hv_source" in device: success = mgr.hv_source.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
+                elif any(x in device for x in ["afe", "main power", "hv source", "power board"]):
+                    pwr_inst = None
+                    if "afe 1" in device or "1# afe" in device: pwr_inst = mgr.afe_power_1
+                    elif "afe 2" in device or "2# afe" in device: pwr_inst = mgr.afe_pwr_standalone
+                    elif "afe 3" in device or "3# afe" in device:
+                        hw_logger("警告: 3# AFE 电源尚未接入系统。")
+                        success = False
+                    elif "main" in device: pwr_inst = mgr.mainboard_power
+                    elif "hv" in device: pwr_inst = mgr.hv_source
+                    elif "power board" in device: pwr_inst = getattr(mgr, 'power_board_ru12', None)
+                    
+                    if pwr_inst:
+                        if "V" in p_str:
+                            val = self._parse_numeric(p_str.split("V")[0])
+                            if hasattr(pwr_inst, 'set_voltage'): success = success and pwr_inst.set_voltage(val)
+                        if "A" in p_str:
+                            a_match = re.search(r"([\d\.]+)\s*A", p_str)
+                            if a_match and hasattr(pwr_inst, 'set_current'):
+                                success = success and pwr_inst.set_current(float(a_match.group(1)))
+                        if "开启输出" in p_str: success = success and pwr_inst.output_control(True)
+                        elif "关闭输出" in p_str: success = success and pwr_inst.output_control(False)
+                    else:
+                        success = False
+                        hw_logger(f"错误: 找不到 {device} 设备实例。")
+
+                elif "继电器" in device or "easy320" in device or "aging board" in device:
+                    relay_inst = getattr(mgr, 'easy320', None) if "easy320" in device else getattr(mgr, 'aging_board', None)
+                    ch_match = re.search(r"CH:(\d+)", p_str)
+                    ch = int(ch_match.group(1)) if ch_match else 1
+                    if relay_inst:
+                        if "全部断开" in action and hasattr(relay_inst, 'write_all_off'): success = relay_inst.write_all_off()
+                        elif "闭合" in action and hasattr(relay_inst, 'close_channel'): success = relay_inst.close_channel(ch)
+                        elif "断开" in action and hasattr(relay_inst, 'open_channel'): success = relay_inst.open_channel(ch)
+                        else: success = False
+                    else: success = False
+                
+                elif "ca550" in device:
+                    if "设置输出" in action:
+                        type_match = re.search(r'Type:([^\s/]+)', p_str)
+                        val_match = re.search(r'Val:([\d.-]+)', p_str)
+                        if type_match and val_match and hasattr(mgr.ca550, 'set_output'):
+                            success = mgr.ca550.set_output(type_match.group(1), float(val_match.group(1)))
+                    elif "开启" in action and hasattr(mgr.ca550, 'set_output_state'): success = mgr.ca550.set_output_state(True)
+                    elif "关闭" in action and hasattr(mgr.ca550, 'set_output_state'): success = mgr.ca550.set_output_state(False)
+                    else: success = False
 
             elif sub_step.type == SubStepType.READ_INSTRUMENT:
                 device = params.get("device", "").lower()
@@ -174,13 +235,30 @@ class ChannelWorker(QObject):
                     elif "电流" in p_str:
                         result_value = mgr.measure_current(self.channel_id, logger=hw_logger)
                         success = result_value > -500
+                elif any(x in device for x in ["afe", "main power", "hv source", "power board"]):
+                    pwr_inst = None
+                    if "afe 1" in device or "1# afe" in device: pwr_inst = mgr.afe_power_1
+                    elif "afe 2" in device or "2# afe" in device: pwr_inst = mgr.afe_pwr_standalone
+                    elif "main" in device: pwr_inst = mgr.mainboard_power
+                    elif "hv" in device: pwr_inst = mgr.hv_source
+                    elif "power board" in device: pwr_inst = getattr(mgr, 'power_board_ru12', None)
                     
-                    # 采样数据存库
-                    if success and self.db_manager and self.test_id != -1:
-                        # 模拟读取电压电流
-                        v = result_value if "电压" in p_str else -1
-                        c = result_value if "电流" in p_str else -1
-                        self.db_manager.log_detail(self.test_id, self.steps[self.current_step_index].name, v, c, "--")
+                    if pwr_inst:
+                        if "电压" in p_str and hasattr(pwr_inst, 'measure_voltage'):
+                            result_value = pwr_inst.measure_voltage()
+                            success = result_value >= 0
+                        elif "电流" in p_str and hasattr(pwr_inst, 'measure_current'):
+                            result_value = pwr_inst.measure_current()
+                            success = result_value >= 0
+                    else:
+                        success = False
+
+                # 采样数据存库
+                if success and self.db_manager and self.test_id != -1 and result_value is not None:
+                    # 模拟读取电压电流
+                    v = result_value if "电压" in p_str else -1
+                    c = result_value if "电流" in p_str else -1
+                    self.db_manager.log_detail(self.test_id, self.steps[self.current_step_index].name, v, c, "--")
 
             elif sub_step.type == SubStepType.CAN_SEND:
                 success = mgr.can_bus.send_frame(params.get("id"), params.get("data"), logger=hw_logger)
