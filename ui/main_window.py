@@ -19,6 +19,7 @@ from ui.tabs.power_board_tab import PowerBoardTab
 
 
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -57,9 +58,27 @@ class MainWindow(QMainWindow):
         self.tab_config = ConfigTab(self.db_manager)
         self.tabs.addTab(self.tab_config, "工步与配方配置")
 
-        # 3. 硬件设备配置页
+        # 3. 硬件设备配置页 (硬件管理中心)
         self.tab_hardware = HardwareTab(self.db_manager)
-        self.tabs.addTab(self.tab_hardware, "设备通讯与全局配置")
+        self.tab_hardware.set_device_manager(self.device_manager)
+        self.tabs.addTab(self.tab_hardware, "硬件管理中心")
+        
+        # 启动时自动初始化硬件 (多线程异步执行，防止 UI 卡死)
+        import threading
+        def async_init():
+            try:
+                self.device_manager.init_all_devices()
+                # 初始化完成后，通知状态栏
+                from PySide6.QtCore import QMetaObject, Qt, Q_ARG
+                QMetaObject.invokeMethod(self.status_bar, "showMessage", 
+                                       Qt.QueuedConnection, 
+                                       Q_ARG(str, "✅ 后台硬件初始化指令已下发完毕"), 
+                                       Q_ARG(int, 5000))
+            except Exception as e:
+                print(f"后台初始化异常: {e}")
+
+        init_thread = threading.Thread(target=async_init, daemon=True)
+        init_thread.start()
 
         # 4. 单通道调试页
         self.tab_debug = DebugTab()
@@ -75,28 +94,33 @@ class MainWindow(QMainWindow):
 
         # 7. 1#AFE 供电电源页
         self.tab_afe = AFEPowerTab(self.device_manager)
-        self.tabs.addTab(self.tab_afe, "1#AFE供电电源")
+        self.tabs.addTab(self.tab_afe, "AFE供电电源")
 
-        # 8. 主机板供电电源页
-        self.tab_main_power = MainboardPowerTab(self.device_manager)
-        self.tabs.addTab(self.tab_main_power, "主机板供电电源")
+        # 8. 被测物供电电源页
+        self.tab_dut_power = MainboardPowerTab(self.device_manager)
+        self.tabs.addTab(self.tab_dut_power, "被测物供电电源")
 
         # --- 扩展调试页 (B 方案: 四个独立 Tab) ---
+        # 默认调试 1 号通道的板卡
+        first_board = self.device_manager.boards.get(1)
+        
         self.tab_afe_standalone = AFEPowerStandaloneTab(self.device_manager.afe_pwr_standalone)
         self.tabs.addTab(self.tab_afe_standalone, "AFE电源调试")
 
-        self.tab_power_board = PowerBoardTab(self.device_manager.power_board_ru12)
-        self.tabs.addTab(self.tab_power_board, "功能测试板电源")
+        self.tab_ctrl_pwr = PowerBoardTab(self.device_manager.ctrl_board_power)
+        self.tabs.addTab(self.tab_ctrl_pwr, "控制板电源调试")
 
-        self.tab_aging_standalone = AgingBoardStandaloneTab(self.device_manager.aging_board)
-        self.tabs.addTab(self.tab_aging_standalone, "老化板调试")
-
+        if first_board:
+            self.tab_aging_standalone = AgingBoardStandaloneTab(first_board.relays)
+            self.tabs.addTab(self.tab_aging_standalone, "老化板调试")
+        
         self.tab_easy320_standalone = Easy320StandaloneTab(self.device_manager.easy320)
         self.tabs.addTab(self.tab_easy320_standalone, "Easy320调试")
 
         self.tab_ca550_standalone = CA550StandaloneTab(self.device_manager.ca550)
         self.tabs.addTab(self.tab_ca550_standalone, "CA550调试")
 
+        # RNCAN 调试页现在需要传入整个 DeviceManager 以便选择通道
         self.tab_rn_can = RNCANTab(self.device_manager)
         self.tabs.addTab(self.tab_rn_can, "RNCAN调试")
 

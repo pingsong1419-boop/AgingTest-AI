@@ -87,7 +87,8 @@ class StepDialog(QDialog):
             "老化功能板继电器 (Aging Board)",
             "功能测试板电源 (Power Board)",
             "CAN 交互",
-            "等待 (Wait)"
+            "等待 (Wait)",
+            "同步屏障 (Synchronization Barrier)"
         ])
         top_layout.addRow("控制设备:", self.device_combo)
         
@@ -355,6 +356,8 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据"])
         elif "等待" in device_text:
             self.action_combo.addItems(["固定延时"])
+        elif "同步屏障" in device_text:
+            self.action_combo.addItems(["等待全通道同步"])
         elif "继电器" in device_text:
             self.action_combo.addItems(["闭合指定通道", "断开指定通道", "全部断开"])
         elif "CA550" in device_text:
@@ -375,6 +378,8 @@ class StepDialog(QDialog):
             self.param_stack.setCurrentIndex(1)
         elif "等待" in device:
             self.param_stack.setCurrentIndex(2)
+        elif "同步屏障" in device:
+            self.param_stack.setCurrentIndex(-1)
         elif "继电器" in device:
             if "指定通道" in action:
                 self.param_stack.setCurrentIndex(4)
@@ -400,7 +405,10 @@ class StepDialog(QDialog):
         params = []
         step_type = "设置仪表"
         
-        if idx == 0: # 设置页面
+        if "同步屏障" in device:
+            step_type = "同步屏障"
+            params.append("Barrier")
+        elif idx == 0: # 设置页面
             if self.cb_volt.isChecked(): params.append(f"{self.i_volt.value()}V")
             if self.cb_curr.isChecked(): params.append(f"{self.i_curr.value()}A")
             if self.cb_output.isChecked(): params.append(self.output_combo.currentText())

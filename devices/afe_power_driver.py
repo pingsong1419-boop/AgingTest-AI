@@ -35,7 +35,7 @@ class AFEPowerController:
         self.is_connected = False
 
     def connect(self) -> bool:
-        """建立 Modbus TCP 连接 (带物理参数校验)"""
+        """建立 Modbus TCP 连接并验证通讯"""
         with self.lock:
             try:
                 # 检查 IP 或端口是否变化，如果变化则重建 client
@@ -51,13 +51,23 @@ class AFEPowerController:
                     )
                 
                 if self.client.connect():
-                    self.is_connected = True
-                    logger.info(f"成功连接至 AFE 电源: {self.ip}:{self.port}")
-                    return True
+                    # 握手验证：尝试读取电压回读寄存器 (100)
+                    result = self.client.read_input_registers(address=100, count=1, device_id=self.slave_id)
+                    if result and not result.isError():
+                        self.is_connected = True
+                        logger.info(f"成功连接至 AFE 电源: {self.ip}:{self.port}")
+                        return True
+                    else:
+                        self.client.close()
+                        self.is_connected = False
+                        logger.error(f"AFE 电源握手失败: {self.ip}:{self.port}")
+                        return False
                 else:
+                    self.is_connected = False
                     logger.error(f"连接 AFE 电源失败: {self.ip}:{self.port}")
                     return False
             except Exception as e:
+                self.is_connected = False
                 logger.error(f"连接异常: {e}")
                 return False
 

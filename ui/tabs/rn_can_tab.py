@@ -125,7 +125,9 @@ class RNCANTab(QWidget):
     def __init__(self, device_manager: DeviceManager):
         super().__init__()
         self.device_manager = device_manager
-        self.driver = device_manager.rn_can
+        # 默认使用 1 号板卡
+        self.current_board = device_manager.boards.get(1)
+        self.driver = self.current_board.can if self.current_board else None
         
         self.is_logging = False
         self.log_file = None
@@ -162,14 +164,20 @@ class RNCANTab(QWidget):
         self.btn_disconnect.setEnabled(False)
         self.btn_disconnect.clicked.connect(self.disconnect_device)
         
-        conn_layout.addWidget(QLabel("网关 IP:"), 0, 0)
-        conn_layout.addWidget(self.ip_edit, 0, 1)
-        conn_layout.addWidget(QLabel("数据端口:"), 1, 0)
-        conn_layout.addWidget(self.port_edit, 1, 1)
-        conn_layout.addWidget(QLabel("配置端口:"), 1, 2)
-        conn_layout.addWidget(self.modbus_port_edit, 1, 3)
-        conn_layout.addWidget(self.btn_connect, 0, 2, 1, 2)
-        conn_layout.addWidget(self.btn_disconnect, 2, 0, 1, 4)
+        self.combo_target_ch = QComboBox()
+        for i in range(1, 61): self.combo_target_ch.addItem(f"通道 {i}", i)
+        self.combo_target_ch.currentIndexChanged.connect(self.on_target_board_changed)
+        
+        conn_layout.addWidget(QLabel("选择板卡:"), 0, 0)
+        conn_layout.addWidget(self.combo_target_ch, 0, 1)
+        conn_layout.addWidget(QLabel("网关 IP:"), 1, 0)
+        conn_layout.addWidget(self.ip_edit, 1, 1)
+        conn_layout.addWidget(QLabel("数据端口:"), 2, 0)
+        conn_layout.addWidget(self.port_edit, 2, 1)
+        conn_layout.addWidget(QLabel("配置端口:"), 2, 2)
+        conn_layout.addWidget(self.modbus_port_edit, 2, 3)
+        conn_layout.addWidget(self.btn_connect, 1, 2, 1, 2)
+        conn_layout.addWidget(self.btn_disconnect, 3, 0, 1, 4)
         
         # 1.2 硬件参数配置
         hw_group = QGroupBox("2. CAN 硬件参数配置 (Modbus)")
@@ -307,6 +315,20 @@ class RNCANTab(QWidget):
         btn_del = QPushButton("移除")
         btn_del.clicked.connect(lambda: self.send_table.removeRow(self.send_table.currentRow()))
         self.send_table.setCellWidget(row, 7, btn_del)
+
+    def on_target_board_changed(self, index):
+        ch_id = self.combo_target_ch.currentData()
+        self.current_board = self.device_manager.boards.get(ch_id)
+        if self.current_board:
+            self.driver = self.current_board.can
+            self.ip_edit.setText(self.current_board.ip)
+            # 根据连接状态更新按钮
+            if self.driver.is_connected:
+                self.btn_connect.setText("已连接"); self.btn_connect.setStyleSheet("background-color: #2E7D32; color: white;")
+                self.btn_disconnect.setEnabled(True)
+            else:
+                self.btn_connect.setText("连接"); self.btn_connect.setStyleSheet("background-color: #1A237E; color: white;")
+                self.btn_connect.setEnabled(True); self.btn_disconnect.setEnabled(False)
 
     def apply_hw_config(self):
         ip = self.ip_edit.text()

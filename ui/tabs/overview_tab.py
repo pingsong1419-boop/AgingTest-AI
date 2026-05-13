@@ -105,7 +105,27 @@ class OverviewTab(QWidget):
         control_panel.addWidget(self.btn_stop)
         
         control_panel.addStretch()
+        
+        # 新增：全局同步状态指示
+        self.lbl_sync_status = QLabel("同步状态: 空闲")
+        self.lbl_sync_status.setStyleSheet("""
+            QLabel {
+                background-color: #1A1A2E;
+                color: #808080;
+                border: 1px solid #4ECCA3;
+                border-radius: 4px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+        """)
+        control_panel.addWidget(self.lbl_sync_status)
+        
         main_layout.addLayout(control_panel)
+        
+        # 连接引擎信号
+        if self.engine:
+            self.engine.barrier_status_changed.connect(self.update_sync_status)
+            self.engine.channel_sync_status_changed.connect(self.on_channel_sync_changed)
         
         # --- 下方：通道网格 ---
         scroll = QScrollArea()
@@ -235,6 +255,44 @@ class OverviewTab(QWidget):
         for ch in self.channel_widgets:
             ch.chk_select.setChecked(any_unselected)
 
+    def update_sync_status(self, waiting, total):
+        """更新全局同步指示器"""
+        if waiting > 0:
+            self.lbl_sync_status.setText(f"同步中: {waiting}/{total} 就绪")
+            self.lbl_sync_status.setStyleSheet("""
+                QLabel {
+                    background-color: #533483;
+                    color: #FFD700;
+                    border: 1px solid #FFD700;
+                    border-radius: 4px;
+                    padding: 5px 15px;
+                    font-weight: bold;
+                }
+            """)
+        else:
+            self.lbl_sync_status.setText("同步状态: 已对齐/空闲")
+            self.lbl_sync_status.setStyleSheet("""
+                QLabel {
+                    background-color: #1A1A2E;
+                    color: #4ECCA3;
+                    border: 1px solid #4ECCA3;
+                    border-radius: 4px;
+                    padding: 5px 15px;
+                    font-weight: bold;
+                }
+            """)
+            
+    def on_channel_sync_changed(self, channel_id, is_waiting):
+        """处理单个通道的同步状态变化"""
+        idx = channel_id - 1
+        if 0 <= idx < len(self.channel_widgets):
+            widget = self.channel_widgets[idx]
+            if is_waiting:
+                widget.set_status("WAIT_SYNC", "#FFD700") # 金黄色
+            else:
+                # 恢复为测试中状态
+                widget.set_status("TESTING", "green")
+            
     def update_recipes(self, recipe_list):
         """当别的界面新建了配方后，同步更新到本界面的下拉框里"""
         current = self.combo_recipe.currentText()
