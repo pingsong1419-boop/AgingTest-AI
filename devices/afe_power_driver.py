@@ -87,12 +87,12 @@ class AFEPowerController:
     def set_current(self, current: float) -> bool:
         """
         设置限流值 (寄存器地址 150)
-        倍率: 10
+        倍率: 100
         """
         with self.lock:
             if not self.is_connected: return False
             try:
-                val = int(round(current * 10))
+                val = int(round(current * 100))
                 result = self.client.write_register(address=150, value=val, device_id=self.slave_id)
                 return not result.isError()
             except Exception as e:
@@ -132,14 +132,14 @@ class AFEPowerController:
     def measure_current(self) -> float:
         """
         读取实时电流 (输入寄存器地址 101)
-        倍率: 0.1
+        倍率: 0.01
         """
         with self.lock:
             if not self.is_connected: return -1.0
             try:
                 result = self.client.read_input_registers(address=101, count=1, device_id=self.slave_id)
                 if result and not result.isError():
-                    return result.registers[0] / 10.0
+                    return result.registers[0] / 100.0
                 return -1.0
             except Exception as e:
                 logger.error(f"电流读取异常: {e}")

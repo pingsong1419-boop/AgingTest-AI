@@ -14,6 +14,8 @@ from ui.tabs.afe_power_tab_standalone import AFEPowerStandaloneTab
 from ui.tabs.aging_board_tab_standalone import AgingBoardStandaloneTab
 from ui.tabs.easy320_tab_standalone import Easy320StandaloneTab
 from ui.tabs.ca550_tab_standalone import CA550StandaloneTab
+from ui.tabs.rn_can_tab import RNCANTab
+from ui.tabs.power_board_tab import PowerBoardTab
 
 
 
@@ -83,6 +85,9 @@ class MainWindow(QMainWindow):
         self.tab_afe_standalone = AFEPowerStandaloneTab(self.device_manager.afe_pwr_standalone)
         self.tabs.addTab(self.tab_afe_standalone, "AFE电源调试")
 
+        self.tab_power_board = PowerBoardTab(self.device_manager.power_board_ru12)
+        self.tabs.addTab(self.tab_power_board, "功能测试板电源")
+
         self.tab_aging_standalone = AgingBoardStandaloneTab(self.device_manager.aging_board)
         self.tabs.addTab(self.tab_aging_standalone, "老化板调试")
 
@@ -91,6 +96,9 @@ class MainWindow(QMainWindow):
 
         self.tab_ca550_standalone = CA550StandaloneTab(self.device_manager.ca550)
         self.tabs.addTab(self.tab_ca550_standalone, "CA550调试")
+
+        self.tab_rn_can = RNCANTab(self.device_manager)
+        self.tabs.addTab(self.tab_rn_can, "RNCAN调试")
 
         layout.addWidget(self.tabs)
 

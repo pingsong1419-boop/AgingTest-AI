@@ -30,18 +30,23 @@ class AFEPowerStandaloneTab(QWidget):
         config_group = QGroupBox("网络配置 (Modbus TCP)")
         config_layout = QHBoxLayout()
         config_layout.addWidget(QLabel("IP 地址:"))
-        self.edit_ip = QLineEdit(self.pwr.ip)
+        self.edit_ip = QLineEdit("192.168.1.203")
         config_layout.addWidget(self.edit_ip)
         
         config_layout.addWidget(QLabel("端口:"))
-        self.edit_port = QLineEdit(str(self.pwr.port))
+        self.edit_port = QLineEdit("10001")
         self.edit_port.setFixedWidth(60)
         config_layout.addWidget(self.edit_port)
         
-        btn_connect = QPushButton("连接")
+        btn_connect = QPushButton("连接设备")
         btn_connect.setStyleSheet("background-color: #007BFF; color: white;")
         btn_connect.clicked.connect(self.connect_device)
         config_layout.addWidget(btn_connect)
+        
+        btn_disconnect = QPushButton("断开连接")
+        btn_disconnect.setStyleSheet("background-color: #6C757D; color: white;")
+        btn_disconnect.clicked.connect(self.disconnect_device)
+        config_layout.addWidget(btn_disconnect)
         
         self.lbl_status = QLabel("●")
         self.lbl_status.setStyleSheet("color: red; font-size: 20px;")
@@ -113,6 +118,11 @@ class AFEPowerStandaloneTab(QWidget):
             self.lbl_status.setStyleSheet("color: green; font-size: 20px;")
         else:
             QMessageBox.critical(self, "错误", "无法连接到电源。")
+
+    def disconnect_device(self):
+        if hasattr(self.pwr, 'disconnect'):
+            self.pwr.disconnect()
+        self.lbl_status.setStyleSheet("color: red; font-size: 20px;")
 
     def update_readings(self):
         if self.pwr.is_connected:

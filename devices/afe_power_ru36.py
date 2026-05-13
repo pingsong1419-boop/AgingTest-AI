@@ -72,13 +72,13 @@ class AFEPowerRU36:
                 return False
 
     def set_current(self, current: float, logger=None) -> bool:
-        """设置电流 (十进制地址 150, 倍率 10)"""
+        """设置电流 (十进制地址 150, 倍率 100)"""
         with self.lock:
             if not self.is_connected:
                 if logger: logger(f"[IP: {self.ip}] 错误: AFE电源未连接")
                 return False
             try:
-                val = int(round(current * 10))
+                val = int(round(current * 100))
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Register 150: {val}")
                 result = self.client.write_register(150, val, device_id=self.unit_id)
                 if logger: logger(f"[IP: {self.ip}] [RX] {'Error' if result.isError() else 'Success'}")
@@ -122,7 +122,7 @@ class AFEPowerRU36:
                 return -1.0
 
     def measure_current(self, logger=None) -> float:
-        """测量电流 (十进制输入寄存器地址 101, 倍率 10)"""
+        """测量电流 (十进制输入寄存器地址 101, 倍率 100)"""
         with self.lock:
             if not self.is_connected:
                 if logger: logger(f"[IP: {self.ip}] 错误: AFE电源未连接")
@@ -133,7 +133,7 @@ class AFEPowerRU36:
                 if not result or result.isError():
                     if logger: logger(f"[IP: {self.ip}] [RX] Error")
                     return -1.0
-                val = result.registers[0] / 10.0
+                val = result.registers[0] / 100.0
                 if logger: logger(f"[IP: {self.ip}] [RX] {val} A")
                 return val
             except Exception as e:

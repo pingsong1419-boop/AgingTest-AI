@@ -7,6 +7,8 @@ from .aging_board_driver import AgingBoardController
 from .ca550_driver import CA550Controller
 from .easy320_driver import Easy320Controller
 from .afe_power_driver import AFEPowerController
+from .rn_can_driver import RNCANDriver
+from .power_board_ru12 import PowerBoardRU12
 
 
 class DeviceManager:
@@ -46,6 +48,12 @@ class DeviceManager:
 
         # 9. AFE 电源 (使用 afe_power_driver.py)
         self.afe_pwr_standalone = AFEPowerController(ip="192.168.1.203")
+
+        # 10. RNCAN 网关
+        self.rn_can = RNCANDriver(ip="192.168.1.10")
+
+        # 11. 功能测试板电源 (RU12-3040)
+        self.power_board_ru12 = PowerBoardRU12(ip="192.168.1.202", port=2000)
 
     def _get_sim_and_ch(self, global_ch: int):
         """
@@ -150,6 +158,8 @@ class DeviceManager:
         self.easy320.disconnect()
         self.ca550.disconnect()
         self.afe_pwr_standalone.disconnect()
+        self.rn_can.disconnect()
+        self.power_board_ru12.disconnect()
 
     def emergency_stop(self):
         """紧急停止：关闭所有电源输出"""
