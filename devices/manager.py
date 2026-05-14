@@ -244,7 +244,6 @@ class DeviceManager:
             logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 60")
             if online_count < 60:
                 logger(f"[!] 警告: 有 {60 - online_count} 个通道目前处于离线状态")
-        
         return True
 
     def get_all_device_status(self):

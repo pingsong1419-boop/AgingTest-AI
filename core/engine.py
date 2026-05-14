@@ -112,7 +112,7 @@ class ChannelWorker(QObject):
 
         step = self.steps[self.current_step_index]
         
-        # 集成好的功能：支持 # 屏蔽逻辑
+        # 集成好的功能：支持 # 屏蔽逻辑 (从原项目保留并优化)
         if step.name.strip().startswith("#"):
             self.log_message.emit(self.channel_id, f"[*] 测试项被屏蔽，跳过执行: {step.name}")
             self.current_step_index += 1
@@ -239,6 +239,7 @@ class ChannelWorker(QObject):
                             success = board.relays.all_off()
                     else:
                         success = False
+                        if logger: logger(f"错误: 找不到通道 {self.channel_id} 对应的控制板")
 
                 elif "easy320" in device:
                     if ":" in p_str:
@@ -311,6 +312,7 @@ class ChannelWorker(QObject):
                 board = mgr.boards.get(self.channel_id)
                 if board:
                     if not board.is_connected: board.connect()
+                    # RNCAN 通常对单通道板卡使用通道 0
                     success = board.can.send_can_message(
                         channel_id=0,
                         can_id=params.get("id"),
@@ -321,6 +323,7 @@ class ChannelWorker(QObject):
                 else: success = False
 
             elif sub_step.type == SubStepType.CAN_INTERACT:
+                # 暂时保留占位，后续可基于 RNCAN 的 recv_queue 实现
                 pass
 
             elif sub_step.type == SubStepType.WAIT:
@@ -392,7 +395,6 @@ class TestEngine(QObject):
     all_channels_finished = Signal()
     barrier_status_changed = Signal(int, int) # (已到人数, 总需人数)
     channel_sync_status_changed = Signal(int, bool) # (通道ID, 是否在等待)
-    
     def __init__(self, device_manager=None, db_manager=None):
         super().__init__()
         self.device_manager = device_manager
@@ -511,7 +513,6 @@ class TestEngine(QObject):
         
         # 绑定同步屏障信号
         worker.reached_barrier.connect(self.handle_barrier_reached)
-        
         thread.started.connect(worker.start)
         from PySide6.QtCore import Qt
         worker.test_finished.connect(lambda: self.stop_channel_test(channel_id), Qt.QueuedConnection)
