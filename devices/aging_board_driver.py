@@ -64,7 +64,7 @@ class AgingBoardController:
         """建立 Modbus TCP 连接 (带物理探测与协议校验)"""
         try:
             # 1. 物理探测，防止 Modbus 库在 IP 不通时长时间挂起
-            with socket.create_connection((self.ip, self.port), timeout=1.5) as s:
+            with socket.create_connection((self.ip, self.port), timeout=0.8) as s:
                 pass
             
             # 2. 检查并重建客户端 (对齐参考项目)
@@ -113,6 +113,13 @@ class AgingBoardController:
         """
         if name not in self.RELAY_MAP:
             logger.warning(f"未知继电器名称: {name}")
+            return False
+        return self.write_relay(self.RELAY_MAP[name], state)
+
+    def set_relay_by_name(self, name: str, state: bool) -> bool:
+        """根据继电器名称控制开关"""
+        if name not in self.RELAY_MAP:
+            logger.error(f"未知继电器名称: {name}")
             return False
         return self.write_relay(self.RELAY_MAP[name], state)
 

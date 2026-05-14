@@ -109,13 +109,23 @@ class Easy320StandaloneTab(QWidget):
             
         self.easy320.ip = ip
         self.easy320.port = port
-        self.easy320.disconnect()
+        self.lbl_status.setText("状态: 正在连接...")
         
-        if self.easy320.connect():
+        import threading
+        def task():
+            success = self.easy320.connect()
+            QTimer.singleShot(0, lambda: self._finalize_connect(success))
+            
+        threading.Thread(target=task, daemon=True).start()
+
+    def _finalize_connect(self, success):
+        if success:
             self.lbl_status.setText("状态: 已连接")
             self.lbl_status.setStyleSheet("color: green; font-weight: bold;")
             self.sync_status()
         else:
+            self.lbl_status.setText("状态: 连接失败")
+            self.lbl_status.setStyleSheet("color: red; font-weight: bold;")
             QMessageBox.critical(self, "错误", "连接设备失败，请检查网络设置。")
 
     def disconnect_device(self):

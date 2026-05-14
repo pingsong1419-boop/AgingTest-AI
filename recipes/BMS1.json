@@ -226,6 +226,348 @@
                     "fail_strategy": "失败停止"
                 }
             ]
+        },
+        {
+            "name": "CA550输出",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "CA550 校准仪 (CA550)-参数设置 (Type:V / Val:5.0 / Range:10V / Output:开启输出)",
+                    "action": "参数设置",
+                    "params": "Type:V / Val:5.0 / Range:10V / Output:开启输出",
+                    "device": "CA550 校准仪 (CA550)",
+                    "type": "校准仪设置",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "CA550关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "CA550 校准仪 (CA550)-参数设置 (Type:V / Val:5.0 / Range:10V / Output:关闭输出)",
+                    "action": "参数设置",
+                    "params": "Type:V / Val:5.0 / Range:10V / Output:关闭输出",
+                    "device": "CA550 校准仪 (CA550)",
+                    "type": "校准仪设置",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "主机板供电开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "主机板电源 (Main Power)-设置参数 (12.0V / 200.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 200.0A / 开启输出",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "主机板供电回读",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "主机板电源 (Main Power)-回读数据 (读取电压)",
+                    "action": "回读数据",
+                    "params": "读取电压",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "读取仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "主机板供电关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "主机板电源 (Main Power)-设置参数 (12.0V / 200.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 200.0A / 关闭输出",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "功能板供电开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "控制板供电电源 (Control Power)-设置参数 (24.0V / 40.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "24.0V / 40.0A / 开启输出",
+                    "device": "控制板供电电源 (Control Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "功能板供电回读",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "控制板供电电源 (Control Power)-回读数据 (读取电压)",
+                    "action": "回读数据",
+                    "params": "读取电压",
+                    "device": "控制板供电电源 (Control Power)",
+                    "type": "读取仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "功能板供电关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "控制板供电电源 (Control Power)-设置参数 (12.0V / 40.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 40.0A / 关闭输出",
+                    "device": "控制板供电电源 (Control Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "Easy320继电器开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "Easy320 继电器 (Easy320)-闭合勾选通道 (1)",
+                    "action": "闭合勾选通道",
+                    "params": "1",
+                    "device": "Easy320 继电器 (Easy320)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "Easy320继电器断开",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "Easy320 继电器 (Easy320)-断开勾选通道 (1)",
+                    "action": "断开勾选通道",
+                    "params": "1",
+                    "device": "Easy320 继电器 (Easy320)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "老化功能板闭合",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "老化功能板继电器 (Aging Board)-闭合勾选通道 (1,11)",
+                    "action": "闭合勾选通道",
+                    "params": "1,11",
+                    "device": "老化功能板继电器 (Aging Board)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "老化功能板断开",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "老化功能板继电器 (Aging Board)-闭合勾选通道 ()",
+                    "action": "闭合勾选通道",
+                    "params": "",
+                    "device": "老化功能板继电器 (Aging Board)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "CAN发送",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "sub_steps": [
+                {
+                    "name": "CAN 交互-发送指令 (ID:0x1801)",
+                    "action": "发送指令",
+                    "params": "ID:0x1801",
+                    "device": "CAN 交互",
+                    "type": "CAN发送",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
         }
     ]
 }

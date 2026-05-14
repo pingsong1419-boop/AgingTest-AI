@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QLineEdit, QComboBox, QPushButton, QDoubleSpinBox, 
-                               QSpinBox, QStackedWidget, QWidget, QFormLayout, QFrame, QCheckBox)
+                               QSpinBox, QStackedWidget, QWidget, QFormLayout, QFrame, 
+                               QCheckBox, QScrollArea, QGridLayout)
 from PySide6.QtCore import Qt
 
 class StepDialog(QDialog):
@@ -85,7 +86,7 @@ class StepDialog(QDialog):
             "CA550 校准仪 (CA550)",
             "Easy320 继电器 (Easy320)",
             "老化功能板继电器 (Aging Board)",
-            "功能测试板电源 (Power Board)",
+            "控制板供电电源 (Control Power)",
             "CAN 交互",
             "等待 (Wait)",
             "同步屏障 (Synchronization Barrier)"
@@ -188,25 +189,49 @@ class StepDialog(QDialog):
         self.param_stack.addWidget(self.page_wait)  # 2: 等待
         self.param_stack.addWidget(self.page_read)  # 3: 读取
 
-        # --- 页面 4: 继电器参数 ---
-        self.page_relay = QWidget()
-        r_form = QFormLayout(self.page_relay)
-        self.r_channel = QSpinBox()
-        self.r_channel.setRange(1, 256)
-        r_form.addRow("目标通道 (CH):", self.r_channel)
-        self.param_stack.addWidget(self.page_relay)
+        # --- 页面 4: Easy320 参数 (勾选模式) ---
+        self.page_easy320 = QWidget()
+        e_layout = QVBoxLayout(self.page_easy320)
+        
+        scroll = QScrollArea()
+        scroll_content = QWidget()
+        grid = QGridLayout(scroll_content)
+        self.easy320_checks = []
+        for i in range(32):
+            cb = QCheckBox(f"CH-{i+1}")
+            grid.addWidget(cb, i // 4, i % 4)
+            self.easy320_checks.append(cb)
+        scroll.setWidget(scroll_content)
+        scroll.setWidgetResizable(True)
+        
+        e_layout.addWidget(QLabel("选择操作通道 (多选):"))
+        e_layout.addWidget(scroll)
+        self.param_stack.addWidget(self.page_easy320) # 4
 
-        # --- 页面 5: CA550 参数 ---
+        # --- 页面 5: CA550 参数 (参数设置) ---
         self.page_ca550 = QWidget()
         ca_form = QFormLayout(self.page_ca550)
+        
+        self.ca_output_state = QComboBox()
+        self.ca_output_state.addItems(["保持现状", "开启输出", "关闭输出"])
+        
         self.ca_type = QComboBox()
-        self.ca_type.addItems(["TC_K (K型热电偶)", "TC_J (J型热电偶)", "TC_T", "TC_E", "TC_N", "TC_R", "TC_S", "TC_B", "V", "mV", "mA", "OHM"])
+        self.ca_type.addItems(["V (电压)", "mA (电流)", "TC_K", "TC_J", "TC_T", "TC_E", "TC_N", "TC_R", "TC_S", "TC_B", "mV", "OHM"])
+        
+        self.ca_range = QComboBox()
+        self.ca_range.addItems(["Auto", "100mV", "1V", "10V", "30V", "20mA", "20mA_SINK"])
+        
         self.ca_val = QDoubleSpinBox()
         self.ca_val.setRange(-1000, 2000)
         self.ca_val.setDecimals(3)
+        self.ca_val.setValue(0.000)
+        
+        ca_form.addRow("输出状态:", self.ca_output_state)
         ca_form.addRow("输出类型:", self.ca_type)
+        ca_form.addRow("输出量程:", self.ca_range)
         ca_form.addRow("输出设定值:", self.ca_val)
-        self.param_stack.addWidget(self.page_ca550)
+        
+        self.param_stack.addWidget(self.page_ca550) # 5
 
         # --- 页面 6: 电池模拟器快捷批量配置 (LabVIEW 风格) ---
         self.page_sim_batch = QWidget()
@@ -228,6 +253,36 @@ class StepDialog(QDialog):
         sim_batch_layout.addRow("量程范围:", self.sim_batch_range)
         sim_batch_layout.addRow("作用通道:", self.sim_batch_channels)
         self.param_stack.addWidget(self.page_sim_batch) # 6
+
+        # --- 页面 7: 老化板继电器参数 (22路勾选模式) ---
+        self.page_aging_relay = QWidget()
+        ag_layout = QVBoxLayout(self.page_aging_relay)
+        
+        ag_scroll = QScrollArea()
+        ag_scroll_content = QWidget()
+        ag_grid = QGridLayout(ag_scroll_content)
+        self.aging_relay_checks = []
+        
+        # 继电器名称列表 (来自 aging_board_driver.py)
+        relay_names = [
+            "KL15", "CC1_2K_12V", "ISO_NEG_SHORT", "CHAOJI_CC_1K", 
+            "IN1_OUT1", "IN2_OUT2", "IN3_OUT3", "CAN_MATCH",
+            "SIG1_SIG2_SHORT", "SIG3_SHORT", "CAN1", "CAN2",
+            "CAN3", "CAN4", "HV", "ISOD_30K_1M",
+            "ISOD_1M_30K", "LINK_PACK_SHORT", "FACH_PACK_SHORT",
+            "DC_DC_100K", "DC_DC_500K", "HALL_POWER"
+        ]
+        
+        for i, name in enumerate(relay_names):
+            cb = QCheckBox(name)
+            ag_grid.addWidget(cb, i // 3, i % 3)
+            self.aging_relay_checks.append(cb)
+            
+        ag_scroll.setWidget(ag_scroll_content)
+        ag_scroll.setWidgetResizable(True)
+        ag_layout.addWidget(QLabel("选择老化板操作通道 (22路):"))
+        ag_layout.addWidget(ag_scroll)
+        self.param_stack.addWidget(self.page_aging_relay) # 7
 
         main_layout.addWidget(self.param_stack)
         
@@ -363,16 +418,24 @@ class StepDialog(QDialog):
         if "ID:" in params_str:
             self.c_id.setText(params_str.split("ID:")[-1].split(" ")[0])
 
-        if "读取电压" in params_str:
-            self.rb_volt.setChecked(True)
         elif "读取电流" in params_str:
             self.rb_curr.setChecked(True)
 
-        if "CH:" in params_str:
-            import re
-            ch_match = re.search(r'CH:(\d+)', params_str)
-            if ch_match:
-                self.r_channel.setValue(int(ch_match.group(1)))
+        if self.param_stack.currentIndex() == 4: # Easy320 通道还原
+            for cb in self.easy320_checks: cb.setChecked(False)
+            for s in params_str.split(","):
+                try:
+                    c_idx = int(s.strip()) - 1
+                    if 0 <= c_idx < 32: self.easy320_checks[c_idx].setChecked(True)
+                except: pass
+        
+        if self.param_stack.currentIndex() == 7: # 老化板继电器通道还原
+            for cb in self.aging_relay_checks: cb.setChecked(False)
+            for s in params_str.split(","):
+                try:
+                    c_idx = int(s.strip()) - 1
+                    if 0 <= c_idx < 22: self.aging_relay_checks[c_idx].setChecked(True)
+                except: pass
                 
         if "Type:" in params_str:
             import re
@@ -389,6 +452,14 @@ class StepDialog(QDialog):
             if val_match:
                 self.ca_val.setValue(float(val_match.group(1)))
 
+        if "Output:" in params_str:
+            out_str = params_str.split("Output:")[-1].split(" ")[0]
+            self.ca_output_state.setCurrentText(out_str)
+            
+        if "Range:" in params_str:
+            range_str = params_str.split("Range:")[-1].split(" ")[0]
+            self.ca_range.setCurrentText(range_str)
+
     def on_device_changed(self, index):
         self.action_combo.clear()
         device_text = self.device_combo.currentText()
@@ -399,15 +470,15 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["固定延时"])
         elif "同步屏障" in device_text:
             self.action_combo.addItems(["等待全通道同步"])
-        elif "继电器" in device_text:
-            self.action_combo.addItems(["闭合指定通道", "断开指定通道", "全部断开"])
+        elif "Easy320" in device_text:
+            self.action_combo.addItems(["闭合勾选通道", "断开勾选通道", "全部断开"])
+        elif "老化" in device_text:
+            self.action_combo.addItems(["闭合勾选通道", "断开勾选通道", "全部断开"])
         elif "CA550" in device_text:
-            self.action_combo.addItems(["设置输出参数", "开启输出", "关闭输出"])
-        else: # 电源类: 模拟器, NGI, AFE, Main, Power Board
+            self.action_combo.addItems(["参数设置", "数据回读"])
+        else: # 电源类: 模拟器, NGI, AFE, Main, Control Power
             if "Simulator" in device_text:
                 self.action_combo.addItems(["快捷批量配置", "回读数据"])
-            elif "AFE" in device_text:
-                self.action_combo.addItems(["设置参数", "回读数据"])
             else:
                 self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
         
@@ -423,14 +494,15 @@ class StepDialog(QDialog):
             self.param_stack.setCurrentIndex(2)
         elif "同步屏障" in device:
             self.param_stack.setCurrentIndex(-1)
-        elif "继电器" in device:
-            if "指定通道" in action:
-                self.param_stack.setCurrentIndex(4)
-            else:
-                self.param_stack.setCurrentIndex(-1)
+        elif "老化" in device:
+            self.param_stack.setCurrentIndex(7)
+        elif "继电器" in device or "Easy320" in device:
+            self.param_stack.setCurrentIndex(4)
         elif "CA550" in device:
-            if "设置输出" in action:
+            if "参数设置" in action:
                 self.param_stack.setCurrentIndex(5)
+            elif "回读" in action:
+                self.param_stack.setCurrentIndex(3)
             else:
                 self.param_stack.setCurrentIndex(-1)
         elif "设置参数" in action or "快捷批量配置" in action:
@@ -446,6 +518,18 @@ class StepDialog(QDialog):
                         self.i_curr.setRange(0, 12)
                     else:
                         self.i_curr.setRange(0, 36)
+                    self.i_curr.setSuffix(" A")
+                elif "control power" in device.lower() or "控制板" in device:
+                    self.i_volt.setRange(0, 30)
+                    self.i_curr.setRange(0, 40)
+                    self.i_curr.setSuffix(" A")
+                elif "主机板" in device or "Main Power" in device:
+                    self.i_volt.setRange(0, 30)
+                    self.i_curr.setRange(0, 200)
+                    self.i_curr.setSuffix(" A")
+                elif "控制板" in device or "Control Power" in device:
+                    self.i_volt.setRange(0, 30)
+                    self.i_curr.setRange(0, 40)
                     self.i_curr.setSuffix(" A")
                 elif "Simulator" in device: # 虽然现在模拟器用Page 6，但以防万一Page 0也被选中
                     self.i_volt.setRange(0, 15)
@@ -479,9 +563,17 @@ class StepDialog(QDialog):
             step_type = "读取仪表"
             if self.rb_volt.isChecked(): params.append("读取电压")
             if self.rb_curr.isChecked(): params.append("读取电流")
+        elif idx == 4: # Easy320 / Relay
+            step_type = "继电器控制"
+            selected = [str(i+1) for i, cb in enumerate(self.easy320_checks) if cb.isChecked()]
+            params.append(",".join(selected))
+        elif idx == 7: # Aging Board Relay
+            step_type = "继电器控制"
+            selected = [str(i+1) for i, cb in enumerate(self.aging_relay_checks) if cb.isChecked()]
+            params.append(",".join(selected))
         elif idx == 1: # CAN
             step_type = "CAN发送" if "发送" in action else "CAN交互"
-            params.append(f"ID:{self.c_id.text()}")
+            params.append(f"ID:{self.c_id.text()} / Data:{self.c_data.text()} / WaitID:{self.c_wait_id.text()}")
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")
@@ -492,6 +584,8 @@ class StepDialog(QDialog):
             step_type = "校准仪设置"
             params.append(f"Type:{self.ca_type.currentText().split(' ')[0]}")
             params.append(f"Val:{self.ca_val.value()}")
+            params.append(f"Range:{self.ca_range.currentText()}")
+            params.append(f"Output:{self.ca_output_state.currentText()}")
         elif idx == 6: # 模拟器批量页面
             params.append(f"{self.sim_batch_volt.value()}V")
             params.append(f"{self.sim_batch_curr.value()}mA")

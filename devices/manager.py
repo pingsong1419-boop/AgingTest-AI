@@ -77,7 +77,7 @@ class DeviceManager:
         dut_port = int(cfg.get("dut_pwr_port", 2000))
         self.dut_power = MainboardPowerRU60(dut_ip, dut_port)
 
-        # 5. 老化控制板供电电源 (Control Board Power)
+        # 5. 控制板供电电源 (Control Board Power)
         ctrl_pwr_ip = cfg.get("ctrl_pwr_ip", "192.168.1.202")
         ctrl_pwr_port = int(cfg.get("ctrl_pwr_port", 10001))
         self.ctrl_board_power = PowerBoardRU12(ctrl_pwr_ip, ctrl_pwr_port)
@@ -238,7 +238,7 @@ class DeviceManager:
         # 4. [关键] 功能板上电与 Easy320 分级上电逻辑
         power_ok = False
         if self.ctrl_board_power and self.ctrl_board_power.is_connected:
-            if logger: logger("[*] 正在初始化功能板电源: 设定 24.0V / 40.0A ...")
+            if logger: logger("[*] 正在初始化控制板供电电源: 设定 24.0V / 40.0A ...")
             self.ctrl_board_power.set_voltage(24.0)
             self.ctrl_board_power.set_current(40.0)
             if self.ctrl_board_power.output_control(True):
@@ -246,12 +246,12 @@ class DeviceManager:
                 import time
                 time.sleep(1.5) 
                 v_meas = self.ctrl_board_power.measure_voltage()
-                if logger: logger(f"[*] 功能板电源实时电压反馈: {v_meas:.2f}V")
+                if logger: logger(f"[*] 控制板供电电源实时电压反馈: {v_meas:.2f}V")
                 
                 # 判定输出是否正常 (24V 允许 +/- 10% 误差)
                 if 21.0 <= v_meas <= 27.0:
                     power_ok = True
-                    if logger: logger("[+] 功能板电源输出正常，准备闭合继电器。")
+                    if logger: logger("[+] 控制板供电电源输出正常，准备闭合继电器。")
                 else:
                     if logger: logger(f"[!] 警告: 功能板电压异常 ({v_meas:.2f}V)，禁止启动后续继电器！")
             else:
@@ -270,7 +270,7 @@ class DeviceManager:
                     if logger: logger(f"[!] 警告: PLC 继电器 {i+1} 写入失败")
             if logger: logger("[*] 分级上电指令发送完毕。")
         elif not power_ok:
-            if logger: logger("[!] 由于功能板电源异常，已跳过 PLC 继电器分级上电流程。")
+            if logger: logger("[!] 由于控制板供电电源异常，已跳过 PLC 继电器分级上电流程。")
         
         # 5. [关键] 逻辑自检：并行扫描 60 路老化板在线状态
         if logger: logger("[*] 开始并行扫描 60 路老化板在线状态 (TCP 握手)...")

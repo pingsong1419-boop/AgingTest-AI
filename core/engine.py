@@ -242,7 +242,7 @@ class ChannelWorker(QObject):
                     if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
                     elif "关闭输出" in p_str: success = success and mgr.output_control(ch_to_use, False, logger=hw_logger)
                 
-                elif "afe" in device or "main_power" in device or "hv_source" in device:
+                elif any(x in device for x in ["afe", "main", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device:
                         act = params.get("action", "")
                         if "输出控制" in act:
@@ -258,8 +258,10 @@ class ChannelWorker(QObject):
                             if "2#" in device: target_dev = mgr.afe_pwr_2
                             elif "3#" in device: target_dev = mgr.afe_pwr_3
                             else: target_dev = mgr.afe_power_1
-                        else:
+                        elif "main" in device:
                             target_dev = mgr.dut_power
+                        elif "control power" in device or "控制板" in device:
+                            target_dev = mgr.ctrl_board_power
                             
                         if not target_dev:
                             hw_logger(f"错误: 目标设备 {device} 未初始化")
@@ -309,27 +311,80 @@ class ChannelWorker(QObject):
                         success = False
                         if logger: logger(f"错误: 找不到通道 {self.channel_id} 对应的控制板")
 
+                elif "老化" in device:
+                    board = mgr.boards.get(self.channel_id)
+                    if board:
+                        act = params.get("action", "")
+                        if "全部断开" in act:
+                            success = board.relays.all_off()
+                        else:
+                            state = "闭合" in act
+                            channels = p_str.split(",")
+                            for ch in channels:
+                                if ch.strip():
+                                    try:
+                                        ch_idx = int(self._parse_numeric(ch)) - 1
+                                        success = success and board.relays.write_relay(ch_idx, state)
+                                    except: pass
+                    else:
+                        if logger: logger(f"错误: 找不到通道 {self.channel_id} 对应的老化板")
+
                 elif "easy320" in device:
-                    if ":" in p_str:
-                        actions = p_str.split(",")
-                        for act in actions:
-                            if ":" in act:
-                                ch_str, state_str = act.split(":")
-                                ch_idx = int(self._parse_numeric(ch_str)) - 1
-                                state = "ON" in state_str.upper() or "开启" in state_str
-                                success = success and mgr.easy320.write_relay(ch_idx, state)
+                    act = params.get("action", "")
+                    if "全部断开" in act:
+                        success = mgr.easy320.batch_control(False)
+                    else:
+                        state = "闭合" in act
+                        channels = p_str.split(",")
+                        for ch in channels:
+                            if ch.strip():
+                                try:
+                                    ch_idx = int(self._parse_numeric(ch)) - 1
+                                    success = success and mgr.easy320.write_relay(ch_idx, state)
+                                except: pass
 
                 elif "ca550" in device:
-                    if "V" in p_str.upper():
-                        mgr.ca550.set_source_func(0)
-                        mgr.ca550.set_source_data(self._parse_numeric(p_str))
-                        success = mgr.ca550.set_source_output(True)
-                    elif "A" in p_str.upper():
-                        mgr.ca550.set_source_func(1)
-                        mgr.ca550.set_source_data(self._parse_numeric(p_str))
-                        success = mgr.ca550.set_source_output(True)
-                    elif "关闭" in p_str or "OFF" in p_str.upper():
-                        success = mgr.ca550.set_source_output(False)
+                    # 处理新格式: Type:V / Val:3.5 / Range:10V / Output:开启输出
+                    if "Type:" in p_str:
+                        # 1. 设置功能类型 (Function)
+                        func_code = 0 # 默认 DCV
+                        if "MA" in p_str.upper(): func_code = 1
+                        elif "OHM" in p_str.upper(): func_code = 2
+                        elif "RTD" in p_str.upper(): func_code = 3
+                        elif "TC" in p_str.upper(): func_code = 4
+                        elif "MV" in p_str.upper(): func_code = 0 
+                        
+                        mgr.ca550.set_source_func(func_code)
+                        
+                        # 2. 设置量程 (Range)
+                        if "Range:" in p_str:
+                            range_code = 0
+                            if "1V" in p_str: range_code = 1
+                            elif "5V" in p_str: range_code = 2
+                            elif "10V" in p_str: range_code = 2
+                            elif "30V" in p_str: range_code = 3
+                            elif "20MA" in p_str.upper(): range_code = 0
+                            mgr.ca550.set_source_range(range_code)
+                            
+                        # 3. 设置数据 (Data)
+                        if "Val:" in p_str:
+                            mgr.ca550.set_source_data(float(self._parse_numeric(p_str.split("Val:")[-1])))
+                            
+                        # 4. 控制输出 (Output)
+                        if "Output:开启" in p_str:
+                            success = mgr.ca550.set_source_output(1)
+                        elif "Output:关闭" in p_str:
+                            success = mgr.ca550.set_source_output(0)
+                        else:
+                            success = True
+                    else:
+                        # 兼容老格式 (仅数值或简单的开关指令)
+                        if "关闭" in p_str or "OFF" in p_str.upper():
+                            success = mgr.ca550.set_source_output(0)
+                        else:
+                            mgr.ca550.set_source_func(0 if "V" in p_str.upper() else 1)
+                            mgr.ca550.set_source_data(self._parse_numeric(p_str))
+                            success = mgr.ca550.set_source_output(1)
 
             elif sub_step.type == SubStepType.READ_INSTRUMENT:
                 device = params.get("device", "").lower()
@@ -348,7 +403,7 @@ class ChannelWorker(QObject):
                         result_value = mgr.measure_current(ch_to_use, logger=hw_logger)
                         success = result_value > -500
                 
-                elif "afe" in device or "main_power" in device or "hv_source" in device:
+                elif any(x in device for x in ["afe", "main", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device:
                         if "电压" in p_str:
                             result_value = mgr.hv_source.measure_voltage(channel=target_ch, logger=hw_logger)
@@ -361,8 +416,10 @@ class ChannelWorker(QObject):
                             if "2#" in device: target_dev = mgr.afe_pwr_2
                             elif "3#" in device: target_dev = mgr.afe_pwr_3
                             else: target_dev = mgr.afe_power_1
-                        else:
+                        elif "main" in device:
                             target_dev = mgr.dut_power
+                        elif "control power" in device or "控制板" in device:
+                            target_dev = mgr.ctrl_board_power
                         
                         if not target_dev:
                             hw_logger(f"错误: 目标设备 {device} 未初始化")
@@ -373,37 +430,59 @@ class ChannelWorker(QObject):
                             success = result_value >= 0
 
                 elif "ca550" in device:
-                    res_str = mgr.ca550.read_measure_data()
-                    result_value = self._parse_numeric(res_str)
-                    success = True
-
-                elif "easy320" in device:
-                    states = mgr.easy320.read_relays()
-                    result_value = str(states)
-                    success = len(states) > 0
+                    raw_data = mgr.ca550.read_measure_data()
+                    try:
+                        # CA550 返回的通常是带单位的字符串，如 "10.0000 V"
+                        result_value = self._parse_numeric(raw_data)
+                        success = True
+                    except:
+                        result_value = raw_data
+                        success = False
 
                 if success and self.db_manager and self.test_id != -1 and result_value is not None:
                     v = result_value if "电压" in p_str else -1
                     c = result_value if "电流" in p_str else -1
                     self.db_manager.log_detail(self.test_id, self.steps[self.current_step_index].name, v, c, "--")
 
-            elif sub_step.type == SubStepType.CAN_SEND:
+            elif sub_step.type in [SubStepType.CAN_SEND, SubStepType.CAN_INTERACT]:
                 board = mgr.boards.get(self.channel_id)
                 if board:
                     if not board.is_connected: board.connect()
-                    # RNCAN 通常对单通道板卡使用通道 0
+                    p_str = str(params.get("params", ""))
+                    # 解析 ID:0x123 / Data:00 11 22
+                    try:
+                        id_str = re.search(r"ID:([0-9a-fA-FXx]+)", p_str).group(1)
+                        can_id = int(id_str, 16)
+                    except: can_id = 0
+                    try:
+                        data_match = re.search(r"Data:([0-9a-fA-F\s]+)", p_str)
+                        hex_data = data_match.group(1).strip().replace(" ", "").split("/")[0]
+                        can_data = bytes.fromhex(hex_data)
+                    except: can_data = b'\x00' * 8
+                    
                     success = board.can.send_can_message(
-                        channel_id=0,
-                        can_id=params.get("id"),
-                        can_type=0,
-                        dlc=8,
-                        data=bytes(params.get("data", []))
+                        channel_id=0, can_id=can_id, can_type=0, 
+                        dlc=board.can.length_to_dlc(len(can_data)), data=can_data
                     )
+                    
+                    if success and sub_step.type == SubStepType.CAN_INTERACT:
+                        try:
+                            wait_id_str = re.search(r"WaitID:([0-9a-fA-FXx]+)", p_str).group(1)
+                            wait_id = int(wait_id_str, 16)
+                        except: wait_id = None
+                        if wait_id is not None:
+                            import time as pytime
+                            start_t = pytime.time()
+                            found = False
+                            while pytime.time() - start_t < 3.0:
+                                if not board.can.msg_queue.empty():
+                                    msg = board.can.msg_queue.get()
+                                    if msg['can_id'] == wait_id:
+                                        found = True; break
+                                pytime.sleep(0.01)
+                            success = found
                 else: success = False
 
-            elif sub_step.type == SubStepType.CAN_INTERACT:
-                # 暂时保留占位，后续可基于 RNCAN 的 recv_queue 实现
-                pass
 
             elif sub_step.type == SubStepType.WAIT:
                 total_ms = int(self._parse_numeric(params.get("params", 1000)))

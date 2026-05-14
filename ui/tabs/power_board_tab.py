@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QTimer
 class PowerBoardTab(QWidget):
     def __init__(self, driver):
         super().__init__()
-        self.setWindowTitle("功能测试板电源控制 (RU12-3040)")
+        self.setWindowTitle("控制板供电电源控制 (RU12-3040)")
         self.resize(600, 500)
         
         # 使用传入的驱动实例
@@ -52,7 +52,7 @@ class PowerBoardTab(QWidget):
         layout.addWidget(config_group)
         
         # 2. 控制面板
-        ctrl_group = QGroupBox("电源输出控制 (RU12-3040)")
+        ctrl_group = QGroupBox("控制板供电输出控制 (RU12-3040)")
         ctrl_layout = QGridLayout()
         
         ctrl_layout.addWidget(QLabel("设定电压 (V):"), 0, 0)

@@ -88,7 +88,7 @@ class HardwareTab(QWidget):
         form_others.addRow("3# 模拟器 IP:", self.edit_sim3_ip)
 
         self.edit_ctrl_pwr_ip = QLineEdit(); self.edit_easy320_ip = QLineEdit()
-        form_others.addRow("控制板电源 IP:", self.edit_ctrl_pwr_ip)
+        form_others.addRow("控制板供电 IP:", self.edit_ctrl_pwr_ip)
         form_others.addRow("Easy320 PLC IP:", self.edit_easy320_ip)
         
         self.edit_ca550_com = QLineEdit()
@@ -210,9 +210,16 @@ class HardwareTab(QWidget):
     def reconnect_board(self, channel_id):
         if not self.device_manager: return
         board = self.device_manager.boards.get(channel_id)
-        if board:
+        if not board: return
+        
+        # 使用线程异步连接，防止界面卡死
+        import threading
+        def task():
             board.connect()
-            self.refresh_hardware_status()
+            # 连接完成后刷新状态（需回到主线程）
+            QTimer.singleShot(0, self.refresh_hardware_status)
+            
+        threading.Thread(target=task, daemon=True).start()
 
     def init_all_hardware(self):
         if not self.device_manager: return

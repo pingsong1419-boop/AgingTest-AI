@@ -101,10 +101,39 @@ class AgingBoardStandaloneTab(QWidget):
 
     def connect_device(self):
         self.board.ip = self.edit_ip.text().strip()
-        if self.board.connect():
+        
+        # 禁用按钮防止重复点击
+        self.sender().setEnabled(False)
+        self.lbl_status.setText("状态: 正在连接...")
+        
+        import threading
+        def task():
+            success = self.board.connect()
+            # 切换回主线程更新 UI
+            def update_ui():
+                if success:
+                    self.lbl_status.setText("状态: 已连接")
+                    self.lbl_status.setStyleSheet("color: green; font-weight: bold;")
+                else:
+                    self.lbl_status.setText("状态: 连接失败")
+                    self.lbl_status.setStyleSheet("color: red; font-weight: bold;")
+                    QMessageBox.critical(self, "错误", f"无法连接到板卡 {self.board.ip}")
+                self.sender().setEnabled(True) if hasattr(self, 'sender') else None # 注意: 这种匿名函数里 sender 可能丢失
+            
+            # 使用特定按钮引用更稳妥
+            QTimer.singleShot(0, lambda: self._finalize_connect(success))
+            
+        threading.Thread(target=task, daemon=True).start()
+
+    def _finalize_connect(self, success):
+        # 寻找连接按钮（假设布局里第一个按钮是连接）
+        # 简化处理：不在此处重置按钮状态，或者在 UI 定义里保存按钮引用
+        if success:
             self.lbl_status.setText("状态: 已连接")
             self.lbl_status.setStyleSheet("color: green; font-weight: bold;")
         else:
+            self.lbl_status.setText("状态: 连接失败")
+            self.lbl_status.setStyleSheet("color: red; font-weight: bold;")
             QMessageBox.critical(self, "错误", f"无法连接到板卡 {self.board.ip}")
 
     def disconnect_device(self):

@@ -61,42 +61,45 @@ class PowerBoardRU12:
                 self.client.close()
             self.is_connected = False
 
-    def set_voltage(self, voltage: float) -> bool:
+    def set_voltage(self, voltage: float, logger=None) -> bool:
         """设置电压 (十进制地址 149, 倍率 100)"""
         with self.lock:
             if not self.is_connected: return False
             try:
                 val = int(round(voltage * 100))
                 result = self.client.write_register(149, val, device_id=self.unit_id)
+                if logger: logger(f"[PowerBoard] 设置电压: {voltage}V, 结果: {not result.isError()}")
                 return not result.isError()
             except Exception as e:
-                logger.error(f"Set voltage error: {e}")
+                if logger: logger(f"[PowerBoard] 设置电压异常: {e}")
                 return False
 
-    def set_current(self, current: float) -> bool:
+    def set_current(self, current: float, logger=None) -> bool:
         """设置电流 (十进制地址 150, 倍率 100)"""
         with self.lock:
             if not self.is_connected: return False
             try:
                 val = int(round(current * 100))
                 result = self.client.write_register(150, val, device_id=self.unit_id)
+                if logger: logger(f"[PowerBoard] 设置电流: {current}A, 结果: {not result.isError()}")
                 return not result.isError()
             except Exception as e:
-                logger.error(f"Set current error: {e}")
+                if logger: logger(f"[PowerBoard] 设置电流异常: {e}")
                 return False
 
-    def output_control(self, state: bool) -> bool:
+    def output_control(self, state: bool, logger=None) -> bool:
         """输出控制 (十进制线圈地址 133)"""
         with self.lock:
             if not self.is_connected: return False
             try:
                 result = self.client.write_coil(133, state, device_id=self.unit_id)
+                if logger: logger(f"[PowerBoard] 输出控制: {'ON' if state else 'OFF'}, 结果: {not result.isError()}")
                 return not result.isError()
             except Exception as e:
-                logger.error(f"Output control error: {e}")
+                if logger: logger(f"[PowerBoard] 输出控制异常: {e}")
                 return False
 
-    def measure_voltage(self) -> float:
+    def measure_voltage(self, logger=None) -> float:
         """测量电压 (十进制输入寄存器地址 100, 倍率 100)"""
         with self.lock:
             if not self.is_connected: return -1.0
@@ -104,12 +107,13 @@ class PowerBoardRU12:
                 result = self.client.read_input_registers(100, count=1, device_id=self.unit_id)
                 if not result or result.isError():
                     return -1.0
-                return result.registers[0] / 100.0
+                val = result.registers[0] / 100.0
+                return val
             except Exception as e:
-                logger.error(f"Measure voltage error: {e}")
+                if logger: logger(f"[PowerBoard] 测量电压异常: {e}")
                 return -1.0
 
-    def measure_current(self) -> float:
+    def measure_current(self, logger=None) -> float:
         """测量电流 (十进制输入寄存器地址 101, 倍率 100)"""
         with self.lock:
             if not self.is_connected: return -1.0
@@ -117,7 +121,8 @@ class PowerBoardRU12:
                 result = self.client.read_input_registers(101, count=1, device_id=self.unit_id)
                 if not result or result.isError():
                     return -1.0
-                return result.registers[0] / 100.0
+                val = result.registers[0] / 100.0
+                return val
             except Exception as e:
-                logger.error(f"Measure current error: {e}")
+                if logger: logger(f"[PowerBoard] 测量电流异常: {e}")
                 return -1.0

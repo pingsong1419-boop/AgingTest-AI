@@ -103,7 +103,7 @@ class ConfigTab(QWidget):
         layout.addLayout(right_panel, 3)
         
         # 绑定双击编辑
-        self.step_tree.itemDoubleClicked.connect(lambda item, col: self.edit_node())
+        self.step_tree.itemDoubleClicked.connect(lambda: self.edit_node())
 
         # 绑定快捷键
         QShortcut(QKeySequence("Ctrl+C"), self.step_tree, self.copy_node)
@@ -512,6 +512,10 @@ class ConfigTab(QWidget):
             QMessageBox.critical(self, "错误", "配方保存失败，请检查日志。")
 
     def add_test_item(self):
+        if not self.current_recipe_name:
+            QMessageBox.warning(self, "提醒", "请先在左侧选择或新建一个配方。")
+            return
+            
         from ui.dialogs.test_item_dialog import TestItemDialog
         dialog = TestItemDialog(self)
         if dialog.exec():
@@ -531,6 +535,10 @@ class ConfigTab(QWidget):
             self.step_tree.setCurrentItem(item)
 
     def add_step(self):
+        if not self.current_recipe_name:
+            QMessageBox.warning(self, "提醒", "请先在左侧选择或新建一个配方。")
+            return
+            
         parent = self.step_tree.currentItem()
         if not parent:
             QMessageBox.warning(self, "提醒", "请先选择一个『测试项』作为父节点。")
@@ -562,8 +570,13 @@ class ConfigTab(QWidget):
             parent.setExpanded(True)
 
     def edit_node(self):
+        if not self.current_recipe_name:
+            QMessageBox.warning(self, "提醒", "请先在左侧选择或新建一个配方。")
+            return
+            
         item = self.step_tree.currentItem()
         if not item:
+            QMessageBox.warning(self, "提醒", "请先选中一个要编辑的测试项或工步。")
             return
             
         parent = item.parent()
@@ -593,7 +606,8 @@ class ConfigTab(QWidget):
                 'params': item.text(2),
                 'device': item.data(0, Qt.UserRole) or "",
                 'type': item.data(1, Qt.UserRole) or "",
-                'is_judgment': item.data(2, Qt.UserRole) or False
+                'is_judgment': item.data(2, Qt.UserRole) or False,
+                'fail_strategy': item.text(4) # 补全 NG 策略
             }
             dialog = StepDialog(self, step_data=data)
             if dialog.exec():

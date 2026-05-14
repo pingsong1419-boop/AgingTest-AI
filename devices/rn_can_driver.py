@@ -65,7 +65,7 @@ class RNCANDriver:
                     self.disconnect()
                 
                 self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.sock.settimeout(2.0)
+                self.sock.settimeout(0.8)
                 self.sock.connect((self.ip, self.port))
                 self.sock.settimeout(None) # 切换到阻塞模式或由线程处理
                 self.is_connected = True
