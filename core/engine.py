@@ -57,7 +57,7 @@ class ChannelWorker(QObject):
     sub_step_finished = Signal(int, int, int, str, object)
     test_finished = Signal(int, bool)
     log_message = Signal(int, str)
-    reached_barrier = Signal(int) # 新增：到达同步屏障信号
+    reached_barrier = Signal(int, object) # 新增：到达同步屏障信号 (channel_id, sub_step)
 
     def __init__(self, channel_id: int, steps: List[TestStep], device_manager=None, db_manager=None, engine=None):
         super().__init__()
@@ -168,7 +168,7 @@ class ChannelWorker(QObject):
             if sub_step.type == SubStepType.BARRIER:
                 # 触发同步屏障：通知 Engine 并挂起自己
                 self.is_waiting_for_sync = True
-                self.reached_barrier.emit(self.channel_id)
+                self.reached_barrier.emit(self.channel_id, sub_step) # 传递 sub_step 以便执行全局动作
                 self.log_message.emit(self.channel_id, "[#] 进入同步屏障，等待其他通道...")
                 return # 停止当前执行链，等待外部调用 resume_from_sync
 
@@ -441,9 +441,13 @@ class TestEngine(QObject):
                         # 此处复用 resume_from_sync 逻辑或专门的逻辑
                         self.workers[next_ch].resume_from_sync()
 
-    def handle_barrier_reached(self, channel_id: int):
+    def handle_barrier_reached(self, channel_id: int, sub_step: SubStep = None):
         """当某个 Worker 到达同步屏障时被调用"""
         with self._lock:
+            # 记录第一个到达屏障的工步参数（假设所有通道脚本一致）
+            if not self.sync_barrier_channels:
+                self._current_barrier_sub_step = sub_step
+
             self.sync_barrier_channels.add(channel_id)
             total_active = len(self.workers)
             waiting_count = len(self.sync_barrier_channels)
@@ -453,13 +457,62 @@ class TestEngine(QObject):
             self.channel_sync_status_changed.emit(channel_id, True)
             
             if waiting_count >= total_active and total_active > 0:
-                print(f"[*] 所有活动通道 ({total_active}) 已到齐，正在释放同步锁...")
+                print(f"[*] 所有活动通道 ({total_active}) 已到齐，准备执行全局动作并释放...")
+                
+                # 1. 执行全局动作 (方案1核心)
+                if hasattr(self, '_current_barrier_sub_step') and self._current_barrier_sub_step:
+                    global_action = self._current_barrier_sub_step.params.get("global_action")
+                    if global_action:
+                        self._execute_global_action(global_action)
+                
+                # 2. 释放所有通道
                 for ch_id in list(self.sync_barrier_channels):
                     if ch_id in self.workers:
                         self.workers[ch_id].resume_from_sync()
                         self.channel_sync_status_changed.emit(ch_id, False)
+                
                 self.sync_barrier_channels.clear()
+                self._current_barrier_sub_step = None
                 self.barrier_status_changed.emit(0, total_active)
+
+    def _execute_global_action(self, action_params: Dict):
+        """执行屏障处的全局统一动作"""
+        mgr = self.device_manager
+        if not mgr: return
+        
+        device = action_params.get("device", "").lower()
+        action = action_params.get("action", "")
+        value_str = str(action_params.get("value", "0"))
+        
+        # 定义一个简单的内部解析器
+        def parse_val(s):
+            try: return float(re.findall(r"[-+]?\d*\.\d+|\d+", str(s))[0])
+            except: return 0.0
+
+        print(f"[#] 正在执行全局同步动作: {device} {action} {value_str}")
+        
+        try:
+            if "hv_source" in device:
+                if "设置电压" in action:
+                    mgr.hv_source.set_voltage(parse_val(value_str))
+                elif "输出控制" in action:
+                    state = "开启" in value_str or "ON" in value_str.upper()
+                    mgr.hv_source.output_control(state)
+            
+            elif "simulator" in device:
+                if "全部开启" in action: mgr.broadcast_output(True)
+                elif "全部关闭" in action: mgr.broadcast_output(False)
+                elif "同步设置电压" in action: mgr.broadcast_voltage(parse_val(value_str))
+                elif "同步设置电流" in action: mgr.broadcast_current(parse_val(value_str))
+            
+            elif "afe" in device or "main_power" in device:
+                target_dev = mgr.afe_power_1 if "afe" in device else mgr.dut_power
+                if "设置电压" in action: target_dev.set_voltage(parse_val(value_str))
+                elif "输出控制" in action:
+                    state = "开启" in value_str or "ON" in value_str.upper()
+                    target_dev.output_control(state)
+        except Exception as e:
+            print(f"[!] 全局同步动作执行异常: {e}")
 
     def release_barrier(self):
         """释放同步锁，让所有 Worker 继续执行"""
