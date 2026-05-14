@@ -250,7 +250,7 @@ class StepDialog(QDialog):
         self.page_eol = QWidget()
         eol_form = QFormLayout(self.page_eol)
         self.eol_op = QComboBox()
-        self.eol_op.setEditable(True)
+        self.eol_op.setEditable(False)
         self.eol_op.addItems([
             "0x03_read_insulation", "0x03_insulation_control",
             "0x04_read_gpio", "0x04_write_gpio",
@@ -266,7 +266,11 @@ class StepDialog(QDialog):
             "0x0b_read_hall_current", "0x0b_read_hall_current_2",
             "0xff_read_wakeup_source", "0xff_read_pressure_sensor", "0xff_read_hsd_load_voltage"
         ])
-        self.eol_args = QLineEdit("INDEX:0")
+        self.eol_param1_label = QLabel("参数1:")
+        self.eol_param1 = QComboBox()
+        self.eol_param2_label = QLabel("参数2:")
+        self.eol_param2 = QComboBox()
+        self.eol_args = QLineEdit("")
         self.eol_channel = QSpinBox()
         self.eol_channel.setRange(0, 255)
         self.eol_channel.setValue(0)
@@ -275,7 +279,9 @@ class StepDialog(QDialog):
         self.eol_timeout.setValue(1000)
         self.eol_timeout.setSuffix(" ms")
         eol_form.addRow("EOL操作:", self.eol_op)
-        eol_form.addRow("EOL参数:", self.eol_args)
+        eol_form.addRow(self.eol_param1_label, self.eol_param1)
+        eol_form.addRow(self.eol_param2_label, self.eol_param2)
+        eol_form.addRow("扩展参数:", self.eol_args)
         eol_form.addRow("RNCAN通道:", self.eol_channel)
         eol_form.addRow("超时:", self.eol_timeout)
         self.param_stack.addWidget(self.page_eol) # 7
@@ -312,12 +318,81 @@ class StepDialog(QDialog):
         # 信号连接
         self.device_combo.currentIndexChanged.connect(self.on_device_changed)
         self.action_combo.currentIndexChanged.connect(self.on_action_changed)
+        self.eol_op.currentTextChanged.connect(self.on_eol_op_changed)
         
         # 初始状态
         if step_data:
             self._load_data(step_data)
         else:
             self.on_device_changed(0)
+        self.on_eol_op_changed()
+
+    def _combo_value(self, combo):
+        return combo.currentData() if combo.currentData() is not None else combo.currentText()
+
+    def _set_combo_by_value(self, combo, value):
+        text = str(value)
+        index = combo.findData(text)
+        if index < 0:
+            index = combo.findText(text)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
+    def _set_param_combo(self, combo, label, title, items):
+        label.setText(title)
+        label.setVisible(bool(items))
+        combo.clear()
+        combo.setVisible(bool(items))
+        for text, value in items:
+            combo.addItem(text, value)
+
+    def _gpio_items(self):
+        return [
+            ("0x01 DIO_CHANNEL_HSD_O_00_EN", "0x01"), ("0x02 DIO_CHANNEL_HSD_O_01_EN", "0x02"),
+            ("0x03 DIO_CHANNEL_HSD_O_02_EN", "0x03"), ("0x04 DIO_CHANNEL_HSD_O_03_EN", "0x04"),
+            ("0x05 DIO_CHANNEL_HSD_O_04_EN", "0x05"), ("0x06 DIO_CHANNEL_HSD_O_05_EN", "0x06"),
+            ("0x07 DIO_CHANNEL_HSD_O_06_EN", "0x07"), ("0x08 DIO_CHANNEL_HSD_O_07_EN", "0x08"),
+            ("0x09 DIO_CHANNEL_LSD_O_00_EN", "0x09"), ("0x0A DIO_CHANNEL_LSD_O_01_EN", "0x0A"),
+            ("0x0B DIO_CHANNEL_LSD_O_02_EN", "0x0B"), ("0x0C DIO_CHANNEL_LSD_O_03_EN", "0x0C"),
+            ("0x0D DIO_CHANNEL_LSD_O_04_EN", "0x0D"), ("0x0E DIO_CHANNEL_LSD_O_05_EN", "0x0E"),
+            ("0x10 CC1_2015+_S2", "0x10"), ("0x11 CC2_SW3", "0x11"),
+            ("0x12 LINK", "0x12"), ("0x13 FAS", "0x13"), ("0x14 SC_EN1", "0x14")
+        ]
+
+    def _index_items(self, count, prefix=""):
+        return [(f"{prefix}{i}", str(i)) for i in range(count)]
+
+    def on_eol_op_changed(self):
+        op = self.eol_op.currentText()
+        self._set_param_combo(self.eol_param1, self.eol_param1_label, "参数1:", [])
+        self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
+        self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
+
+        if "gpio" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "GPIO:", self._gpio_items())
+            if "write" in op:
+                self._set_param_combo(self.eol_param2, self.eol_param2_label, "LEVEL:", [("0 低电平", "0"), ("1 高电平", "1")])
+        elif "adc" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "INDEX:", self._index_items(49, "ADC "))
+        elif "pwm" in op and "crash" not in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM:", self._index_items(16, "PWM "))
+        elif "insulation_control" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "STATE:", [("0 P/N均断开", "0"), ("1 P闭合N断开", "1"), ("2 P断开N闭合", "2")])
+        elif "node_count" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "COUNT:", self._index_items(12, "节点 "))
+        elif "balance_control" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "CELL:", self._index_items(256, "Cell "))
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "STATE:", [("0 关闭", "0"), ("1 开启", "1")])
+        elif "cell_voltage" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "CELL:", self._index_items(256, "Cell "))
+        elif "temp" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "INDEX:", self._index_items(64, "NTC "))
+        elif "crash_impedance" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "INDEX:", [("0 sig1", "0"), ("1 sig3", "1")])
+        elif "eeprom_address" in op:
+            self.eol_args.setPlaceholderText("ADDRESS:0x00000000")
+        elif "eeprom_data" in op or "rtc" in op:
+            self.eol_args.setPlaceholderText("DATA:00000000")
 
     def _split_params(self, params_str):
         values = {}
@@ -429,11 +504,23 @@ class StepDialog(QDialog):
 
         if "EOL" in kv:
             self.eol_op.setCurrentText(kv.get("EOL", ""))
+            self.on_eol_op_changed()
             self.eol_timeout.setValue(int(float(kv.get("TIMEOUT", "1000"))))
             self.eol_channel.setValue(int(float(kv.get("CH", "0"))))
+            used_keys = {"EOL", "TIMEOUT", "CH"}
+            if self.eol_param1.isVisible():
+                key = self.eol_param1_label.text().replace(":", "").strip().upper()
+                if key in kv:
+                    self._set_combo_by_value(self.eol_param1, kv[key])
+                    used_keys.add(key)
+            if self.eol_param2.isVisible():
+                key = self.eol_param2_label.text().replace(":", "").strip().upper()
+                if key in kv:
+                    self._set_combo_by_value(self.eol_param2, kv[key])
+                    used_keys.add(key)
             eol_args = []
             for key, value in kv.items():
-                if key not in {"EOL", "TIMEOUT", "CH"}:
+                if key not in used_keys:
                     eol_args.append(f"{key}:{value}")
             self.eol_args.setText(" / ".join(eol_args))
             self.param_stack.setCurrentIndex(7)
@@ -579,6 +666,12 @@ class StepDialog(QDialog):
         elif idx == 7: # 智界 EOL 协议
             step_type = "智界EOL协议"
             params.append(f"EOL:{self.eol_op.currentText().strip()}")
+            if self.eol_param1.isVisible():
+                key = self.eol_param1_label.text().replace(":", "").strip().upper()
+                params.append(f"{key}:{self._combo_value(self.eol_param1)}")
+            if self.eol_param2.isVisible():
+                key = self.eol_param2_label.text().replace(":", "").strip().upper()
+                params.append(f"{key}:{self._combo_value(self.eol_param2)}")
             for part in self.eol_args.text().split("/"):
                 part = part.strip()
                 if part:
