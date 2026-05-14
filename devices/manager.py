@@ -21,7 +21,7 @@ class DeviceManager:
         self.simulators = []
         self.hv_source = None
         self.afe_power_1 = None
-        self.afe_pwr_standalone = None
+        self.afe_pwr_2 = None
         self.afe_pwr_3 = None
         self.dut_power = None
         self.ctrl_board_power = None
@@ -148,53 +148,69 @@ class DeviceManager:
 
     def broadcast_voltage(self, voltage: float, logger=None) -> bool:
         """
-        全系统广播设置电压：对所有连接的模拟器发送 0 号通道指令
+        全系统广播设置电压：对所有模拟器的 1-18 通道执行设置
         """
         if logger: logger(f"[*] 全系统同步设置电压: {voltage}V")
         success = True
-        connected_sims = 0
-        for sim in self.simulators:
+        connected_count = 0
+        for i, sim in enumerate(self.simulators):
             if sim.is_connected:
-                connected_sims += 1
-                if not sim.set_voltage(0, voltage):
-                    success = False
-        if connected_sims == 0:
-            if logger: logger("错误：所有模拟器均未连接")
-            return False
+                connected_count += 1
+                if logger: logger(f"  > 正在配置 {i+1}# 模拟器 ({sim.ip})...")
+                # 为确保兼容性，直接循环 1-18 通道执行设置
+                for ch in range(1, 19):
+                    if not sim.set_voltage(ch, voltage):
+                        success = False
+        if connected_count == 0:
+            if logger: logger("[!] 警告: 没有已连接的模拟器，广播取消")
         return success
 
     def broadcast_current(self, current: float, logger=None) -> bool:
         """
-        全系统广播设置电流
+        全系统广播设置电流：对所有模拟器的 1-18 通道执行设置
         """
         if logger: logger(f"[*] 全系统同步设置电流限制: {current}A")
         success = True
-        connected_sims = 0
-        for sim in self.simulators:
+        connected_count = 0
+        for i, sim in enumerate(self.simulators):
             if sim.is_connected:
-                connected_sims += 1
-                if not sim.set_current_limit(0, current):
-                    success = False
-        if connected_sims == 0:
-            if logger: logger("错误：所有模拟器均未连接")
-            return False
+                connected_count += 1
+                if logger: logger(f"  > 正在配置 {i+1}# 模拟器 ({sim.ip})...")
+                for ch in range(1, 19):
+                    if not sim.set_current_limit(ch, current):
+                        success = False
+        return success
+
+    def broadcast_range(self, range_str: str, logger=None) -> bool:
+        """
+        全系统广播设置量程: HIGH / LOW
+        """
+        if logger: logger(f"[*] 全系统同步设置量程: {range_str}")
+        success = True
+        connected_count = 0
+        for i, sim in enumerate(self.simulators):
+            if sim.is_connected:
+                connected_count += 1
+                if logger: logger(f"  > 正在配置 {i+1}# 模拟器 ({sim.ip})...")
+                for ch in range(1, 19):
+                    if not sim.set_range(ch, range_str):
+                        success = False
         return success
 
     def broadcast_output(self, state: bool, logger=None) -> bool:
         """
-        全系统广播输出控制：开启/关闭所有模拟器输出
+        全系统广播输出控制：对所有模拟器的 1-18 通道执行设置
         """
-        if logger: logger(f"[*] 全系统同步输出控制: {state}")
+        if logger: logger(f"[*] 全系统同步输出控制: {'开启' if state else '关闭'}")
         success = True
-        connected_sims = 0
-        for sim in self.simulators:
+        connected_count = 0
+        for i, sim in enumerate(self.simulators):
             if sim.is_connected:
-                connected_sims += 1
-                if not sim.output_control(0, state):
-                    success = False
-        if connected_sims == 0:
-            if logger: logger("错误：所有模拟器均未连接")
-            return False
+                connected_count += 1
+                if logger: logger(f"  > 正在控制 {i+1}# 模拟器 ({sim.ip}) 输出...")
+                for ch in range(1, 19):
+                    if not sim.output_control(ch, state):
+                        success = False
         return success
 
     def init_all_devices(self, logger=None):

@@ -208,6 +208,27 @@ class StepDialog(QDialog):
         ca_form.addRow("输出设定值:", self.ca_val)
         self.param_stack.addWidget(self.page_ca550)
 
+        # --- 页面 6: 电池模拟器快捷批量配置 (LabVIEW 风格) ---
+        self.page_sim_batch = QWidget()
+        sim_batch_layout = QFormLayout(self.page_sim_batch)
+        self.sim_batch_volt = QDoubleSpinBox()
+        self.sim_batch_volt.setRange(0, 15); self.sim_batch_volt.setDecimals(3); self.sim_batch_volt.setValue(3.800)
+        self.sim_batch_curr = QDoubleSpinBox()
+        self.sim_batch_curr.setRange(0, 5000); self.sim_batch_curr.setDecimals(1); self.sim_batch_curr.setValue(1000.0)
+        self.sim_batch_curr.setSuffix(" mA")
+        self.sim_batch_output = QComboBox()
+        self.sim_batch_output.addItems(["ON", "OFF"])
+        self.sim_batch_range = QComboBox()
+        self.sim_batch_range.addItems(["HIGH (大量程)", "LOW (小量程)"])
+        self.sim_batch_channels = QLineEdit("ALL")
+        
+        sim_batch_layout.addRow("设定电压 (V):", self.sim_batch_volt)
+        sim_batch_layout.addRow("设定电流 (mA):", self.sim_batch_curr)
+        sim_batch_layout.addRow("输出状态:", self.sim_batch_output)
+        sim_batch_layout.addRow("量程范围:", self.sim_batch_range)
+        sim_batch_layout.addRow("作用通道:", self.sim_batch_channels)
+        self.param_stack.addWidget(self.page_sim_batch) # 6
+
         main_layout.addWidget(self.param_stack)
         
         main_layout.addStretch()
@@ -292,6 +313,26 @@ class StepDialog(QDialog):
 
         # 3. 解析参数字符串并尝试还原
         params_str = data.get('params', '')
+        
+        # --- 模拟器批量参数还原 ---
+        if "mA" in params_str:
+            import re
+            ma_match = re.search(r"([\d.]+)mA", params_str)
+            if ma_match: self.sim_batch_curr.setValue(float(ma_match.group(1)))
+            
+            v_match = re.search(r"([\d.]+)V", params_str)
+            if v_match: self.sim_batch_volt.setValue(float(v_match.group(1)))
+            
+            if "ON" in params_str: self.sim_batch_output.setCurrentText("ON")
+            elif "OFF" in params_str: self.sim_batch_output.setCurrentText("OFF")
+            
+            if "Range:HIGH" in params_str: self.sim_batch_range.setCurrentIndex(0)
+            elif "Range:LOW" in params_str: self.sim_batch_range.setCurrentIndex(1)
+            
+            if "CH:" in params_str:
+                self.sim_batch_channels.setText(params_str.split("CH:")[-1])
+
+        # --- 通用参数还原 ---
         if "V" in params_str:
             import re
             v_match = re.search(r'([\d.]+)V', params_str)
@@ -364,7 +405,9 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["设置输出参数", "开启输出", "关闭输出"])
         else: # 电源类: 模拟器, NGI, AFE, Main, Power Board
             if "Simulator" in device_text:
-                self.action_combo.addItems(["设置参数", "全部通道设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
+                self.action_combo.addItems(["快捷批量配置", "回读数据"])
+            elif "AFE" in device_text:
+                self.action_combo.addItems(["设置参数", "回读数据"])
             else:
                 self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
         
@@ -390,8 +433,28 @@ class StepDialog(QDialog):
                 self.param_stack.setCurrentIndex(5)
             else:
                 self.param_stack.setCurrentIndex(-1)
-        elif "设置参数" in action:
-            self.param_stack.setCurrentIndex(0)
+        elif "设置参数" in action or "快捷批量配置" in action:
+            if "Simulator" in device:
+                self.param_stack.setCurrentIndex(6)
+            else:
+                self.param_stack.setCurrentIndex(0)
+                # 动态调整范围
+                if "AFE" in device:
+                    self.i_volt.setRange(0, 100)
+                    # 2# 和 3# AFE 电源电流限制为 12A，1# 为 36A
+                    if "2#" in device or "3#" in device:
+                        self.i_curr.setRange(0, 12)
+                    else:
+                        self.i_curr.setRange(0, 36)
+                    self.i_curr.setSuffix(" A")
+                elif "Simulator" in device: # 虽然现在模拟器用Page 6，但以防万一Page 0也被选中
+                    self.i_volt.setRange(0, 15)
+                    self.i_curr.setRange(0, 5)
+                    self.i_curr.setSuffix(" A")
+                else: # NGI 或其它
+                    self.i_volt.setRange(0, 1000)
+                    self.i_curr.setRange(0, 500)
+                    self.i_curr.setSuffix(" A")
         elif "回读" in action or "读取数据" in action:
             self.param_stack.setCurrentIndex(3)
         else: # 全局操作等
@@ -429,6 +492,12 @@ class StepDialog(QDialog):
             step_type = "校准仪设置"
             params.append(f"Type:{self.ca_type.currentText().split(' ')[0]}")
             params.append(f"Val:{self.ca_val.value()}")
+        elif idx == 6: # 模拟器批量页面
+            params.append(f"{self.sim_batch_volt.value()}V")
+            params.append(f"{self.sim_batch_curr.value()}mA")
+            params.append(f"{self.sim_batch_output.currentText()}")
+            params.append(f"Range:{self.sim_batch_range.currentText().split(' ')[0]}")
+            params.append(f"CH:{self.sim_batch_channels.text()}")
         elif "全部" in action:
             params.append("--")
 

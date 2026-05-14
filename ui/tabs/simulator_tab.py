@@ -39,6 +39,7 @@ class SimulatorTab(QWidget):
     def _init_ui(self):
         layout = QVBoxLayout(self)
         
+
         # 1. 网络连接配置
         net_group = QGroupBox("电池模拟器网络配置 (TCP/IP)")
         net_layout = QHBoxLayout()
@@ -303,6 +304,7 @@ class SimulatorTab(QWidget):
             self.btn_one_key.setText("🚀 一键全局：设定电压 + 开启输出")
             self.btn_one_key.setEnabled(True)
             self._notify_status(f"一键全同步{'成功' if res else '失败'}")
+
 
     def _notify_status(self, msg):
         p = self.parent()

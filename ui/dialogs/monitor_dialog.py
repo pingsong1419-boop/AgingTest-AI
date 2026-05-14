@@ -123,30 +123,44 @@ class MonitorDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def run_selected_test(self):
-        """执行勾选的测试项"""
+        """执行勾选的测试项 (保持列表完整，将未选中的标记为屏蔽)"""
         if not self.engine: return
         
-        selected_data = []
-        # 从树中提取勾选的项
+        full_data = []
+        has_selection = False
+        # 遍历树中所有测试项
         for i in range(self.step_tree.topLevelItemCount()):
             item = self.step_tree.topLevelItem(i)
+            step_data = item.data(0, Qt.UserRole)
+            if not step_data: continue
+            
+            # 克隆一份数据以防修改到缓存中的原始配方
+            new_step_data = step_data.copy()
+            
             if item.checkState(0) == Qt.Checked:
-                # 重新构建该项的数据包
-                step_data = item.data(0, Qt.UserRole)
-                if step_data:
-                    selected_data.append(step_data)
+                has_selection = True
+                # 确保不带屏蔽符
+                if new_step_data['name'].startswith("#"):
+                    new_step_data['name'] = new_step_data['name'].lstrip("#")
+            else:
+                # 添加屏蔽符，引擎在执行时会检测并跳过
+                if not new_step_data['name'].startswith("#"):
+                    new_step_data['name'] = "#" + new_step_data['name']
+            
+            full_data.append(new_step_data)
         
-        if not selected_data:
+        if not has_selection:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "提示", "请先勾选要执行的测试项！")
             return
             
-        self.log_text.append(f"--- 启动单通道手动测试: CH-{self.channel_id} (勾选项) ---")
-        self.engine.start_channel_test(self.channel_id, selected_data)
+        self.log_text.append(f"--- 启动单通道手动测试: CH-{self.channel_id} (保留全部项目列表) ---")
+        # 下发全量数据，引擎会自动跳过带 # 的项目
+        self.engine.start_channel_test(self.channel_id, full_data)
         self._connect_signals() # 重新绑定信号以获取最新 worker
 
     def run_all_test(self):
-        """执行全部测试项"""
+        """执行全部测试项 (确保清除屏蔽标记)"""
         if not self.engine: return
         
         all_data = []
@@ -154,7 +168,11 @@ class MonitorDialog(QDialog):
             item = self.step_tree.topLevelItem(i)
             step_data = item.data(0, Qt.UserRole)
             if step_data:
-                all_data.append(step_data)
+                # 克隆数据并清除可能存在的屏蔽符
+                new_step_data = step_data.copy()
+                if new_step_data['name'].startswith("#"):
+                    new_step_data['name'] = new_step_data['name'].lstrip("#")
+                all_data.append(new_step_data)
         
         if not all_data:
             return

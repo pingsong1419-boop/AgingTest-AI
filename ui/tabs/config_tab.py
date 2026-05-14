@@ -10,8 +10,10 @@ class ConfigTab(QWidget):
         super().__init__()
         self.db_manager = db_manager
         self.clipboard_data = None  # 用于存储复制的节点数据
+        self.current_recipe_name = None # 记录当前加载的配方名
         self._init_ui()
         self.refresh_recipe_list()
+        self.set_editor_enabled(False) # 初始禁用编辑
         
     def _init_ui(self):
         layout = QHBoxLayout(self)
@@ -43,7 +45,12 @@ class ConfigTab(QWidget):
         prop_layout.addStretch()
         right_panel.addLayout(prop_layout)
         
-        right_panel.addWidget(QLabel("测试项目与工步流 (树状结构):"))
+        # 使用容器包装右侧编辑区域以便整体控制启用状态
+        self.edit_container = QWidget()
+        self.edit_layout = QVBoxLayout(self.edit_container)
+        self.edit_layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.edit_layout.addWidget(QLabel("测试项目与工步流 (树状结构):"))
         self.step_tree = QTreeWidget()
         self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略"])
         self.step_tree.setColumnWidth(0, 250)
@@ -89,7 +96,9 @@ class ConfigTab(QWidget):
         btn_layout.addWidget(btn_del)
         btn_layout.addWidget(btn_save_recipe)
         btn_layout.addWidget(btn_dry_run)
-        right_panel.addLayout(btn_layout)
+        self.edit_layout.addLayout(btn_layout)
+        
+        right_panel.addWidget(self.edit_container)
         
         layout.addLayout(right_panel, 3)
         
@@ -101,6 +110,16 @@ class ConfigTab(QWidget):
         QShortcut(QKeySequence("Ctrl+V"), self.step_tree, self.paste_node)
         QShortcut(QKeySequence("Delete"), self.step_tree, self.delete_node)
 
+    def set_editor_enabled(self, enabled):
+        """控制右侧编辑面板的启用状态"""
+        self.edit_container.setEnabled(enabled)
+        self.topology_combo.setEnabled(enabled)
+        if not enabled:
+            self.step_tree.clear()
+            self.edit_container.setToolTip("请先在左侧选择或新建一个配方")
+        else:
+            self.edit_container.setToolTip("")
+
     def refresh_recipe_list(self):
         """从本地磁盘刷新配方列表"""
         self.recipe_tree.clear()
@@ -109,10 +128,24 @@ class ConfigTab(QWidget):
             self.recipe_tree.addTopLevelItem(QTreeWidgetItem([name]))
 
     def on_recipe_selected(self, item, column):
-        """点击左侧配方时加载数据"""
+        """点击左侧配方时加载数据或切换折叠状态"""
         name = item.text(0)
+        
+        # 如果点击的是当前已选中的配方，则切换右侧树的展开/折叠状态
+        if self.current_recipe_name == name:
+            if self.step_tree.topLevelItemCount() > 0:
+                # 以第一项的状态作为基准切换
+                is_expanded = self.step_tree.topLevelItem(0).isExpanded()
+                if is_expanded:
+                    self.step_tree.collapseAll()
+                else:
+                    self.step_tree.expandAll()
+            return
+
         data = self.db_manager.load_recipe_json(name)
         if data:
+            self.current_recipe_name = name
+            self.set_editor_enabled(True)
             self.load_recipe_to_tree(data)
 
     def load_recipe_to_tree(self, data):
@@ -599,6 +632,8 @@ class ConfigTab(QWidget):
             item = QTreeWidgetItem([text])
             self.recipe_tree.addTopLevelItem(item)
             self.recipe_tree.setCurrentItem(item)
+            self.current_recipe_name = text
+            self.set_editor_enabled(True)
             # 顺便立即保存一个空的
             self.save_recipe()
 

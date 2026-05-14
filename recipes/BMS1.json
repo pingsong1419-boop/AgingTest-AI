@@ -10,9 +10,9 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "电池模拟器 (Simulator)-全部通道设置参数 (3.0V / 1.0A)",
-                    "action": "全部通道设置参数",
-                    "params": "3.0V / 1.0A",
+                    "name": "电池模拟器 (Simulator)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
                     "device": "电池模拟器 (Simulator)",
                     "type": "设置仪表",
                     "is_judgment": false,
@@ -28,11 +28,200 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "电池模拟器 (Simulator)-全部通道开启 (3.0V / 1.0A)",
-                    "action": "全部通道开启",
-                    "params": "3.0V / 1.0A",
+                    "name": "电池模拟器 (Simulator)-回读数据 (读取电压)",
+                    "action": "回读数据",
+                    "params": "读取电压",
+                    "device": "电池模拟器 (Simulator)",
+                    "type": "读取仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "模拟电池关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "电池模拟器 (Simulator)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
                     "device": "电池模拟器 (Simulator)",
                     "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "1#AFE电源开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 36.0A / 开启输出",
+                    "device": "1# AFE 电源 (AFE 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "1#AFE电源关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 36.0A / 关闭输出",
+                    "device": "1# AFE 电源 (AFE 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#AFE电源开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 开启输出",
+                    "device": "2# AFE 电源 (AFE 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#AFE电源关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 关闭输出",
+                    "device": "2# AFE 电源 (AFE 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#AFE电源开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 开启输出",
+                    "device": "3# AFE 电源 (AFE 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (5000ms)",
+                    "action": "固定延时",
+                    "params": "5000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#AFE电源关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 关闭输出",
+                    "device": "3# AFE 电源 (AFE 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
                     "is_judgment": false,
                     "fail_strategy": "失败停止"
                 }

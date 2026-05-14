@@ -84,6 +84,24 @@ class Lingtu66100:
             if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
             return False
 
+    def set_range(self, channel: int, range_str: str, logger=None) -> bool:
+        """
+        设置量程: SOURce[ch]:CURRent:RANGe <HIGH|LOW>
+        range_str: "HIGH" 或 "LOW"
+        """
+        if not self.is_connected:
+            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+            return False
+        try:
+            # 这里的指令根据 66100 协议手册调整，通常为 SOUR:CURR:RANG
+            cmd = f"SOUR{channel}:CURR:RANG {range_str}\n"
+            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
+            self.sock.send(cmd.encode())
+            return True
+        except Exception as e:
+            if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
+            return False
+
     def output_control(self, channel: int, state: bool, logger=None) -> bool:
         """控制输出开关，并等待确认"""
         if not self.is_connected:

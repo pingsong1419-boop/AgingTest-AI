@@ -184,8 +184,47 @@ class ChannelWorker(QObject):
                         return # 挂起，等待 Engine 回调 resume_from_sync
                 
                 if "simulator" in device:
-                    if "全部开启" in params.get("action", ""): success = mgr.broadcast_output(True)
-                    elif "全部关闭" in params.get("action", ""): success = mgr.broadcast_output(False)
+                    action = params.get("action", "")
+                    if "快捷批量配置" in action:
+                        # 1. 解析参数字符串 (格式: 3.8V / 1000mA / ON / Range:HIGH / CH:ALL)
+                        volt = self._parse_numeric(p_str.split("V")[0])
+                        curr_ma = 0.0
+                        if "mA" in p_str:
+                            ma_match = re.search(r"([\d\.]+)mA", p_str)
+                            if ma_match: curr_ma = float(ma_match.group(1))
+                        curr_a = curr_ma / 1000.0
+                        output_on = "ON" in p_str
+                        range_str = "HIGH" if "Range:HIGH" in p_str else "LOW"
+                        ch_str = "ALL"
+                        if "CH:" in p_str:
+                            ch_str = p_str.split("CH:")[-1].strip().upper()
+                        
+                        # 2. 执行逻辑
+                        if ch_str == "ALL":
+                            # 使用已优化的广播方法 (带 1-18 循环回退)
+                            mgr.broadcast_voltage(volt, logger=hw_logger)
+                            mgr.broadcast_current(curr_a, logger=hw_logger)
+                            mgr.broadcast_range(range_str, logger=hw_logger)
+                            success = mgr.broadcast_output(output_on, logger=hw_logger)
+                        else:
+                            # 针对特定通道列表
+                            try:
+                                parts = ch_str.replace("，", ",").split(",")
+                                target_channels = [int(p.strip()) for p in parts if p.strip()]
+                                for sim in mgr.simulators:
+                                    if not sim.is_connected: continue
+                                    for ch in target_channels:
+                                        if 1 <= ch <= 18:
+                                            sim.set_voltage(ch, volt)
+                                            sim.set_current_limit(ch, curr_a)
+                                            sim.set_range(ch, range_str)
+                                            sim.output_control(ch, output_on)
+                            except Exception as e:
+                                hw_logger(f"解析通道列表失败: {e}")
+                                success = False
+                        
+                        self.on_sub_step_complete()
+                        return
 
                 target_ch = None
                 if "CH:" in p_str:
@@ -214,16 +253,45 @@ class ChannelWorker(QObject):
                         else:
                             success = mgr.hv_source.set_voltage(self._parse_numeric(p_str), channel=target_ch, logger=hw_logger)
                     else:
-                        target_dev = mgr.afe_power_1 if "afe" in device else mgr.mainboard_power
-                        act = params.get("action", "")
-                        if "输出控制" in act:
-                            state = "开启" in p_str or "ON" in p_str.upper()
-                            success = target_dev.output_control(state, logger=hw_logger)
-                        elif "清除保护" in act:
-                            if hasattr(target_dev, "clear_errors"): success = target_dev.clear_errors(logger=hw_logger)
-                            else: success = True
+                        # 1. 确定目标设备
+                        if "afe" in device:
+                            if "2#" in device: target_dev = mgr.afe_pwr_2
+                            elif "3#" in device: target_dev = mgr.afe_pwr_3
+                            else: target_dev = mgr.afe_power_1
                         else:
-                            success = target_dev.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
+                            target_dev = mgr.dut_power
+                            
+                        if not target_dev:
+                            hw_logger(f"错误: 目标设备 {device} 未初始化")
+                            success = False
+                        else:
+                            act = params.get("action", "")
+                            # 2. 支持复合指令 (如 100V 5A ON)
+                            if any(x in p_str.upper() for x in ["V", "A", "ON", "OFF"]) or "开启" in p_str or "关闭" in p_str:
+                                if "V" in p_str.upper():
+                                    v_val = self._parse_numeric(p_str.upper().split("V")[0])
+                                    success = success and target_dev.set_voltage(v_val, logger=hw_logger)
+                                if "A" in p_str.upper():
+                                    a_match = re.search(r"([\d\.]+)\s*A", p_str.upper())
+                                    if a_match:
+                                        success = success and target_dev.set_current(float(a_match.group(1)), logger=hw_logger)
+                                if "开启" in p_str or "ON" in p_str.upper(): 
+                                    success = success and target_dev.output_control(True, logger=hw_logger)
+                                elif "关闭" in p_str or "OFF" in p_str.upper(): 
+                                    success = success and target_dev.output_control(False, logger=hw_logger)
+                            
+                            # 3. 如果不是复合指令，则按原 action 逻辑执行
+                            else:
+                                if "输出控制" in act:
+                                    state = "开启" in p_str or "ON" in p_str.upper()
+                                    success = target_dev.output_control(state, logger=hw_logger)
+                                elif "设置电流" in act:
+                                    success = target_dev.set_current(self._parse_numeric(p_str), logger=hw_logger)
+                                elif "清除保护" in act:
+                                    if hasattr(target_dev, "clear_errors"): success = target_dev.clear_errors(logger=hw_logger)
+                                    else: success = True
+                                else:
+                                    success = target_dev.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
 
                 elif "aging_board" in device:
                     board = mgr.boards.get(self.channel_id)
@@ -288,10 +356,21 @@ class ChannelWorker(QObject):
                             result_value = mgr.hv_source.measure_current(channel=target_ch, logger=hw_logger)
                         success = result_value >= 0
                     else:
-                        target_dev = mgr.afe_power_1 if "afe" in device else mgr.mainboard_power
-                        if "电压" in p_str: result_value = target_dev.read_voltage(logger=hw_logger)
-                        elif "电流" in p_str: result_value = target_dev.read_current(logger=hw_logger)
-                        success = result_value >= 0
+                        # 确定目标设备
+                        if "afe" in device:
+                            if "2#" in device: target_dev = mgr.afe_pwr_2
+                            elif "3#" in device: target_dev = mgr.afe_pwr_3
+                            else: target_dev = mgr.afe_power_1
+                        else:
+                            target_dev = mgr.dut_power
+                        
+                        if not target_dev:
+                            hw_logger(f"错误: 目标设备 {device} 未初始化")
+                            success = False
+                        else:
+                            if "电压" in p_str: result_value = target_dev.measure_voltage(logger=hw_logger)
+                            elif "电流" in p_str: result_value = target_dev.measure_current(logger=hw_logger)
+                            success = result_value >= 0
 
                 elif "ca550" in device:
                     res_str = mgr.ca550.read_measure_data()
@@ -327,8 +406,29 @@ class ChannelWorker(QObject):
                 pass
 
             elif sub_step.type == SubStepType.WAIT:
-                delay = int(self._parse_numeric(params.get("delay_ms", 1000)))
-                QTimer.singleShot(delay, self.on_sub_step_complete)
+                total_ms = int(self._parse_numeric(params.get("params", 1000)))
+                
+                # 如果延时较短（小于 2s），直接单次定时
+                if total_ms < 2000:
+                    QTimer.singleShot(total_ms, self.on_sub_step_complete)
+                else:
+                    # 如果延时较长，实现简单的倒计时日志反馈
+                    remaining = total_ms
+                    def tick():
+                        nonlocal remaining
+                        if not self.is_running: return
+                        
+                        if remaining <= 0:
+                            self.on_sub_step_complete()
+                        else:
+                            if remaining % 1000 == 0 or remaining == total_ms:
+                                self.log_message.emit(self.channel_id, f"      [倒计时] 剩余 {remaining/1000:.0f}s...")
+                            
+                            interval = min(1000, remaining)
+                            remaining -= interval
+                            QTimer.singleShot(interval, tick)
+                    
+                    tick()
                 return
 
         except Exception as e:
@@ -506,11 +606,20 @@ class TestEngine(QObject):
                 elif "同步设置电流" in action: mgr.broadcast_current(parse_val(value_str))
             
             elif "afe" in device or "main_power" in device:
-                target_dev = mgr.afe_power_1 if "afe" in device else mgr.dut_power
-                if "设置电压" in action: target_dev.set_voltage(parse_val(value_str))
-                elif "输出控制" in action:
-                    state = "开启" in value_str or "ON" in value_str.upper()
-                    target_dev.output_control(state)
+                # 确定目标设备
+                if "afe" in device:
+                    if "2#" in device: target_dev = mgr.afe_pwr_2
+                    elif "3#" in device: target_dev = mgr.afe_pwr_3
+                    else: target_dev = mgr.afe_power_1
+                else:
+                    target_dev = mgr.dut_power
+                
+                if target_dev:
+                    if "设置电压" in action: target_dev.set_voltage(parse_val(value_str))
+                    elif "设置电流" in action: target_dev.set_current(parse_val(value_str))
+                    elif "输出控制" in action:
+                        state = "开启" in value_str or "ON" in value_str.upper()
+                        target_dev.output_control(state)
         except Exception as e:
             print(f"[!] 全局同步动作执行异常: {e}")
 
