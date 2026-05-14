@@ -21,6 +21,7 @@ class SubStepType(Enum):
     READ_INSTRUMENT = "读取仪表"
     CAN_SEND = "CAN发送"
     CAN_INTERACT = "CAN交互"
+    EOL_PROTOCOL = "智界EOL协议"
     WAIT = "等待"
     BARRIER = "同步屏障" # 新增：同步点
 
@@ -212,6 +213,18 @@ class ChannelWorker(QObject):
         if not board.can.is_connected:
             raise ValueError(f"通道 {self.channel_id} CAN未连接")
         return board
+
+    def _execute_eol_protocol(self, mgr, params, hw_logger):
+        eol_cfg = self._parse_eol_params(params)
+        if not eol_cfg:
+            raise ValueError("EOL参数缺失: 未找到 EOL:<操作名>")
+        board = self._get_can_board(mgr)
+        from devices.eol_protocol import EOLProtocol
+        eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
+        result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], **eol_cfg["kwargs"])
+        result_value = result.value if result.success else result.error
+        hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
+        return result.success, result_value
 
     def execute_sub_step(self, sub_step: SubStep):
         if not self.is_running: return
@@ -467,16 +480,11 @@ class ChannelWorker(QObject):
                 hw_logger(f"CAN TX ID=0x{can_cfg['can_id']:X} DATA={can_cfg['data'].hex(' ').upper()}")
 
             elif sub_step.type == SubStepType.CAN_INTERACT:
-                board = self._get_can_board(mgr)
                 eol_cfg = self._parse_eol_params(params)
                 if eol_cfg:
-                    from devices.eol_protocol import EOLProtocol
-                    eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
-                    result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], **eol_cfg["kwargs"])
-                    success = result.success
-                    result_value = result.value if result.success else result.error
-                    hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if success else 'FAIL'} {result_value}")
+                    success, result_value = self._execute_eol_protocol(mgr, params, hw_logger)
                 else:
+                    board = self._get_can_board(mgr)
                     can_cfg = self._parse_can_params(params)
                     wait_id = can_cfg["wait_id"] if can_cfg["wait_id"] >= 0 else can_cfg["can_id"]
                     msg = board.can.send_and_wait_response(
@@ -491,6 +499,9 @@ class ChannelWorker(QObject):
                     success = msg is not None
                     result_value = msg.get("data", b"").hex(" ").upper() if msg else "TIMEOUT"
                     hw_logger(f"CAN REQ ID=0x{can_cfg['can_id']:X} WAIT=0x{wait_id:X} => {result_value}")
+
+            elif sub_step.type == SubStepType.EOL_PROTOCOL:
+                success, result_value = self._execute_eol_protocol(mgr, params, hw_logger)
 
             elif sub_step.type == SubStepType.WAIT:
                 total_ms = int(self._parse_numeric(params.get("params", 1000)))
@@ -737,12 +748,20 @@ class TestEngine(QObject):
             for sub in item.get('sub_steps', []):
                 stype = SubStepType.SET_INSTRUMENT
                 t_str = sub.get('type', "")
-                if "读取" in t_str: stype = SubStepType.READ_INSTRUMENT
-                elif "CAN发送" in t_str: stype = SubStepType.CAN_SEND
-                elif "CAN交互" in t_str: stype = SubStepType.CAN_INTERACT
-                elif "等待" in t_str: stype = SubStepType.WAIT
-                elif "同步屏障" in t_str: stype = SubStepType.BARRIER
-                
+                params_str = str(sub.get('params', ""))
+                if "智界EOL" in t_str or "EOL协议" in t_str:
+                    stype = SubStepType.EOL_PROTOCOL
+                elif "读取" in t_str:
+                    stype = SubStepType.READ_INSTRUMENT
+                elif "CAN发送" in t_str:
+                    stype = SubStepType.CAN_SEND
+                elif "CAN交互" in t_str:
+                    stype = SubStepType.EOL_PROTOCOL if "EOL:" in params_str.upper() else SubStepType.CAN_INTERACT
+                elif "等待" in t_str:
+                    stype = SubStepType.WAIT
+                elif "同步屏障" in t_str:
+                    stype = SubStepType.BARRIER
+
                 fail_strategy_str = sub.get('fail_strategy', "失败停止")
                 fail_strategy = SubStepFailStrategy.STOP
                 for fs in SubStepFailStrategy:

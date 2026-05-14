@@ -87,6 +87,7 @@ class StepDialog(QDialog):
             "老化功能板继电器 (Aging Board)",
             "功能测试板电源 (Power Board)",
             "CAN 交互",
+            "智界EOL协议",
             "等待 (Wait)",
             "同步屏障 (Synchronization Barrier)"
         ])
@@ -150,9 +151,6 @@ class StepDialog(QDialog):
         # --- 页面 1: CAN 参数 ---
         self.page_can = QWidget()
         c_form = QFormLayout(self.page_can)
-        self.c_mode = QComboBox()
-        self.c_mode.addItems(["原始CAN", "EOL协议"])
-        self.c_mode.currentIndexChanged.connect(self.on_can_mode_changed)
         self.c_id = QLineEdit("0x7F0")
         self.c_data = QLineEdit("00 00 00 00 00 00 00 00")
         self.c_wait_id = QLineEdit("0x7F8")
@@ -168,17 +166,6 @@ class StepDialog(QDialog):
         self.c_timeout.setRange(1, 600000)
         self.c_timeout.setValue(1000)
         self.c_timeout.setSuffix(" ms")
-        self.eol_op = QComboBox()
-        self.eol_op.setEditable(True)
-        self.eol_op.addItems([
-            "read_adc_value", "read_adc_raw", "read_gpio", "write_gpio", "read_insulation",
-            "insulation_control", "read_pwm_duty", "read_pwm_freq", "read_cell_voltage",
-            "read_stack_voltage", "read_csc_hv", "read_cell_temp", "read_pcb_temp",
-            "read_hall_current", "read_wakeup_source", "read_pressure_sensor", "read_eeprom_data",
-            "write_eeprom_data", "set_eeprom_address"
-        ])
-        self.eol_args = QLineEdit("INDEX:0")
-        c_form.addRow("模式:", self.c_mode)
         c_form.addRow("帧 ID (HEX):", self.c_id)
         c_form.addRow("数据 (HEX):", self.c_data)
         c_form.addRow("等待响应 ID:", self.c_wait_id)
@@ -186,8 +173,6 @@ class StepDialog(QDialog):
         c_form.addRow("DLC:", self.c_dlc)
         c_form.addRow("RNCAN通道:", self.c_channel)
         c_form.addRow("超时:", self.c_timeout)
-        c_form.addRow("EOL操作:", self.eol_op)
-        c_form.addRow("EOL参数:", self.eol_args)
 
         # --- 页面 2: 等待参数 ---
         self.page_wait = QWidget()
@@ -261,6 +246,40 @@ class StepDialog(QDialog):
         sim_batch_layout.addRow("作用通道:", self.sim_batch_channels)
         self.param_stack.addWidget(self.page_sim_batch) # 6
 
+        # --- 页面 7: 智界 EOL 协议 ---
+        self.page_eol = QWidget()
+        eol_form = QFormLayout(self.page_eol)
+        self.eol_op = QComboBox()
+        self.eol_op.setEditable(True)
+        self.eol_op.addItems([
+            "0x03_read_insulation", "0x03_insulation_control",
+            "0x04_read_gpio", "0x04_write_gpio",
+            "0x05_read_pwm_duty", "0x05_read_pwm_freq",
+            "0x06_read_adc_value", "0x06_read_adc_raw",
+            "0x07_set_csc_node_count", "0x07_read_csc_hv", "0x07_csc_balance_control",
+            "0x07_read_cell_voltage", "0x07_read_stack_voltage", "0x07_read_fast_charge_impedance",
+            "0x08_read_crash_pwm_duty", "0x08_read_crash_pwm_freq",
+            "0x08_read_crash_impedance", "0x08_read_crash_pulse_width",
+            "0x09_read_rtc_time", "0x09_set_rtc_wakeup", "0x09_set_rtc_time",
+            "0x10_read_cell_temp", "0x10_read_pcb_temp", "0x10_read_host_temp", "0x10_read_host_pcb_temp",
+            "0x0a_set_eeprom_address", "0x0a_read_eeprom_data", "0x0a_write_eeprom_data",
+            "0x0b_read_hall_current", "0x0b_read_hall_current_2",
+            "0xff_read_wakeup_source", "0xff_read_pressure_sensor", "0xff_read_hsd_load_voltage"
+        ])
+        self.eol_args = QLineEdit("INDEX:0")
+        self.eol_channel = QSpinBox()
+        self.eol_channel.setRange(0, 255)
+        self.eol_channel.setValue(0)
+        self.eol_timeout = QSpinBox()
+        self.eol_timeout.setRange(1, 600000)
+        self.eol_timeout.setValue(1000)
+        self.eol_timeout.setSuffix(" ms")
+        eol_form.addRow("EOL操作:", self.eol_op)
+        eol_form.addRow("EOL参数:", self.eol_args)
+        eol_form.addRow("RNCAN通道:", self.eol_channel)
+        eol_form.addRow("超时:", self.eol_timeout)
+        self.param_stack.addWidget(self.page_eol) # 7
+
         main_layout.addWidget(self.param_stack)
         
         main_layout.addStretch()
@@ -299,14 +318,6 @@ class StepDialog(QDialog):
             self._load_data(step_data)
         else:
             self.on_device_changed(0)
-        self.on_can_mode_changed()
-
-    def on_can_mode_changed(self):
-        is_eol = self.c_mode.currentIndex() == 1
-        for widget in [self.c_id, self.c_data, self.c_wait_id, self.c_type, self.c_dlc, self.c_channel]:
-            widget.setEnabled(not is_eol)
-        self.eol_op.setEnabled(is_eol)
-        self.eol_args.setEnabled(is_eol)
 
     def _split_params(self, params_str):
         values = {}
@@ -326,7 +337,14 @@ class StepDialog(QDialog):
 
         device = data.get('device', '')
         action = data.get('action', '')
-        
+        params_str = data.get('params', '')
+        step_type = data.get('type', '')
+        kv = self._split_params(params_str)
+        is_eol_step = "EOL" in step_type.upper() or "智界EOL" in step_type or "EOL" in kv
+        if is_eol_step:
+            device = "智界EOL协议"
+            action = "执行EOL操作"
+
         # 1. 设置设备
         index = self.device_combo.findText(device)
         if index >= 0:
@@ -362,8 +380,7 @@ class StepDialog(QDialog):
         self.fail_strategy_combo.setCurrentText(fail_strategy)
 
         # 3. 解析参数字符串并尝试还原
-        params_str = data.get('params', '')
-        
+
         # --- 模拟器批量参数还原 ---
         if "mA" in params_str:
             import re
@@ -410,18 +427,17 @@ class StepDialog(QDialog):
             if ms_match:
                 self.w_time.setValue(int(ms_match.group(1)))
 
-        kv = self._split_params(params_str)
         if "EOL" in kv:
-            self.c_mode.setCurrentIndex(1)
             self.eol_op.setCurrentText(kv.get("EOL", ""))
-            self.c_timeout.setValue(int(float(kv.get("TIMEOUT", "1000"))))
+            self.eol_timeout.setValue(int(float(kv.get("TIMEOUT", "1000"))))
+            self.eol_channel.setValue(int(float(kv.get("CH", "0"))))
             eol_args = []
             for key, value in kv.items():
                 if key not in {"EOL", "TIMEOUT", "CH"}:
                     eol_args.append(f"{key}:{value}")
             self.eol_args.setText(" / ".join(eol_args))
+            self.param_stack.setCurrentIndex(7)
         else:
-            self.c_mode.setCurrentIndex(0)
             if "ID" in kv: self.c_id.setText(kv["ID"])
             if "DATA" in kv: self.c_data.setText(kv["DATA"])
             if "WAIT_ID" in kv: self.c_wait_id.setText(kv["WAIT_ID"])
@@ -429,7 +445,6 @@ class StepDialog(QDialog):
             if "DLC" in kv: self.c_dlc.setValue(int(kv["DLC"]))
             if "CH" in kv: self.c_channel.setValue(int(kv["CH"]))
             if "TIMEOUT" in kv: self.c_timeout.setValue(int(float(kv["TIMEOUT"])))
-        self.on_can_mode_changed()
 
         if "读取电压" in params_str:
             self.rb_volt.setChecked(True)
@@ -461,7 +476,9 @@ class StepDialog(QDialog):
         self.action_combo.clear()
         device_text = self.device_combo.currentText()
         
-        if "CAN" in device_text:
+        if "智界EOL" in device_text:
+            self.action_combo.addItems(["执行EOL操作"])
+        elif "CAN" in device_text:
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据"])
         elif "等待" in device_text:
             self.action_combo.addItems(["固定延时"])
@@ -485,7 +502,9 @@ class StepDialog(QDialog):
         device = self.device_combo.currentText()
         action = self.action_combo.currentText()
         
-        if "CAN" in device:
+        if "智界EOL" in device:
+            self.param_stack.setCurrentIndex(7)
+        elif "CAN" in device:
             self.param_stack.setCurrentIndex(1)
         elif "等待" in device:
             self.param_stack.setCurrentIndex(2)
@@ -548,24 +567,24 @@ class StepDialog(QDialog):
             if self.rb_volt.isChecked(): params.append("读取电压")
             if self.rb_curr.isChecked(): params.append("读取电流")
         elif idx == 1: # CAN
-            step_type = "CAN发送" if "发送" in action and self.c_mode.currentIndex() == 0 else "CAN交互"
-            if self.c_mode.currentIndex() == 1:
-                params.append(f"EOL:{self.eol_op.currentText().strip()}")
-                for part in self.eol_args.text().split("/"):
-                    part = part.strip()
-                    if part:
-                        params.append(part)
+            step_type = "CAN发送" if "发送" in action else "CAN交互"
+            params.append(f"ID:{self.c_id.text().strip()}")
+            params.append(f"DATA:{self.c_data.text().strip()}")
+            if "发送" not in action:
+                params.append(f"WAIT_ID:{self.c_wait_id.text().strip()}")
                 params.append(f"TIMEOUT:{self.c_timeout.value()}")
-                params.append(f"CH:{self.c_channel.value()}")
-            else:
-                params.append(f"ID:{self.c_id.text().strip()}")
-                params.append(f"DATA:{self.c_data.text().strip()}")
-                if "发送" not in action:
-                    params.append(f"WAIT_ID:{self.c_wait_id.text().strip()}")
-                    params.append(f"TIMEOUT:{self.c_timeout.value()}")
-                params.append(f"TYPE:{self.c_type.currentIndex()}")
-                params.append(f"DLC:{self.c_dlc.value()}")
-                params.append(f"CH:{self.c_channel.value()}")
+            params.append(f"TYPE:{self.c_type.currentIndex()}")
+            params.append(f"DLC:{self.c_dlc.value()}")
+            params.append(f"CH:{self.c_channel.value()}")
+        elif idx == 7: # 智界 EOL 协议
+            step_type = "智界EOL协议"
+            params.append(f"EOL:{self.eol_op.currentText().strip()}")
+            for part in self.eol_args.text().split("/"):
+                part = part.strip()
+                if part:
+                    params.append(part)
+            params.append(f"TIMEOUT:{self.eol_timeout.value()}")
+            params.append(f"CH:{self.eol_channel.value()}")
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")

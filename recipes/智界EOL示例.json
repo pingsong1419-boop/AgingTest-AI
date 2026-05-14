@@ -11,10 +11,10 @@
             "sub_steps": [
                 {
                     "name": "CAN 交互-EOL读取ADC转换值 (EOL:read_adc_value / INDEX:0 / TIMEOUT:1000 / CH:0)",
-                    "action": "交互/问答",
-                    "params": "EOL:read_adc_value / INDEX:0 / TIMEOUT:1000 / CH:0",
-                    "device": "CAN 交互",
-                    "type": "CAN交互",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x06_read_adc_value / INDEX:0 / TIMEOUT:1000 / CH:0",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
                     "is_judgment": true,
                     "fail_strategy": "失败停止"
                 }
@@ -29,10 +29,10 @@
             "sub_steps": [
                 {
                     "name": "CAN 交互-EOL读取GPIO (EOL:read_gpio / GPIO:0x01 / TIMEOUT:1000 / CH:0)",
-                    "action": "交互/问答",
-                    "params": "EOL:read_gpio / GPIO:0x01 / TIMEOUT:1000 / CH:0",
-                    "device": "CAN 交互",
-                    "type": "CAN交互",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x04_read_gpio / GPIO:0x01 / TIMEOUT:1000 / CH:0",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
                     "is_judgment": true,
                     "fail_strategy": "失败停止"
                 }
@@ -47,10 +47,10 @@
             "sub_steps": [
                 {
                     "name": "CAN 交互-EOL读取绝缘值 (EOL:read_insulation / TIMEOUT:1000 / CH:0)",
-                    "action": "交互/问答",
-                    "params": "EOL:read_insulation / TIMEOUT:1000 / CH:0",
-                    "device": "CAN 交互",
-                    "type": "CAN交互",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x03_read_insulation / TIMEOUT:1000 / CH:0",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
                     "is_judgment": true,
                     "fail_strategy": "失败停止"
                 }
