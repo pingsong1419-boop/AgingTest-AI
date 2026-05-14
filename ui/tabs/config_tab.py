@@ -464,6 +464,7 @@ class ConfigTab(QWidget):
             msg = "配方校验发现以下问题：\n\n" + "\n".join(errors[:5])
             if len(errors) > 5: msg += f"\n...等共 {len(errors)} 个问题"
             QMessageBox.warning(self, "校验未通过", msg)
+            return
 
         recipe_item = self.recipe_tree.currentItem()
         if not recipe_item:
@@ -593,7 +594,8 @@ class ConfigTab(QWidget):
                 'params': item.text(2),
                 'device': item.data(0, Qt.UserRole) or "",
                 'type': item.data(1, Qt.UserRole) or "",
-                'is_judgment': item.data(2, Qt.UserRole) or False
+                'is_judgment': item.data(2, Qt.UserRole) or False,
+                'fail_strategy': item.text(4)
             }
             dialog = StepDialog(self, step_data=data)
             if dialog.exec():

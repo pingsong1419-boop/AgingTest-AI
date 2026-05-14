@@ -7,7 +7,7 @@ class StepDialog(QDialog):
     def __init__(self, parent=None, step_data=None):
         super().__init__(parent)
         self.setWindowTitle("编辑指令 (子工步)")
-        self.resize(500, 580)
+        self.resize(620, 720)
         self.setStyleSheet("""
             QDialog { background-color: #1A1A2E; color: #E0E0E0; }
             QLabel { font-size: 14px; color: #B0B0B0; }
@@ -150,12 +150,44 @@ class StepDialog(QDialog):
         # --- 页面 1: CAN 参数 ---
         self.page_can = QWidget()
         c_form = QFormLayout(self.page_can)
-        self.c_id = QLineEdit("0x1801")
+        self.c_mode = QComboBox()
+        self.c_mode.addItems(["原始CAN", "EOL协议"])
+        self.c_mode.currentIndexChanged.connect(self.on_can_mode_changed)
+        self.c_id = QLineEdit("0x7F0")
         self.c_data = QLineEdit("00 00 00 00 00 00 00 00")
-        self.c_wait_id = QLineEdit("0x1802")
+        self.c_wait_id = QLineEdit("0x7F8")
+        self.c_type = QComboBox()
+        self.c_type.addItems(["Classic", "FD", "FD+BRS"])
+        self.c_dlc = QSpinBox()
+        self.c_dlc.setRange(0, 15)
+        self.c_dlc.setValue(8)
+        self.c_channel = QSpinBox()
+        self.c_channel.setRange(0, 255)
+        self.c_channel.setValue(0)
+        self.c_timeout = QSpinBox()
+        self.c_timeout.setRange(1, 600000)
+        self.c_timeout.setValue(1000)
+        self.c_timeout.setSuffix(" ms")
+        self.eol_op = QComboBox()
+        self.eol_op.setEditable(True)
+        self.eol_op.addItems([
+            "read_adc_value", "read_adc_raw", "read_gpio", "write_gpio", "read_insulation",
+            "insulation_control", "read_pwm_duty", "read_pwm_freq", "read_cell_voltage",
+            "read_stack_voltage", "read_csc_hv", "read_cell_temp", "read_pcb_temp",
+            "read_hall_current", "read_wakeup_source", "read_pressure_sensor", "read_eeprom_data",
+            "write_eeprom_data", "set_eeprom_address"
+        ])
+        self.eol_args = QLineEdit("INDEX:0")
+        c_form.addRow("模式:", self.c_mode)
         c_form.addRow("帧 ID (HEX):", self.c_id)
         c_form.addRow("数据 (HEX):", self.c_data)
         c_form.addRow("等待响应 ID:", self.c_wait_id)
+        c_form.addRow("CAN 类型:", self.c_type)
+        c_form.addRow("DLC:", self.c_dlc)
+        c_form.addRow("RNCAN通道:", self.c_channel)
+        c_form.addRow("超时:", self.c_timeout)
+        c_form.addRow("EOL操作:", self.eol_op)
+        c_form.addRow("EOL参数:", self.eol_args)
 
         # --- 页面 2: 等待参数 ---
         self.page_wait = QWidget()
@@ -267,6 +299,24 @@ class StepDialog(QDialog):
             self._load_data(step_data)
         else:
             self.on_device_changed(0)
+        self.on_can_mode_changed()
+
+    def on_can_mode_changed(self):
+        is_eol = self.c_mode.currentIndex() == 1
+        for widget in [self.c_id, self.c_data, self.c_wait_id, self.c_type, self.c_dlc, self.c_channel]:
+            widget.setEnabled(not is_eol)
+        self.eol_op.setEnabled(is_eol)
+        self.eol_args.setEnabled(is_eol)
+
+    def _split_params(self, params_str):
+        values = {}
+        for part in str(params_str).replace("；", "/").replace("，", "/").split("/"):
+            part = part.strip()
+            if not part or ":" not in part:
+                continue
+            key, value = part.split(":", 1)
+            values[key.strip().upper()] = value.strip()
+        return values
 
     def _load_data(self, data):
         """将已有数据填充到界面"""
@@ -360,8 +410,26 @@ class StepDialog(QDialog):
             if ms_match:
                 self.w_time.setValue(int(ms_match.group(1)))
 
-        if "ID:" in params_str:
-            self.c_id.setText(params_str.split("ID:")[-1].split(" ")[0])
+        kv = self._split_params(params_str)
+        if "EOL" in kv:
+            self.c_mode.setCurrentIndex(1)
+            self.eol_op.setCurrentText(kv.get("EOL", ""))
+            self.c_timeout.setValue(int(float(kv.get("TIMEOUT", "1000"))))
+            eol_args = []
+            for key, value in kv.items():
+                if key not in {"EOL", "TIMEOUT", "CH"}:
+                    eol_args.append(f"{key}:{value}")
+            self.eol_args.setText(" / ".join(eol_args))
+        else:
+            self.c_mode.setCurrentIndex(0)
+            if "ID" in kv: self.c_id.setText(kv["ID"])
+            if "DATA" in kv: self.c_data.setText(kv["DATA"])
+            if "WAIT_ID" in kv: self.c_wait_id.setText(kv["WAIT_ID"])
+            if "TYPE" in kv: self.c_type.setCurrentIndex(max(0, min(2, int(kv["TYPE"]))))
+            if "DLC" in kv: self.c_dlc.setValue(int(kv["DLC"]))
+            if "CH" in kv: self.c_channel.setValue(int(kv["CH"]))
+            if "TIMEOUT" in kv: self.c_timeout.setValue(int(float(kv["TIMEOUT"])))
+        self.on_can_mode_changed()
 
         if "读取电压" in params_str:
             self.rb_volt.setChecked(True)
@@ -480,8 +548,24 @@ class StepDialog(QDialog):
             if self.rb_volt.isChecked(): params.append("读取电压")
             if self.rb_curr.isChecked(): params.append("读取电流")
         elif idx == 1: # CAN
-            step_type = "CAN发送" if "发送" in action else "CAN交互"
-            params.append(f"ID:{self.c_id.text()}")
+            step_type = "CAN发送" if "发送" in action and self.c_mode.currentIndex() == 0 else "CAN交互"
+            if self.c_mode.currentIndex() == 1:
+                params.append(f"EOL:{self.eol_op.currentText().strip()}")
+                for part in self.eol_args.text().split("/"):
+                    part = part.strip()
+                    if part:
+                        params.append(part)
+                params.append(f"TIMEOUT:{self.c_timeout.value()}")
+                params.append(f"CH:{self.c_channel.value()}")
+            else:
+                params.append(f"ID:{self.c_id.text().strip()}")
+                params.append(f"DATA:{self.c_data.text().strip()}")
+                if "发送" not in action:
+                    params.append(f"WAIT_ID:{self.c_wait_id.text().strip()}")
+                    params.append(f"TIMEOUT:{self.c_timeout.value()}")
+                params.append(f"TYPE:{self.c_type.currentIndex()}")
+                params.append(f"DLC:{self.c_dlc.value()}")
+                params.append(f"CH:{self.c_channel.value()}")
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")

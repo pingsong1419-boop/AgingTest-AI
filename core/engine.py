@@ -146,6 +146,73 @@ class ChannelWorker(QObject):
             return float(res[0]) if res else 0.0
         except: return 0.0
 
+    def _parse_key_values(self, params: str) -> Dict[str, str]:
+        values = {}
+        for part in str(params).replace("；", "/").replace("，", "/").split("/"):
+            part = part.strip()
+            if not part or ":" not in part:
+                continue
+            key, value = part.split(":", 1)
+            values[key.strip().upper()] = value.strip()
+        return values
+
+    def _parse_int(self, value: Any, default: int = 0) -> int:
+        if value is None or value == "":
+            return default
+        if isinstance(value, int):
+            return value
+        return int(str(value).strip(), 0)
+
+    def _parse_hex_bytes(self, value: Any, default_len: int = 8) -> bytes:
+        if value is None:
+            return bytes(default_len)
+        if isinstance(value, bytes):
+            return value
+        if isinstance(value, (list, tuple)):
+            return bytes(int(v) & 0xFF for v in value)
+        text = str(value).strip()
+        if not text:
+            return bytes(default_len)
+        text = text.replace("0x", "").replace("0X", "")
+        text = re.sub(r"[^0-9a-fA-F]", "", text)
+        return bytes.fromhex(text) if text else bytes(default_len)
+
+    def _parse_can_params(self, params: Dict) -> Dict[str, Any]:
+        kv = self._parse_key_values(params.get("params", ""))
+        data = params.get("data") if "data" in params else kv.get("DATA")
+        parsed_data = self._parse_hex_bytes(data)
+        dlc = self._parse_int(params.get("dlc", kv.get("DLC")), len(parsed_data) or 8)
+        return {
+            "channel_id": self._parse_int(params.get("channel_id", kv.get("CH")), 0),
+            "can_id": self._parse_int(params.get("id", params.get("can_id", kv.get("ID"))), 0),
+            "can_type": self._parse_int(params.get("can_type", kv.get("TYPE")), 0),
+            "dlc": dlc,
+            "data": parsed_data,
+            "wait_id": self._parse_int(params.get("wait_id", kv.get("WAIT_ID")), -1),
+            "timeout": self._parse_int(params.get("timeout_ms", kv.get("TIMEOUT")), 1000) / 1000.0,
+        }
+
+    def _parse_eol_params(self, params: Dict) -> Optional[Dict[str, Any]]:
+        kv = self._parse_key_values(params.get("params", ""))
+        if "EOL" not in kv:
+            return None
+        return {
+            "op_name": kv.pop("EOL").strip(),
+            "timeout": self._parse_int(kv.pop("TIMEOUT", 1000), 1000) / 1000.0,
+            "channel_id": self._parse_int(kv.pop("CH", 0), 0),
+            "kwargs": kv,
+        }
+
+    def _get_can_board(self, mgr):
+        board = mgr.boards.get(self.channel_id)
+        if not board:
+            raise ValueError(f"找不到通道 {self.channel_id} 对应的CAN控制板")
+        if not board.can.is_connected:
+            board.can.connect()
+        if not board.can.is_connected:
+            raise ValueError(f"通道 {self.channel_id} CAN未连接")
+        return board
+
     def execute_sub_step(self, sub_step: SubStep):
         if not self.is_running: return
         
@@ -388,22 +455,42 @@ class ChannelWorker(QObject):
                     self.db_manager.log_detail(self.test_id, self.steps[self.current_step_index].name, v, c, "--")
 
             elif sub_step.type == SubStepType.CAN_SEND:
-                board = mgr.boards.get(self.channel_id)
-                if board:
-                    if not board.is_connected: board.connect()
-                    # RNCAN 通常对单通道板卡使用通道 0
-                    success = board.can.send_can_message(
-                        channel_id=0,
-                        can_id=params.get("id"),
-                        can_type=0,
-                        dlc=8,
-                        data=bytes(params.get("data", []))
-                    )
-                else: success = False
+                board = self._get_can_board(mgr)
+                can_cfg = self._parse_can_params(params)
+                success = board.can.send_can_message(
+                    channel_id=can_cfg["channel_id"],
+                    can_id=can_cfg["can_id"],
+                    can_type=can_cfg["can_type"],
+                    dlc=can_cfg["dlc"],
+                    data=can_cfg["data"]
+                )
+                hw_logger(f"CAN TX ID=0x{can_cfg['can_id']:X} DATA={can_cfg['data'].hex(' ').upper()}")
 
             elif sub_step.type == SubStepType.CAN_INTERACT:
-                # 暂时保留占位，后续可基于 RNCAN 的 recv_queue 实现
-                pass
+                board = self._get_can_board(mgr)
+                eol_cfg = self._parse_eol_params(params)
+                if eol_cfg:
+                    from devices.eol_protocol import EOLProtocol
+                    eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
+                    result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], **eol_cfg["kwargs"])
+                    success = result.success
+                    result_value = result.value if result.success else result.error
+                    hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if success else 'FAIL'} {result_value}")
+                else:
+                    can_cfg = self._parse_can_params(params)
+                    wait_id = can_cfg["wait_id"] if can_cfg["wait_id"] >= 0 else can_cfg["can_id"]
+                    msg = board.can.send_and_wait_response(
+                        channel_id=can_cfg["channel_id"],
+                        can_id=can_cfg["can_id"],
+                        can_type=can_cfg["can_type"],
+                        dlc=can_cfg["dlc"],
+                        data=can_cfg["data"],
+                        response_id=wait_id,
+                        timeout=can_cfg["timeout"]
+                    )
+                    success = msg is not None
+                    result_value = msg.get("data", b"").hex(" ").upper() if msg else "TIMEOUT"
+                    hw_logger(f"CAN REQ ID=0x{can_cfg['can_id']:X} WAIT=0x{wait_id:X} => {result_value}")
 
             elif sub_step.type == SubStepType.WAIT:
                 total_ms = int(self._parse_numeric(params.get("params", 1000)))

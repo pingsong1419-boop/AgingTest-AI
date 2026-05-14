@@ -3,10 +3,8 @@ import struct
 import threading
 import time
 import queue
-import os
-import csv
-from typing import Optional, Callable, List, Dict
-from datetime import datetime
+from collections import deque
+from typing import Optional, Callable
 
 class RNCANDriver:
     """
@@ -31,7 +29,9 @@ class RNCANDriver:
         self.on_message_received: Optional[Callable] = None # 可选的回调
         self._receive_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
-        
+        self._rx_history = deque(maxlen=2000)
+        self._rx_condition = threading.Condition()
+
         # CRC16-CCITT 查找表 (多项式 0x1021)
         self.crc_table = self._generate_crc_table()
 
@@ -160,9 +160,12 @@ class RNCANDriver:
                         }
                         if not self.msg_queue.full():
                             self.msg_queue.put(msg_info)
+                        with self._rx_condition:
+                            self._rx_history.append(msg_info)
+                            self._rx_condition.notify_all()
                         if self.on_message_received:
                             self.on_message_received(msg_info)
-                    
+
                     # 移除已处理的帧
                     buffer = buffer[total_frame_size:]
                     
@@ -226,6 +229,51 @@ class RNCANDriver:
         except Exception as e:
             print(f"[RNCAN] Send error: {e}")
             return False
+
+    def clear_rx_history(self, can_id: Optional[int] = None):
+        with self._rx_condition:
+            if can_id is None:
+                self._rx_history.clear()
+            else:
+                self._rx_history = deque(
+                    (msg for msg in self._rx_history if msg.get('can_id') != can_id),
+                    maxlen=self._rx_history.maxlen
+                )
+
+    def wait_for_message(self, can_id: Optional[int] = None, channel_id: Optional[int] = None,
+                         predicate: Optional[Callable] = None, timeout: float = 1.0):
+        deadline = time.time() + max(0.0, timeout)
+        seen_index = 0
+        with self._rx_condition:
+            while True:
+                history = list(self._rx_history)
+                for msg in history[seen_index:]:
+                    if can_id is not None and msg.get('can_id') != can_id:
+                        continue
+                    if channel_id is not None and msg.get('channel') != channel_id:
+                        continue
+                    if predicate and not predicate(msg):
+                        continue
+                    return msg
+                seen_index = len(history)
+
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    return None
+                self._rx_condition.wait(remaining)
+
+    def send_and_wait_response(self, channel_id: int, can_id: int, can_type: int, dlc: int,
+                               data: bytes, response_id: int, timeout: float = 1.0,
+                               matcher: Optional[Callable] = None):
+        self.clear_rx_history(response_id)
+        if not self.send_can_message(channel_id, can_id, can_type, dlc, data):
+            return None
+        return self.wait_for_message(
+            can_id=response_id,
+            channel_id=channel_id,
+            predicate=matcher,
+            timeout=timeout
+        )
 
     def dlc_to_length(self, dlc: int) -> int:
         if dlc <= 8:
