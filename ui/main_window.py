@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
         import threading
         def async_init():
             try:
-                self.device_manager.init_all_devices()
+                self.device_manager.init_all_devices(logger=print)
                 # 初始化完成后，通知状态栏
                 from PySide6.QtCore import QMetaObject, Qt, Q_ARG
                 QMetaObject.invokeMethod(self.status_bar, "showMessage", 
@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         # 默认调试 1 号通道的板卡
         first_board = self.device_manager.boards.get(1)
         
-        self.tab_afe_standalone = AFEPowerStandaloneTab(self.device_manager.afe_pwr_standalone)
+        self.tab_afe_standalone = AFEPowerStandaloneTab(self.device_manager.afe_pwr_2)
         self.tabs.addTab(self.tab_afe_standalone, "AFE电源调试")
 
         self.tab_ctrl_pwr = PowerBoardTab(self.device_manager.ctrl_board_power)

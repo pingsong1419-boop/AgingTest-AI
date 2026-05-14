@@ -23,6 +23,10 @@ class CA550Controller:
 
     def connect(self) -> bool:
         """建立串口连接并执行握手验证"""
+        if not self.port or self.port.strip() == "":
+            logger.warning("CA550 串口未配置，跳过连接。")
+            return False
+            
         try:
             # 物理层连接
             self.ser = serial.Serial(
@@ -31,7 +35,7 @@ class CA550Controller:
                 bytesize=self.bytesize,
                 parity=self.parity,
                 stopbits=self.stopbits,
-                timeout=1.5
+                timeout=1.0  # 稍微缩短超时
             )
             # 激活 DTR/RTS 信号
             self.ser.dtr = True

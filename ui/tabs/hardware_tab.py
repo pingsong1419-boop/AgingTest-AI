@@ -47,26 +47,63 @@ class HardwareTab(QWidget):
         self.status_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         status_v.addWidget(self.status_table)
         status_group.setLayout(status_v)
-        mgr_layout.addWidget(status_group, 2)
+        mgr_layout.addWidget(status_group, 3)  # 增加权重
         
         # B. 通讯配置
         config_group = QGroupBox("公共设备通讯参数配置")
-        config_form = QHBoxLayout()
-        form_l = QFormLayout(); self.edit_afe1_ip = QLineEdit(); self.edit_afe1_port = QLineEdit()
-        form_l.addRow("1# AFE IP:", self.edit_afe1_ip); form_l.addRow("1# 端口:", self.edit_afe1_port)
+        config_group.setMaximumHeight(220) # 限制高度
+        config_main_layout = QHBoxLayout()
+        
+        # 左侧列: AFE 电源配置 (IP + 端口 并排)
+        form_afe = QFormLayout()
+        
+        def create_ip_port_row(ip_edit, port_edit):
+            layout = QHBoxLayout()
+            ip_edit.setPlaceholderText("0.0.0.0")
+            port_edit.setFixedWidth(60)
+            port_edit.setPlaceholderText("2000")
+            layout.addWidget(ip_edit)
+            layout.addWidget(QLabel("端口:"))
+            layout.addWidget(port_edit)
+            return layout
+
+        self.edit_afe1_ip = QLineEdit(); self.edit_afe1_port = QLineEdit()
+        form_afe.addRow("1# AFE IP:", create_ip_port_row(self.edit_afe1_ip, self.edit_afe1_port))
+        
+        self.edit_afe2_ip = QLineEdit(); self.edit_afe2_port = QLineEdit()
+        form_afe.addRow("2# AFE IP:", create_ip_port_row(self.edit_afe2_ip, self.edit_afe2_port))
+        
+        self.edit_afe3_ip = QLineEdit(); self.edit_afe3_port = QLineEdit()
+        form_afe.addRow("3# AFE IP:", create_ip_port_row(self.edit_afe3_ip, self.edit_afe3_port))
+        
+        # 右侧列: 其它设备
+        form_others = QFormLayout()
         self.edit_dut_ip = QLineEdit(); self.edit_hv_ip = QLineEdit()
-        form_l.addRow("被测物电源 IP:", self.edit_dut_ip); form_l.addRow("NGI 高压 IP:", self.edit_hv_ip)
+        form_others.addRow("DUT供电 IP:", self.edit_dut_ip)
+        form_others.addRow("NGI 高压 IP:", self.edit_hv_ip)
         
-        form_r = QFormLayout(); self.edit_sim1_ip = QLineEdit(); self.edit_sim2_ip = QLineEdit(); self.edit_sim3_ip = QLineEdit()
-        form_r.addRow("1# 模拟器 IP:", self.edit_sim1_ip); form_r.addRow("2# 模拟器 IP:", self.edit_sim2_ip); form_r.addRow("3# 模拟器 IP:", self.edit_sim3_ip)
-        self.edit_ctrl_pwr_ip = QLineEdit(); form_r.addRow("控制板电源 IP:", self.edit_ctrl_pwr_ip)
-        self.edit_easy320_ip = QLineEdit(); form_r.addRow("Easy320 IP:", self.edit_easy320_ip)
+        self.edit_sim1_ip = QLineEdit(); self.edit_sim2_ip = QLineEdit(); self.edit_sim3_ip = QLineEdit()
+        form_others.addRow("1# 模拟器 IP:", self.edit_sim1_ip)
+        form_others.addRow("2# 模拟器 IP:", self.edit_sim2_ip)
+        form_others.addRow("3# 模拟器 IP:", self.edit_sim3_ip)
+
+        self.edit_ctrl_pwr_ip = QLineEdit(); self.edit_easy320_ip = QLineEdit()
+        form_others.addRow("控制板电源 IP:", self.edit_ctrl_pwr_ip)
+        form_others.addRow("Easy320 PLC IP:", self.edit_easy320_ip)
         
-        config_form.addLayout(form_l); config_form.addLayout(form_r)
+        self.edit_ca550_com = QLineEdit()
+        form_others.addRow("CA550 串口号:", self.edit_ca550_com)
+
+        config_main_layout.addLayout(form_afe, 2)
+        config_main_layout.addLayout(form_others, 3)
+        
         btn_save = QPushButton("💾 保存\n全局参数")
-        btn_save.setFixedSize(100, 80); btn_save.clicked.connect(self.save_global_config)
-        config_form.addWidget(btn_save)
-        config_group.setLayout(config_form)
+        btn_save.setFixedSize(100, 100)
+        btn_save.setStyleSheet("font-weight: bold; background-color: #4B4B6A;")
+        btn_save.clicked.connect(self.save_global_config)
+        config_main_layout.addWidget(btn_save)
+        
+        config_group.setLayout(config_main_layout)
         mgr_layout.addWidget(config_group, 1)
         
         self.sub_tabs.addTab(tab_mgr, "1. 硬件状态与全局配置")
@@ -178,7 +215,22 @@ class HardwareTab(QWidget):
             self.refresh_hardware_status()
 
     def init_all_hardware(self):
-        if self.device_manager: self.device_manager.init_all_devices()
+        if not self.device_manager: return
+        
+        self.btn_init_all.setEnabled(False)
+        self.btn_init_all.setText("⚡ 正在全量初始化硬件 (请稍候)...")
+        
+        import threading
+        def task():
+            try:
+                # 执行耗时的初始化逻辑
+                self.device_manager.init_all_devices(logger=print)
+            finally:
+                # 恢复按钮状态（需在主线程执行）
+                QTimer.singleShot(0, lambda: self.btn_init_all.setEnabled(True))
+                QTimer.singleShot(0, lambda: self.btn_init_all.setText("⚡ 一键初始化所有硬件"))
+        
+        threading.Thread(target=task, daemon=True).start()
 
     def disconnect_all_hardware(self):
         if self.device_manager: self.device_manager.disconnect_all(); self.refresh_hardware_status()
@@ -187,6 +239,10 @@ class HardwareTab(QWidget):
         cfg = self.db_manager.load_sys_config() or {}
         self.edit_afe1_ip.setText(cfg.get("afe1_ip", "192.168.1.200"))
         self.edit_afe1_port.setText(str(cfg.get("afe1_port", "2000")))
+        self.edit_afe2_ip.setText(cfg.get("afe2_ip", "192.168.1.204"))
+        self.edit_afe2_port.setText(str(cfg.get("afe2_port", "2000")))
+        self.edit_afe3_ip.setText(cfg.get("afe3_ip", "192.168.1.203"))
+        self.edit_afe3_port.setText(str(cfg.get("afe3_port", "2000")))
         self.edit_dut_ip.setText(cfg.get("dut_pwr_ip", "192.168.1.201"))
         self.edit_hv_ip.setText(cfg.get("hv_ip", "192.168.1.190"))
         self.edit_sim1_ip.setText(cfg.get("sim1_ip", "192.168.1.210"))
@@ -194,6 +250,7 @@ class HardwareTab(QWidget):
         self.edit_sim3_ip.setText(cfg.get("sim3_ip", "192.168.1.212"))
         self.edit_ctrl_pwr_ip.setText(cfg.get("ctrl_pwr_ip", "192.168.1.202"))
         self.edit_easy320_ip.setText(cfg.get("easy320_ip", "192.168.1.88"))
+        self.edit_ca550_com.setText(cfg.get("ca550_com", ""))
 
         ch_cfgs = self.db_manager.load_channel_config() or []
 
@@ -201,13 +258,18 @@ class HardwareTab(QWidget):
         data = {
             "afe1_ip": self.edit_afe1_ip.text(),
             "afe1_port": self.edit_afe1_port.text(),
+            "afe2_ip": self.edit_afe2_ip.text(),
+            "afe2_port": self.edit_afe2_port.text(),
+            "afe3_ip": self.edit_afe3_ip.text(),
+            "afe3_port": self.edit_afe3_port.text(),
             "dut_pwr_ip": self.edit_dut_ip.text(),
             "hv_ip": self.edit_hv_ip.text(),
             "sim1_ip": self.edit_sim1_ip.text(),
             "sim2_ip": self.edit_sim2_ip.text(),
             "sim3_ip": self.edit_sim3_ip.text(),
             "ctrl_pwr_ip": self.edit_ctrl_pwr_ip.text(),
-            "easy320_ip": self.edit_easy320_ip.text()
+            "easy320_ip": self.edit_easy320_ip.text(),
+            "ca550_com": self.edit_ca550_com.text()
         }
         if self.db_manager.save_sys_config(data):
             if self.device_manager: self.device_manager.update_config()

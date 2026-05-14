@@ -64,13 +64,13 @@ class DeviceManager:
         afe1_port = int(cfg.get("afe1_port", 2000))
         self.afe_power_1 = AFEPowerRU36(afe1_ip, afe1_port)
 
-        afe2_ip = cfg.get("afe2_ip", "192.168.1.203")
-        afe2_port = int(cfg.get("afe2_port", 10001))
-        self.afe_pwr_standalone = AFEPowerController(afe2_ip, afe2_port)
+        afe2_ip = cfg.get("afe2_ip", "192.168.1.204")
+        afe2_port = int(cfg.get("afe2_port", 2000))
+        self.afe_pwr_2 = AFEPowerRU36(afe2_ip, afe2_port)
 
         afe3_ip = cfg.get("afe3_ip", "192.168.1.203")
-        afe3_port = int(cfg.get("afe3_port", 10001))
-        self.afe_pwr_3 = AFEPowerController(afe3_ip, afe3_port)
+        afe3_port = int(cfg.get("afe3_port", 2000))
+        self.afe_pwr_3 = AFEPowerRU36(afe3_ip, afe3_port)
 
         # 4. 被测物供电电源 (DUT Power)
         dut_ip = cfg.get("dut_pwr_ip", "192.168.1.201")
@@ -83,7 +83,7 @@ class DeviceManager:
         self.ctrl_board_power = PowerBoardRU12(ctrl_pwr_ip, ctrl_pwr_port)
 
         # 6. CA550
-        ca_com = cfg.get("ca550_com", "COM5")
+        ca_com = cfg.get("ca550_com", "")
         self.ca550 = CA550Controller(port=ca_com)
 
         # 7. Easy320
@@ -96,7 +96,7 @@ class DeviceManager:
             ch_configs = self.db_manager.load_channel_config() or []
         
         base_ip = cfg.get("board_base_ip", "192.168.1.")
-        start_suffix = int(cfg.get("board_start_suffix", 101))
+        start_suffix = int(cfg.get("board_start_suffix", 10))
         
         # 建立一个映射字典供快速查询
         db_ips = {c["channel_id"]: c["board_ip"] for c in ch_configs if c.get("board_ip")}
@@ -210,7 +210,7 @@ class DeviceManager:
         # 2. 电源类设备初始化
         if self.hv_source: self.hv_source.connect()
         if self.afe_power_1: self.afe_power_1.connect()
-        if self.afe_pwr_standalone: self.afe_pwr_standalone.connect()
+        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: self.afe_pwr_2.connect()
         if self.afe_pwr_3: self.afe_pwr_3.connect()
         if self.dut_power: self.dut_power.connect()
         if self.ctrl_board_power: self.ctrl_board_power.connect()
@@ -219,26 +219,57 @@ class DeviceManager:
         for sim in self.simulators:
             sim.connect()
             
-        # 4. [关键] 老化板分级顺序启动防浪涌逻辑
-        if self.easy320 and self.easy320.is_connected:
-            if logger: logger("[*] 触发分级上电逻辑 (PLC Easy320)...")
-            # 假设每路继电器控制一个老化架或一组老化板，分批启动
-            # 此处演示为 1-16 路继电器，每 500ms 开启一个
+        # 4. [关键] 功能板上电与 Easy320 分级上电逻辑
+        power_ok = False
+        if self.ctrl_board_power and self.ctrl_board_power.is_connected:
+            if logger: logger("[*] 正在初始化功能板电源: 设定 24.0V / 40.0A ...")
+            self.ctrl_board_power.set_voltage(24.0)
+            self.ctrl_board_power.set_current(40.0)
+            if self.ctrl_board_power.output_control(True):
+                # 等待电压建立时间
+                import time
+                time.sleep(1.5) 
+                v_meas = self.ctrl_board_power.measure_voltage()
+                if logger: logger(f"[*] 功能板电源实时电压反馈: {v_meas:.2f}V")
+                
+                # 判定输出是否正常 (24V 允许 +/- 10% 误差)
+                if 21.0 <= v_meas <= 27.0:
+                    power_ok = True
+                    if logger: logger("[+] 功能板电源输出正常，准备闭合继电器。")
+                else:
+                    if logger: logger(f"[!] 警告: 功能板电压异常 ({v_meas:.2f}V)，禁止启动后续继电器！")
+            else:
+                if logger: logger("[!] 错误: 无法开启功能板电源输出。")
+        else:
+            if logger: logger("[!] 错误: 功能板电源未联机，无法进行安全上电检查。")
+
+        # 只有电源正常才允许操作 PLC 继电器
+        if power_ok and self.easy320 and self.easy320.is_connected:
+            if logger: logger("[*] 触发分级上电逻辑 (PLC Easy320 前16路)...")
             import time
             for i in range(16):
-                self.easy320.write_relay(i, True)
-                time.sleep(0.5) 
+                if self.easy320.write_relay(i, True):
+                    time.sleep(0.5) 
+                else:
+                    if logger: logger(f"[!] 警告: PLC 继电器 {i+1} 写入失败")
             if logger: logger("[*] 分级上电指令发送完毕。")
+        elif not power_ok:
+            if logger: logger("[!] 由于功能板电源异常，已跳过 PLC 继电器分级上电流程。")
         
-        # 5. [关键] 逻辑自检：确认老化板 TCP 握手在线状态
-        if logger: logger("[*] 开始扫描 60 路老化板在线状态 (TCP 握手)...")
+        # 5. [关键] 逻辑自检：并行扫描 60 路老化板在线状态
+        if logger: logger("[*] 开始并行扫描 60 路老化板在线状态 (TCP 握手)...")
+        from concurrent.futures import ThreadPoolExecutor
+        
         online_count = 0
-        # 考虑到 60 个连接可能较慢，实际建议改为多线程扫描，此处先串行演示逻辑
-        for i, board in self.boards.items():
+        def check_board(b_tuple):
+            idx, board = b_tuple
             if board.connect():
-                online_count += 1
-                if i % 10 == 0 and logger: # 减少日志冗余
-                    logger(f"    - 进度: 已检测 {i}/60 通道")
+                return True
+            return False
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            results = list(executor.map(check_board, self.boards.items()))
+            online_count = sum(1 for r in results if r)
         
         if logger: 
             logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 60")
@@ -265,7 +296,8 @@ class DeviceManager:
         
         if self.hv_source: add_status("NGI 高压源", self.hv_source)
         if self.afe_power_1: add_status("1# AFE 供电电源", self.afe_power_1)
-        if self.afe_pwr_standalone: add_status("2# AFE 调试电源", self.afe_pwr_standalone)
+        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: add_status("2# AFE 供电电源", self.afe_pwr_2)
+        if hasattr(self, 'afe_pwr_3') and self.afe_pwr_3: add_status("3# AFE 供电电源", self.afe_pwr_3)
         if self.dut_power: add_status("被测物供电电源 (DUT)", self.dut_power)
         if self.ctrl_board_power: add_status("控制板供电电源 (Ctrl Board)", self.ctrl_board_power)
         if self.ca550: add_status("CA550 校准源", self.ca550, self.ca550.port)
@@ -283,8 +315,8 @@ class DeviceManager:
             sim.disconnect()
         if self.hv_source: self.hv_source.disconnect()
         if self.afe_power_1: self.afe_power_1.disconnect()
-        if self.afe_pwr_standalone: self.afe_pwr_standalone.disconnect()
-        if self.afe_pwr_3: self.afe_pwr_3.disconnect()
+        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: self.afe_pwr_2.disconnect()
+        if hasattr(self, 'afe_pwr_3') and self.afe_pwr_3: self.afe_pwr_3.disconnect()
         if self.dut_power: self.dut_power.disconnect()
         if self.ctrl_board_power: self.ctrl_board_power.disconnect()
         for board in self.boards.values():
