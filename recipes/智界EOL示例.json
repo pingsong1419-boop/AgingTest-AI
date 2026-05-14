@@ -1,0 +1,60 @@
+{
+    "name": "智界EOL示例",
+    "topology": "1主0从",
+    "items": [
+        {
+            "name": "EOL_ADC转换值读取",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "5.0",
+            "strategy": "任何NG停止",
+            "sub_steps": [
+                {
+                    "name": "CAN 交互-EOL读取ADC转换值 (EOL:read_adc_value / INDEX:0 / TIMEOUT:1000 / CH:0)",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x06_read_adc_value / INDEX:0 / TIMEOUT:1000 / CH:0",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
+                    "is_judgment": true,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "EOL_GPIO状态读取",
+            "mode": "范围判定",
+            "min": "0",
+            "max": "1",
+            "strategy": "任何NG停止",
+            "sub_steps": [
+                {
+                    "name": "CAN 交互-EOL读取GPIO (EOL:read_gpio / GPIO:0x01 / TIMEOUT:1000 / CH:0)",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x04_read_gpio / GPIO:0x01 / TIMEOUT:1000 / CH:0",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
+                    "is_judgment": true,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "EOL_绝缘值读取",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "100000.0",
+            "strategy": "任何NG停止",
+            "sub_steps": [
+                {
+                    "name": "CAN 交互-EOL读取绝缘值 (EOL:read_insulation / TIMEOUT:1000 / CH:0)",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x03_read_insulation / TIMEOUT:1000 / CH:0",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
+                    "is_judgment": true,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        }
+    ]
+}

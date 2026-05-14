@@ -559,11 +559,11 @@
             "strategy": "任何NG停止",
             "sub_steps": [
                 {
-                    "name": "CAN 交互-发送指令 (ID:0x1801)",
-                    "action": "发送指令",
-                    "params": "ID:0x1801",
-                    "device": "CAN 交互",
-                    "type": "CAN发送",
+                    "name": "智界EOL协议-执行EOL操作 (EOL:0x10_read_host_temp / TIMEOUT:1000 / CH:1)",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x10_read_host_temp / TIMEOUT:1000 / CH:1",
+                    "device": "智界EOL协议",
+                    "type": "智界EOL协议",
                     "is_judgment": false,
                     "fail_strategy": "失败停止"
                 }

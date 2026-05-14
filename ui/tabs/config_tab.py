@@ -464,6 +464,7 @@ class ConfigTab(QWidget):
             msg = "配方校验发现以下问题：\n\n" + "\n".join(errors[:5])
             if len(errors) > 5: msg += f"\n...等共 {len(errors)} 个问题"
             QMessageBox.warning(self, "校验未通过", msg)
+            return
 
         recipe_item = self.recipe_tree.currentItem()
         if not recipe_item:
