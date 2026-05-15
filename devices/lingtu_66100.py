@@ -20,18 +20,21 @@ class Lingtu66100:
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # 设置 LINGER 选项，确保关闭时立即发送 RST 报文释放端口
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
-            self.sock.settimeout(3.0)
+            self.sock.settimeout(2.0)
             self.sock.connect((self.ip, self.port))
             self.is_connected = True
             
-            # 清除仪器缓冲区并测试通讯
-            self.sock.send(b"*CLS\n") # 清除状态寄存器
-            time.sleep(0.1)
-            self.sock.send(b"*IDN?\n")
-            idn = self.sock.recv(1024).decode().strip()
-            print(f"[*] 联机成功: {idn}")
+            # 尝试握手，但不作为联机成功的唯一标准
+            try:
+                self.sock.send(b"*CLS\n")
+                time.sleep(0.1)
+                self.sock.send(b"*IDN?\n")
+                idn = self.sock.recv(1024).decode().strip()
+                print(f"[*] 模拟器 ({self.ip}) 握手成功: {idn}")
+            except:
+                print(f"[!] 模拟器 ({self.ip}) TCP 已连接，但 *IDN? 无响应")
+            
             return True
         except Exception as e:
             print(f"[Lingtu66100] 连接失败 ({self.ip}): {e}")

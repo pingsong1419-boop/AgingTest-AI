@@ -247,6 +247,15 @@ class DBManager:
             return [os.path.splitext(f)[0] for f in files]
         except: return []
 
+    def delete_recipe(self, name: str) -> bool:
+        try:
+            file_path = os.path.join(self.get_recipe_dir(), f"{name}.json")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                return True
+            return False
+        except: return False
+
     # --- 系统与硬件配置存储逻辑 ---
     
     def get_config_dir(self):

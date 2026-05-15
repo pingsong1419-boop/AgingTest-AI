@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                               QLineEdit, QPushButton, QFrame, QListWidget)
-from PySide6.QtCore import Qt, Signal
+                               QLineEdit, QPushButton, QFrame, QListWidget, QScrollArea)
+from PySide6.QtCore import Qt, Signal, QTimer
 
 class ScanDialog(QDialog):
     """
@@ -18,7 +18,7 @@ class ScanDialog(QDialog):
         self.slaves_count = slaves_count
         
         self.setWindowTitle("扫码入站绑定")
-        self.setFixedSize(500, 450)
+        self.setFixedSize(750, 600)
         self.setStyleSheet("background-color: #1A1A2E; color: white;")
         
         # 数据缓存
@@ -51,8 +51,19 @@ class ScanDialog(QDialog):
         
         # 扫描输入框 (保持焦点)
         self.scan_input = QLineEdit()
-        self.scan_input.setFixedHeight(40)
-        self.scan_input.setStyleSheet("font-size: 18px; border: 2px solid #3E3E5C; border-radius: 5px; padding: 5px;")
+        self.scan_input.setFixedHeight(50)
+        self.scan_input.setPlaceholderText(">>> 请在此处扫码 <<<")
+        self.scan_input.setStyleSheet("""
+            QLineEdit {
+                font-size: 24px; 
+                font-family: 'Consolas', 'Monaco', monospace;
+                border: 2px solid #00E5FF; 
+                border-radius: 8px; 
+                padding: 10px;
+                background-color: #0F0F1E;
+                color: #00FF00;
+            }
+        """)
         self.scan_input.returnPressed.connect(self.process_scan)
         layout.addWidget(self.scan_input)
         
@@ -62,19 +73,39 @@ class ScanDialog(QDialog):
         info_layout = QVBoxLayout(info_frame)
         
         self.lbl_ch_info = QLabel("测试通道: --")
-        self.lbl_ch_info.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.lbl_ch_info.setStyleSheet("font-size: 20px; font-weight: bold; color: #4ECCA3;")
         info_layout.addWidget(self.lbl_ch_info)
         
         self.lbl_shelf_info = QLabel("货架编号: --")
+        self.lbl_shelf_info.setStyleSheet("font-size: 16px; color: #AAAAAA;")
+        self.lbl_shelf_info.setWordWrap(True)
         info_layout.addWidget(self.lbl_shelf_info)
         
         self.lbl_master_info = QLabel("主机编码: --")
+        self.lbl_master_info.setStyleSheet("font-size: 18px; font-weight: bold; border-top: 1px solid #3E3E5C; padding-top: 10px;")
+        self.lbl_master_info.setWordWrap(True)
+        self.lbl_master_info.setTextInteractionFlags(Qt.TextSelectableByMouse)
         info_layout.addWidget(self.lbl_master_info)
         
-        info_layout.addWidget(QLabel("从机列表:"))
+        slave_lbl = QLabel("从机列表:")
+        slave_lbl.setStyleSheet("font-size: 14px; color: #888888;")
+        info_layout.addWidget(slave_lbl)
+        
         self.list_slaves = QListWidget()
-        self.list_slaves.setFixedHeight(100)
-        self.list_slaves.setStyleSheet("background: transparent; border: 1px solid #3E3E5C;")
+        self.list_slaves.setFixedHeight(120)
+        self.list_slaves.setStyleSheet("""
+            QListWidget {
+                font-size: 14px;
+                background: #1A1A2E; 
+                border: 1px solid #3E3E5C;
+                border-radius: 5px;
+                padding: 5px;
+            }
+            QListWidget::item {
+                padding: 5px;
+                border-bottom: 1px solid #2A2A3E;
+            }
+        """)
         info_layout.addWidget(self.list_slaves)
         
         layout.addWidget(info_frame)
@@ -99,6 +130,8 @@ class ScanDialog(QDialog):
         if not code: return
         
         # 状态机逻辑
+        print(f"[DEBUG] 扫码输入: {code}, 当前目标通道: {self.target_channel}")
+        
         if self.target_channel == -1:
             # 第一步：识别货架码
             if code in self.shelf_mapping:
@@ -106,11 +139,13 @@ class ScanDialog(QDialog):
                 self.shelf_code = code
                 self.lbl_ch_info.setText(f"测试通道: CH-{self.target_channel:02d}")
                 self.lbl_shelf_info.setText(f"货架编号: {code}")
-                self.lbl_step.setText("货架已识别！请扫描【主机条码】")
-                self.lbl_step.setStyleSheet("color: #FFD700;")
+                self.lbl_step.setText("✅ 货架已识别！请扫描【主机条码】")
+                self.lbl_step.setStyleSheet("color: #FFD700; font-size: 20px;")
+                print(f"[DEBUG] 识别到货架: {code} -> 通道: {self.target_channel}")
             else:
-                self.lbl_step.setText("❌ 未识别的货架码，请检查硬件配置")
-                self.lbl_step.setStyleSheet("color: #FF4D4D;")
+                self.lbl_step.setText(f"❌ 未识别货架码: {code}")
+                self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 18px;")
+                print(f"[DEBUG] 未识别的货架码: {code}")
                 
         elif not self.master_code:
             # 第二步：扫主机
@@ -149,7 +184,5 @@ class ScanDialog(QDialog):
         self.lbl_master_info.setText("主机编码: --")
         self.list_slaves.clear()
         self.lbl_step.setText("请扫描【货架二维码】以定位测试通道")
-        self.lbl_step.setStyleSheet("color: #00E5FF;")
+        self.lbl_step.setStyleSheet("color: #00E5FF; font-size: 16px;")
         self.scan_input.setFocus()
-
-from PySide6.QtCore import QTimer

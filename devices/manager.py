@@ -53,6 +53,10 @@ class DeviceManager:
             Lingtu66100(sim2_ip, sim2_port),
             Lingtu66100(sim3_ip, sim3_port)
         ]
+        # 尝试后台联机
+        import threading
+        for sim in self.simulators:
+            threading.Thread(target=sim.connect, daemon=True).start()
 
         # 2. NGI 高压源
         hv_ip = cfg.get("hv_ip", "192.168.1.190")

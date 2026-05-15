@@ -26,9 +26,19 @@ class ConfigTab(QWidget):
         self.recipe_tree.itemClicked.connect(self.on_recipe_selected)
         left_panel.addWidget(self.recipe_tree)
         
+        btn_recipe_layout = QHBoxLayout()
         self.btn_add_recipe = QPushButton("新建配方")
         self.btn_add_recipe.clicked.connect(self.add_new_recipe)
-        left_panel.addWidget(self.btn_add_recipe)
+        self.btn_del_recipe = QPushButton("删除配方")
+        self.btn_del_recipe.clicked.connect(self.delete_selected_recipe)
+        self.btn_del_recipe.setStyleSheet("background-color: #5A5A5A;")
+        btn_recipe_layout.addWidget(self.btn_add_recipe)
+        btn_recipe_layout.addWidget(self.btn_del_recipe)
+        left_panel.addLayout(btn_recipe_layout)
+        
+        # 增加配方列表右键菜单支持
+        self.recipe_tree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.recipe_tree.customContextMenuRequested.connect(self.on_recipe_context_menu)
         
         layout.addLayout(left_panel, 1)
         
@@ -185,6 +195,16 @@ class ConfigTab(QWidget):
                 
                 parent.addChild(child)
         self.step_tree.expandAll()
+
+    def on_recipe_context_menu(self, pos):
+        item = self.recipe_tree.itemAt(pos)
+        if not item: return
+        
+        menu = QMenu()
+        del_act = QAction("删除该配方", self)
+        del_act.triggered.connect(self.delete_selected_recipe)
+        menu.addAction(del_act)
+        menu.exec_(self.recipe_tree.viewport().mapToGlobal(pos))
 
     def on_context_menu(self, pos):
         item = self.step_tree.itemAt(pos)
@@ -509,6 +529,12 @@ class ConfigTab(QWidget):
         if self.db_manager.save_recipe_json(recipe_name, data):
             QMessageBox.information(self, "成功", f"配方【{recipe_name}】已成功保存。")
             self.refresh_recipe_list()
+            # 重新选中刚才保存的配方
+            for i in range(self.recipe_tree.topLevelItemCount()):
+                item = self.recipe_tree.topLevelItem(i)
+                if item.text(0) == recipe_name:
+                    self.recipe_tree.setCurrentItem(item)
+                    break
         else:
             QMessageBox.critical(self, "错误", "配方保存失败，请检查日志。")
 
@@ -651,6 +677,26 @@ class ConfigTab(QWidget):
             self.set_editor_enabled(True)
             # 顺便立即保存一个空的
             self.save_recipe()
+
+    def delete_selected_recipe(self):
+        item = self.recipe_tree.currentItem()
+        if not item:
+            QMessageBox.warning(self, "提醒", "请先在左侧选择要删除的配方。")
+            return
+            
+        name = item.text(0)
+        reply = QMessageBox.question(self, "确认删除", f"确定要彻底删除配方【{name}】吗？\n该操作不可撤销。", 
+                                     QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.Yes:
+            if self.db_manager.delete_recipe(name):
+                QMessageBox.information(self, "成功", f"配方【{name}】已删除。")
+                if self.current_recipe_name == name:
+                    self.current_recipe_name = None
+                    self.set_editor_enabled(False)
+                self.refresh_recipe_list()
+            else:
+                QMessageBox.critical(self, "错误", "删除失败，请检查文件权限。")
 
     def get_all_recipes(self):
         recipes = []

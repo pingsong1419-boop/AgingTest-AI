@@ -3,17 +3,17 @@
     "topology": "1主3从",
     "items": [
         {
-            "name": "模拟电池输出",
+            "name": "1#模拟电池输出",
             "mode": "范围判定",
-            "min": "0.0",
-            "max": "0.0",
-            "strategy": "NG继续",
+            "min": "3.7",
+            "max": "3.9",
+            "strategy": "任何NG停止",
             "sub_steps": [
                 {
-                    "name": "电池模拟器 (Simulator)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
-                    "device": "电池模拟器 (Simulator)",
+                    "device": "1# 电池模拟器 (Simulator 1)",
                     "type": "设置仪表",
                     "is_judgment": false,
                     "fail_strategy": "失败停止"
@@ -28,28 +28,154 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "电池模拟器 (Simulator)-回读数据 (读取电压)",
+                    "name": "1# 电池模拟器 (Simulator 1)-回读数据 (读取电压)",
                     "action": "回读数据",
                     "params": "读取电压",
-                    "device": "电池模拟器 (Simulator)",
+                    "device": "1# 电池模拟器 (Simulator 1)",
                     "type": "读取仪表",
-                    "is_judgment": false,
+                    "is_judgment": true,
                     "fail_strategy": "失败停止"
                 }
             ]
         },
         {
-            "name": "模拟电池关闭",
+            "name": "1#模拟电池关闭",
             "mode": "范围判定",
             "min": "0.0",
             "max": "0.0",
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "电池模拟器 (Simulator)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
-                    "device": "电池模拟器 (Simulator)",
+                    "device": "1# 电池模拟器 (Simulator 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#模拟电池输出",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#模拟电池关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#模拟电池输出",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "3# 电池模拟器 (Simulator 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "3# 电池模拟器 (Simulator 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#模拟电池关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "sub_steps": [
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
                     "type": "设置仪表",
                     "is_judgment": false,
                     "fail_strategy": "失败停止"
@@ -559,9 +685,27 @@
             "strategy": "任何NG停止",
             "sub_steps": [
                 {
-                    "name": "智界EOL协议-执行EOL操作 (EOL:0x10_read_host_temp / TIMEOUT:1000 / CH:1)",
+                    "name": "CAN 交互-发送指令 (ID:0x7F0 / DATA:00 00 00 00 00 00 00 00 / TYPE:0 / DLC:8 / CH:0)",
+                    "action": "发送指令",
+                    "params": "ID:0x7F0 / DATA:00 00 00 00 00 00 00 00 / TYPE:0 / DLC:8 / CH:0",
+                    "device": "CAN 交互",
+                    "type": "CAN发送",
+                    "is_judgment": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "#智界协议发送",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "sub_steps": [
+                {
+                    "name": "智界EOL协议-执行EOL操作 (EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1)",
                     "action": "执行EOL操作",
-                    "params": "EOL:0x10_read_host_temp / TIMEOUT:1000 / CH:1",
+                    "params": "EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1",
                     "device": "智界EOL协议",
                     "type": "智界EOL协议",
                     "is_judgment": false,

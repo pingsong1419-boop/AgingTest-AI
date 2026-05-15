@@ -85,7 +85,7 @@ class MainboardPowerRU60:
                 if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
                 return False
             try:
-                val = int(round(current * 10))
+                val = int(round(current * 100))
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Register 150: {val}")
                 result = self.client.write_register(150, val, device_id=self.unit_id)
                 if logger: logger(f"[IP: {self.ip}] [RX] {'Error' if result.isError() else 'Success'}")
@@ -116,8 +116,8 @@ class MainboardPowerRU60:
                 if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
                 return -1.0
             try:
-                if logger: logger(f"[IP: {self.ip}] [TX] Read Input Register 100")
-                result = self.client.read_input_registers(100, count=1, device_id=self.unit_id)
+                if logger: logger(f"[IP: {self.ip}] [TX] Read Register 100")
+                result = self.client.read_holding_registers(100, count=1, device_id=self.unit_id)
                 if not result or result.isError():
                     if logger: logger(f"[IP: {self.ip}] [RX] Error")
                     return -1.0
@@ -135,12 +135,12 @@ class MainboardPowerRU60:
                 if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
                 return -1.0
             try:
-                if logger: logger(f"[IP: {self.ip}] [TX] Read Input Register 101")
-                result = self.client.read_input_registers(101, count=1, device_id=self.unit_id)
+                if logger: logger(f"[IP: {self.ip}] [TX] Read Register 101")
+                result = self.client.read_holding_registers(101, count=1, device_id=self.unit_id)
                 if not result or result.isError():
                     if logger: logger(f"[IP: {self.ip}] [RX] Error")
                     return -1.0
-                val = result.registers[0] / 10.0
+                val = result.registers[0] / 100.0
                 if logger: logger(f"[IP: {self.ip}] [RX] {val} A")
                 return val
             except Exception as e:

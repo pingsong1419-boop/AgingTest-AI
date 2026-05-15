@@ -108,7 +108,7 @@ class ChannelWorker(QObject):
 
         step = self.steps[self.current_step_index]
         if step.name.strip().startswith("#"):
-            self.log_message.emit(self.channel_id, f"[*] 测试项被屏蔽，跳过执行: {step.name}")
+            # self.log_message.emit(self.channel_id, f"[*] 测试项被屏蔽，跳过执行: {step.name}")
             self.current_step_index += 1
             self.run_next_step()
             return
@@ -138,11 +138,17 @@ class ChannelWorker(QObject):
 
     def _parse_key_values(self, params: str) -> Dict[str, str]:
         values = {}
-        for part in str(params).replace("；", "/").replace("，", "/").split("/"):
+        for part in str(params).replace("；", "/").replace("，", "/").replace("  ", " ").split("/"):
             part = part.strip()
-            if not part or ":" not in part:
+            if not part: continue
+            part = part.replace("：", ":")
+            if ":" not in part:
+                # 兼容旧配方：如果没有冒号但它是纯数字，推测它是 INDEX
+                if part.isdigit(): values["INDEX"] = part
                 continue
             key, value = part.split(":", 1)
+            # 清洗可能存在的重复冒号 (如 INDEX::0)
+            value = value.strip().lstrip(":")
             values[key.strip().upper()] = value.strip()
         return values
 
@@ -194,12 +200,17 @@ class ChannelWorker(QObject):
         return board
 
     def _execute_eol_protocol(self, mgr, params, hw_logger):
+        params_str = params.get("params", "")
+        kv = self._parse_key_values(params_str)
+        hw_logger(f"[DEBUG] EOL RAW: {params_str}")
+        hw_logger(f"[DEBUG] EOL KV: {kv}")
+        
         eol_cfg = self._parse_eol_params(params)
         if not eol_cfg: raise ValueError("EOL参数缺失")
         board = self._get_can_board(mgr)
         from devices.eol_protocol import EOLProtocol
         eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
-        result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], **eol_cfg["kwargs"])
+        result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], logger=hw_logger, **eol_cfg["kwargs"])
         result_value = result.value if result.success else result.error
         hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
         return result.success, result_value
@@ -236,46 +247,88 @@ class ChannelWorker(QObject):
                     ch_match = re.search(r"CH:(\d+)", p_str)
                     if ch_match: target_ch = int(ch_match.group(1))
 
-                if "simulator" in device:
+                if "simulator" in device or "电池模拟器" in device:
                     action = params.get("action", "")
+                    
+                    # 确定具体的模拟器实例 (如果有 1#, 2#, 3# 标识)
+                    target_sim = None
+                    if "1#" in device: target_sim = mgr.simulators[0]
+                    elif "2#" in device: target_sim = mgr.simulators[1]
+                    elif "3#" in device: target_sim = mgr.simulators[2]
+                    
                     if "快捷批量配置" in action:
                         volt = self._parse_numeric(p_str.split("V")[0])
                         curr_ma = float(re.search(r"([\d\.]+)mA", p_str).group(1)) if "mA" in p_str else 0.0
                         output_on = "ON" in p_str
                         range_str = "HIGH" if "Range:HIGH" in p_str else "LOW"
                         ch_str = p_str.split("CH:")[-1].strip().upper() if "CH:" in p_str else "ALL"
-                        if ch_str == "ALL":
-                            mgr.broadcast_voltage(volt, logger=hw_logger)
-                            mgr.broadcast_current(curr_ma/1000.0, logger=hw_logger)
-                            mgr.broadcast_range(range_str, logger=hw_logger)
-                            success = mgr.broadcast_output(output_on, logger=hw_logger)
-                        else:
-                            try:
-                                target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
-                                for sim in mgr.simulators:
-                                    if not sim.is_connected: continue
+                        
+                        # 如果指定了具体的模拟器 (如 1#), 则 "ALL" 仅作用于该模拟器
+                        if target_sim:
+                            if ch_str == "ALL":
+                                target_sim.set_voltage(0, volt, logger=hw_logger) # 0 通常表示全通道
+                                target_sim.set_current_limit(0, curr_ma/1000.0, logger=hw_logger)
+                                target_sim.set_range(0, range_str, logger=hw_logger)
+                                success = target_sim.output_control(0, output_on, logger=hw_logger)
+                            else:
+                                try:
+                                    target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
                                     for ch in target_channels:
                                         if 1 <= ch <= 18:
-                                            sim.set_voltage(ch, volt)
-                                            sim.set_current_limit(ch, curr_ma/1000.0)
-                                            sim.set_range(ch, range_str)
-                                            sim.output_control(ch, output_on)
-                            except: success = False
+                                            target_sim.set_voltage(ch, volt)
+                                            target_sim.set_current_limit(ch, curr_ma/1000.0)
+                                            target_sim.set_range(ch, range_str)
+                                            target_sim.output_control(ch, output_on)
+                                except: success = False
+                        else:
+                            # 原始逻辑：广播到所有模拟器
+                            if ch_str == "ALL":
+                                mgr.broadcast_voltage(volt, logger=hw_logger)
+                                mgr.broadcast_current(curr_ma/1000.0, logger=hw_logger)
+                                mgr.broadcast_range(range_str, logger=hw_logger)
+                                success = mgr.broadcast_output(output_on, logger=hw_logger)
+                            else:
+                                try:
+                                    target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
+                                    for sim in mgr.simulators:
+                                        if not sim.is_connected: continue
+                                        for ch in target_channels:
+                                            if 1 <= ch <= 18:
+                                                sim.set_voltage(ch, volt)
+                                                sim.set_current_limit(ch, curr_ma/1000.0)
+                                                sim.set_range(ch, range_str)
+                                                sim.output_control(ch, output_on)
+                                except: success = False
                         self.on_sub_step_complete(); return
 
+                    # 单路控制逻辑
                     ch_to_use = target_ch if target_ch is not None else self.channel_id
-                    if "V" in p_str: success = success and mgr.set_voltage(ch_to_use, self._parse_numeric(p_str.split("V")[0]), logger=hw_logger)
-                    if "A" in p_str:
-                        a_match = re.search(r"([\d\.]+)\s*A", p_str)
-                        if a_match: success = success and mgr.set_current(ch_to_use, float(a_match.group(1)), logger=hw_logger)
-                    if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
-                    elif "关闭输出" in p_str: success = success and mgr.output_control(ch_to_use, False, logger=hw_logger)
+                    
+                    if target_sim:
+                        # 如果指定了模拟器，则 local_ch 怎么算？
+                        # 这里我们假设如果指定了 1#, 则 ch_to_use 就是该机器上的物理通道 (1-18)
+                        # 如果 ch_to_use > 18，可能需要取模
+                        physical_ch = (ch_to_use - 1) % 18 + 1
+                        if "V" in p_str: success = success and target_sim.set_voltage(physical_ch, self._parse_numeric(p_str.split("V")[0]), logger=hw_logger)
+                        if "A" in p_str:
+                            a_match = re.search(r"([\d\.]+)\s*A", p_str)
+                            if a_match: success = success and target_sim.set_current_limit(physical_ch, float(a_match.group(1)), logger=hw_logger)
+                        if "开启输出" in p_str: success = success and target_sim.output_control(physical_ch, True, logger=hw_logger)
+                        elif "关闭输出" in p_str: success = success and target_sim.output_control(physical_ch, False, logger=hw_logger)
+                    else:
+                        if "V" in p_str: success = success and mgr.set_voltage(ch_to_use, self._parse_numeric(p_str.split("V")[0]), logger=hw_logger)
+                        if "A" in p_str:
+                            a_match = re.search(r"([\d\.]+)\s*A", p_str)
+                            if a_match: success = success and mgr.set_current(ch_to_use, float(a_match.group(1)), logger=hw_logger)
+                        if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
+                        elif "关闭输出" in p_str: success = success and mgr.output_control(ch_to_use, False, logger=hw_logger)
                 
-                elif any(x in device for x in ["afe", "main", "hv_source", "control power", "控制板"]):
-                    if "hv_source" in device:
-                        if "输出控制" in params.get("action", ""):
-                            success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper(), channel=target_ch, logger=hw_logger)
-                        elif "清除保护" in params.get("action", ""): success = mgr.hv_source.clear_errors(logger=hw_logger)
+                elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
+                    if "hv_source" in device or "hv source" in device:
+                        act = params.get("action", "")
+                        if "输出控制" in act or "开启" in act or "关闭" in act:
+                            success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper() or "开启" in act, channel=target_ch, logger=hw_logger)
+                        elif "清除保护" in act: success = mgr.hv_source.clear_errors(logger=hw_logger)
                         else: success = mgr.hv_source.set_voltage(self._parse_numeric(p_str), channel=target_ch, logger=hw_logger)
                     else:
                         if "2#" in device: target_dev = mgr.afe_pwr_2
@@ -299,7 +352,7 @@ class ChannelWorker(QObject):
                                 elif "清除保护" in act and hasattr(target_dev, "clear_errors"): target_dev.clear_errors(logger=hw_logger)
                                 else: target_dev.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
 
-                elif "aging_board" in device or "老化" in device:
+                elif "aging_board" in device or "aging board" in device or "老化" in device:
                     board = mgr.boards.get(self.channel_id)
                     if board:
                         if ":" in p_str:
@@ -341,19 +394,29 @@ class ChannelWorker(QObject):
             elif sub_step.type == SubStepType.READ_INSTRUMENT:
                 device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
                 target_ch = int(re.search(r"CH:(\d+)", p_str).group(1)) if "CH:" in p_str else None
-                if "simulator" in device:
+                if "simulator" in device or "电池模拟器" in device:
                     ch = target_ch if target_ch is not None else self.channel_id
-                    result_value = mgr.measure_voltage(ch) if "电压" in p_str else mgr.measure_current(ch)
+                    # 确定具体的模拟器实例 (如果有 1#, 2#, 3# 标识)
+                    target_sim = None
+                    if "1#" in device: target_sim = mgr.simulators[0]
+                    elif "2#" in device: target_sim = mgr.simulators[1]
+                    elif "3#" in device: target_sim = mgr.simulators[2]
+                    
+                    if target_sim:
+                        physical_ch = (ch - 1) % 18 + 1
+                        result_value = target_sim.measure_voltage(physical_ch) if "电压" in p_str else target_sim.measure_current(physical_ch)
+                    else:
+                        result_value = mgr.measure_voltage(ch) if "电压" in p_str else mgr.measure_current(ch)
                     success = result_value >= 0
                 elif any(x in device for x in ["afe", "main", "hv_source", "control power", "控制板"]):
                     if "2#" in device: dev = mgr.afe_pwr_2
                     elif "3#" in device: dev = mgr.afe_pwr_3
                     elif "afe" in device: dev = mgr.afe_power_1
                     elif "main" in device: dev = mgr.dut_power
-                    elif "hv_source" in device: dev = mgr.hv_source
+                    elif "hv_source" in device or "hv source" in device: dev = mgr.hv_source
                     else: dev = mgr.ctrl_board_power
                     if dev:
-                        result_value = dev.measure_voltage(channel=target_ch) if "电压" in p_str else dev.measure_current(channel=target_ch)
+                        result_value = dev.measure_voltage() if "电压" in p_str else dev.measure_current()
                         success = result_value is not None
                 elif "ca550" in device:
                     result_value = self._parse_numeric(mgr.ca550.read_measure_data())
@@ -363,7 +426,7 @@ class ChannelWorker(QObject):
                 board = self._get_can_board(mgr)
                 cfg = self._parse_can_params(params)
                 success = board.can.send_can_message(cfg["channel_id"], cfg["can_id"], cfg["can_type"], cfg["dlc"], cfg["data"])
-                hw_logger(f"CAN TX ID=0x{cfg['can_id']:X} DATA={cfg['data'].hex(' ').upper()}")
+                hw_logger(f"CAN TX CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} DATA={cfg['data'].hex(' ').upper()}")
 
             elif sub_step.type == SubStepType.CAN_INTERACT:
                 eol_cfg = self._parse_eol_params(params)
@@ -375,7 +438,7 @@ class ChannelWorker(QObject):
                     msg = board.can.send_and_wait_response(cfg["channel_id"], cfg["can_id"], cfg["can_type"], cfg["dlc"], cfg["data"], w_id, cfg["timeout"])
                     success = msg is not None
                     result_value = msg.get("data", b"").hex(" ").upper() if msg else "TIMEOUT"
-                    hw_logger(f"CAN REQ ID=0x{cfg['can_id']:X} WAIT=0x{w_id:X} => {result_value}")
+                    hw_logger(f"CAN REQ CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} WAIT=0x{w_id:X} => {result_value}")
 
             elif sub_step.type == SubStepType.EOL_PROTOCOL:
                 success, result_value = self._execute_eol_protocol(mgr, params, hw_logger)

@@ -140,13 +140,13 @@ class MainboardPowerTab(QWidget):
 
     def connect_device(self):
         if not self.mgr: return
-        self.mgr.mainboard_power.ip = self.edit_ip.text()
-        try: self.mgr.mainboard_power.port = int(self.edit_port.text())
-        except: self.mgr.mainboard_power.port = 2000
+        self.mgr.dut_power.ip = self.edit_ip.text()
+        try: self.mgr.dut_power.port = int(self.edit_port.text())
+        except: self.mgr.dut_power.port = 2000
         
         self.btn_connect.setText("⏳ 正在连接...")
         self.btn_connect.setEnabled(False)
-        self.conn_worker = ConnectWorker(self.mgr.mainboard_power)
+        self.conn_worker = ConnectWorker(self.mgr.dut_power)
         self.conn_worker.finished.connect(self.on_connect_finished)
         self.conn_worker.start()
 
@@ -164,19 +164,19 @@ class MainboardPowerTab(QWidget):
     def disconnect_device(self):
         if self.mgr:
             self.timer.stop()
-            self.mgr.mainboard_power.disconnect()
+            self.mgr.dut_power.disconnect()
             self.btn_connect.setText("连接设备")
             self.btn_connect.setStyleSheet("background-color: #007BFF;")
             self.btn_connect.setEnabled(True)
             self.btn_disconnect.setEnabled(False)
 
     def start_reading(self):
-        if self.mgr and self.mgr.mainboard_power.is_connected:
+        if self.mgr and self.mgr.dut_power.is_connected:
             if hasattr(self, "_reading_in_progress") and self._reading_in_progress:
                 return
             
             self._reading_in_progress = True
-            self.read_worker = ReadWorker(self.mgr.mainboard_power)
+            self.read_worker = ReadWorker(self.mgr.dut_power)
             self.read_worker.finished.connect(self.on_read_finished)
             self.read_worker.start()
 
@@ -203,10 +203,10 @@ class MainboardPowerTab(QWidget):
         self._run_control("output_control", state, btn, "开启电源输出" if state else "关闭输出")
 
     def _run_control(self, action, value, btn, original_text):
-        if not self.mgr or not self.mgr.mainboard_power.is_connected: return
+        if not self.mgr or not self.mgr.dut_power.is_connected: return
         btn.setText("⏳ 执行中...")
         btn.setEnabled(False)
-        self.ctrl_worker = ControlWorker(self.mgr.mainboard_power, action, value)
+        self.ctrl_worker = ControlWorker(self.mgr.dut_power, action, value)
         self.ctrl_worker.finished.connect(lambda res, act, args: self.on_control_finished(res, btn, original_text))
         self.ctrl_worker.start()
 

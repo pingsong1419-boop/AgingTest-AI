@@ -81,17 +81,23 @@ class AgingBoardController:
             # 3. 建立 Modbus 连接与协议级校验
             if self.client.connect():
                 # 尝试读取 1 个线圈作为协议握手
-                result = self.client.read_coils(address=0, count=1, device_id=self.slave_id)
-                if not result.isError():
+                try:
+                    result = self.client.read_coils(address=0, count=1, device_id=self.slave_id)
+                    if not result.isError():
+                        self.is_connected = True
+                        logger.info(f"功能板 {self.ip} 连接成功")
+                        return True
+                    
+                    # 兼容性处理：检查是否收到设备异常响应 (对齐参考项目)
+                    from pymodbus.pdu import ExceptionResponse
+                    if isinstance(result, ExceptionResponse):
+                        self.is_connected = True
+                        logger.info(f"功能板 {self.ip} 协议校验通过 (收到异常响应)")
+                        return True
+                except Exception as e:
+                    logger.warning(f"功能板 {self.ip} TCP 已连接，但 Modbus 握手失败: {e}")
+                    # 只要 TCP 通了，我们先认为是在线的，后续指令执行时会再次尝试
                     self.is_connected = True
-                    logger.info(f"功能板 {self.ip} 连接成功")
-                    return True
-                
-                # 兼容性处理：检查是否收到设备异常响应 (对齐参考项目)
-                from pymodbus.pdu import ExceptionResponse
-                if isinstance(result, ExceptionResponse):
-                    self.is_connected = True
-                    logger.info(f"功能板 {self.ip} 协议校验通过 (收到异常响应)")
                     return True
 
             return False

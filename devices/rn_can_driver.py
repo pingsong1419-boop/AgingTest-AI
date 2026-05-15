@@ -158,11 +158,15 @@ class RNCANDriver:
                             'timestamp': timestamp,
                             'direction': 'RX'
                         }
+                        if can_id == 0x7F8:
+                            print(f"[RNCAN] RX CH:{channel_id} ID=0x{can_id:X} DATA={msg_data.hex(' ').upper()}")
                         if not self.msg_queue.full():
                             self.msg_queue.put(msg_info)
                         with self._rx_condition:
                             self._rx_history.append(msg_info)
                             self._rx_condition.notify_all()
+                    else:
+                        print(f"[RNCAN] CRC ERROR: calc=0x{crc_calc:04X}, rec=0x{crc_received:04X}")
                         if self.on_message_received:
                             self.on_message_received(msg_info)
 
@@ -176,8 +180,10 @@ class RNCANDriver:
                 break
 
     def send_can_message(self, channel_id: int, can_id: int, can_type: int, dlc: int, data: bytes) -> bool:
-        if not self.is_connected:
-            return False
+        if not self.is_connected or not self.sock:
+            # 尝试主动重连一次
+            if not self.connect():
+                return False
             
         try:
             target_len = self.dlc_to_length(dlc)
@@ -208,7 +214,16 @@ class RNCANDriver:
             
             with self.lock:
                 if self.sock:
-                    self.sock.sendall(packet)
+                    try:
+                        self.sock.sendall(packet)
+                    except (socket.error, socket.timeout) as e:
+                        print(f"[RNCAN] Socket send error: {e}, attempting reconnect...")
+                        self.is_connected = False
+                        if self.connect():
+                            self.sock.sendall(packet) # 重连后重试发送
+                        else:
+                            return False
+                    
                     # 触发本地回调以显示在发送日志中
                     msg_info = {
                         'timestamp_rel': time.time(),
@@ -227,7 +242,8 @@ class RNCANDriver:
                     return True
             return False
         except Exception as e:
-            print(f"[RNCAN] Send error: {e}")
+            print(f"[RNCAN] Send fatal error: {e}")
+            self.is_connected = False
             return False
 
     def clear_rx_history(self, can_id: Optional[int] = None):

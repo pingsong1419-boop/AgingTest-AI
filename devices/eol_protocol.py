@@ -1,5 +1,8 @@
+import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,9 +29,21 @@ class EOLProtocol:
         self.operations = self._build_operations()
 
     def transact(self, device_id: int, operation: int, payload: Optional[bytes] = None,
-                 timeout: float = 1.0, decoder: Optional[Callable[[bytes], Any]] = None) -> EOLResult:
-        payload = (payload or b"")[:4].ljust(4, b"\x00")
-        request_data = bytes([self.REQUEST_PREFIX, device_id & 0xFF, operation & 0xFF, 0x00]) + payload
+                 timeout: float = 1.0, decoder: Optional[Callable[[bytes], Any]] = None,
+                 request_id: Optional[int] = None, response_id: Optional[int] = None,
+                 can_type: int = 0, dlc: int = 8,
+                 logger: Callable[[str], None] = None) -> EOLResult:
+        req_id = request_id if request_id is not None else self.REQUEST_ID
+        resp_id = response_id if response_id is not None else self.RESPONSE_ID
+        payload_data = (payload or b"")[:4].ljust(4, b"\x00")
+        request_data = bytes([self.REQUEST_PREFIX, device_id & 0xFF, operation & 0xFF, 0x00]) + payload_data
+        
+        # 记录发送日志
+        log_msg = f"CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={request_data.hex(' ').upper()}"
+        if logger: 
+            logger(log_msg)
+        else:
+            print(log_msg)
 
         def matcher(msg):
             data = msg.get("data", b"")
@@ -41,11 +56,11 @@ class EOLProtocol:
 
         msg = self.can_driver.send_and_wait_response(
             channel_id=self.channel_id,
-            can_id=self.REQUEST_ID,
-            can_type=0,
-            dlc=8,
+            can_id=req_id,
+            can_type=can_type,
+            dlc=dlc,
             data=request_data,
-            response_id=self.RESPONSE_ID,
+            response_id=resp_id,
             timeout=timeout,
             matcher=matcher
         )
@@ -63,123 +78,108 @@ class EOLProtocol:
             value = decoder(raw)
         return EOLResult(True, response_code=response_code, payload=payload, raw_data=raw, value=value)
 
-    def execute(self, op_name: str, timeout: float = 1.0, **kwargs) -> EOLResult:
-        op_key = op_name.strip().lower()
-        spec = self.operations.get(op_key)
-        if not spec:
-            return EOLResult(False, error=f"未知EOL操作: {op_name}")
-
+    def execute(self, op_name: str, timeout: float = 1.0, logger: Callable[[str], None] = None, **kwargs) -> EOLResult:
+        if op_name not in self.operations:
+            return EOLResult(False, error=f"不支持的EOL操作: {op_name}")
+        
+        spec = self.operations[op_name]
         try:
-            payload = spec.get("payload", lambda _kw: b"")(kwargs)
+            payload = spec.get("payload")(kwargs) if callable(spec.get("payload")) else spec.get("payload")
+            tx_id = self._int_arg(kwargs, "TX_ID", "发送ID") if "TX_ID" in kwargs or "发送ID" in kwargs else None
+            rx_id = self._int_arg(kwargs, "RX_ID", "接收ID") if "RX_ID" in kwargs or "接收ID" in kwargs else None
+            
+            # 提取 TYPE 和 DLC (由 StepDialog 传入)
+            can_type = self._int_arg(kwargs, "TYPE", "CAN类型") if "TYPE" in kwargs or "CAN类型" in kwargs else 0
+            dlc = self._int_arg(kwargs, "DLC", "长度") if "DLC" in kwargs or "长度" in kwargs else 8
+            
+            # ADC 读取模式特殊处理 (0x06)
+            op_code = spec.get("operation", 0)
+            if "0x06" in op_name:
+                # ADC: 0x01 raw, 0x02 value
+                mode_str = str(kwargs.get("读取模式", kwargs.get("MODE", ""))).upper()
+                op_code = 0x01 if "RAW" in mode_str or "原始" in mode_str else 0x02
+
             return self.transact(
-                spec["device_id"],
-                spec["operation"],
+                device_id=spec.get("device_id"),
+                operation=op_code,
                 payload=payload,
                 timeout=timeout,
-                decoder=spec.get("decoder")
+                decoder=spec.get("decoder"),
+                request_id=tx_id,
+                response_id=rx_id,
+                can_type=can_type,
+                dlc=dlc,
+                logger=logger
             )
         except Exception as e:
             return EOLResult(False, error=f"EOL参数错误: {e}")
 
     def _build_operations(self) -> Dict[str, Dict[str, Any]]:
         return {
-            # 0x03 绝缘
+            # --- 0x03 绝缘 ---
             "0x03_insulation_control": {"device_id": 0x03, "operation": 0x01, "payload": lambda kw: bytes([0x01, self._int_arg(kw, "STATE", "VALUE")])},
-            "insulation_control": {"device_id": 0x03, "operation": 0x01, "payload": lambda kw: bytes([0x01, self._int_arg(kw, "STATE", "VALUE")])},
+            "0x03 绝缘控制写入": {"device_id": 0x03, "operation": 0x01, "payload": lambda kw: bytes([0x01, self._int_arg(kw, "STATE", "VALUE")])},
             "0x03_read_insulation": {"device_id": 0x03, "operation": 0x03, "decoder": self._decode_insulation},
-            "read_insulation": {"device_id": 0x03, "operation": 0x03, "decoder": self._decode_insulation},
+            "0x03 绝缘控制读取": {"device_id": 0x03, "operation": 0x03, "decoder": self._decode_insulation},
             
-            # 0x04 GPIO
+            # --- 0x04 GPIO ---
             "0x04_read_gpio": {"device_id": 0x04, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "GPIO", "INDEX")]), "decoder": self._decode_index_value},
-            "read_gpio": {"device_id": 0x04, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "GPIO", "INDEX")]), "decoder": self._decode_index_value},
+            "0x04 GPIO控制读取": {"device_id": 0x04, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "GPIO", "INDEX")]), "decoder": self._decode_index_value},
             "0x04_write_gpio": {"device_id": 0x04, "operation": 0x05, "payload": lambda kw: bytes([self._int_arg(kw, "GPIO", "INDEX"), self._int_arg(kw, "LEVEL", "VALUE")])},
-            "write_gpio": {"device_id": 0x04, "operation": 0x05, "payload": lambda kw: bytes([self._int_arg(kw, "GPIO", "INDEX"), self._int_arg(kw, "LEVEL", "VALUE")])},
+            "0x04 GPIO控制写入": {"device_id": 0x04, "operation": 0x05, "payload": lambda kw: bytes([self._int_arg(kw, "GPIO", "INDEX"), self._int_arg(kw, "LEVEL", "VALUE")])},
             
-            # 0x05 PWM
+            # --- 0x05 PWM ---
             "0x05_read_pwm_duty": {"device_id": 0x05, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "PWM", "CHANNEL", "INDEX")]), "decoder": self._decode_byte4},
-            "read_pwm_duty": {"device_id": 0x05, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "PWM", "CHANNEL", "INDEX")]), "decoder": self._decode_byte4},
-            "0x05_read_pwm_freq": {"device_id": 0x05, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "PWM", "CHANNEL", "INDEX")]), "decoder": self._decode_data_u32},
-            "read_pwm_freq": {"device_id": 0x05, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "PWM", "CHANNEL", "INDEX")]), "decoder": self._decode_data_u32},
+            "0x05 PWM读取": {"device_id": 0x05, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "PWM", "CHANNEL", "INDEX")]), "decoder": self._decode_byte4},
             
-            # 0x06 ADC
-            "0x06_read_adc_raw": {"device_id": 0x06, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "ADC", "INDEX")]), "decoder": self._decode_index_u16},
-            "read_adc_raw": {"device_id": 0x06, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "ADC", "INDEX")]), "decoder": self._decode_index_u16},
-            "0x06_read_adc_value": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC", "INDEX")]), "decoder": lambda raw: self._decode_index_u16(raw) * 0.001},
-            "read_adc_value": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC", "INDEX")]), "decoder": lambda raw: self._decode_index_u16(raw) * 0.001},
+            # --- 0x06 ADC ---
+            "0x06_read_adc_value": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: self._decode_index_u16(raw) * 0.001},
+            "0x06 ADC读取": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: self._decode_index_u16(raw) * 0.001},
             
-            # 0x07 CSC
-            "0x07_set_csc_node_count": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "VALUE")])},
-            "set_csc_node_count": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "VALUE")])},
-            "0x07_read_csc_hv": {"device_id": 0x07, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "HV")]), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
-            "read_csc_hv": {"device_id": 0x07, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "HV")]), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
-            "0x07_csc_balance_control": {"device_id": 0x07, "operation": 0x05, "payload": lambda kw: bytes([0x00, self._int_arg(kw, "STATE", "VALUE")])},
-            "csc_balance_control": {"device_id": 0x07, "operation": 0x05, "payload": lambda kw: bytes([0x00, self._int_arg(kw, "STATE", "VALUE")])},
-            "0x07_read_cell_voltage": {"device_id": 0x07, "operation": 0x0E, "payload": lambda kw: self._int_arg(kw, "CELL", "INDEX").to_bytes(2, "big"), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
-            "read_cell_voltage": {"device_id": 0x07, "operation": 0x0E, "payload": lambda kw: self._int_arg(kw, "CELL", "INDEX").to_bytes(2, "big"), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
-            "0x07_read_stack_voltage": {"device_id": 0x07, "operation": 0x0F, "payload": lambda kw: self._int_arg(kw, "STACK", "INDEX").to_bytes(2, "big"), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
-            "read_stack_voltage": {"device_id": 0x07, "operation": 0x0F, "payload": lambda kw: self._int_arg(kw, "STACK", "INDEX").to_bytes(2, "big"), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
-            "0x07_read_fast_charge_impedance": {"device_id": 0x07, "operation": 0x10, "decoder": self._decode_data_u32},
-            "read_fast_charge_impedance": {"device_id": 0x07, "operation": 0x10, "decoder": self._decode_data_u32},
+            # --- 0x07 CSC ---
+            "0x07 CSC控制读取": {"device_id": 0x07, "operation": 0x0E, "payload": lambda kw: self._int_arg(kw, "CELL", "INDEX", "TYPE").to_bytes(2, "big"), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
+            "0x07 CSC控制写入": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "STATE", "TYPE")])},
             
-            # 0x08 CRASH
-            "0x08_read_crash_pwm_duty": {"device_id": 0x08, "operation": 0x01, "decoder": self._decode_byte4},
-            "read_crash_pwm_duty": {"device_id": 0x08, "operation": 0x01, "decoder": self._decode_byte4},
-            "0x08_read_crash_pwm_freq": {"device_id": 0x08, "operation": 0x02, "decoder": self._decode_data_u32},
-            "read_crash_pwm_freq": {"device_id": 0x08, "operation": 0x02, "decoder": self._decode_data_u32},
-            "0x08_read_crash_impedance": {"device_id": 0x08, "operation": 0x03, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX")]), "decoder": self._decode_data_u32},
-            "read_crash_impedance": {"device_id": 0x08, "operation": 0x03, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX")]), "decoder": self._decode_data_u32},
-            "0x08_read_crash_pulse_width": {"device_id": 0x08, "operation": 0x04, "decoder": self._decode_data_u32},
-            "read_crash_pulse_width": {"device_id": 0x08, "operation": 0x04, "decoder": self._decode_data_u32},
+            # --- 0x08 CRASH ---
+            "0x08 CRASH读取": {"device_id": 0x08, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "TYPE")]), "decoder": self._decode_data_u32},
             
-            # 0x09 RTC
-            "0x09_read_rtc_time": {"device_id": 0x09, "operation": 0x04, "decoder": self._decode_payload_hex},
-            "read_rtc_time": {"device_id": 0x09, "operation": 0x04, "decoder": self._decode_payload_hex},
-            "0x09_set_rtc_wakeup": {"device_id": 0x09, "operation": 0x05, "payload": lambda kw: bytes([0x02]) + self._bytes_arg(kw, "DATA", length=3)},
-            "set_rtc_wakeup": {"device_id": 0x09, "operation": 0x05, "payload": lambda kw: bytes([0x02]) + self._bytes_arg(kw, "DATA", length=3)},
-            "0x09_set_rtc_time": {"device_id": 0x09, "operation": 0x07, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
-            "set_rtc_time": {"device_id": 0x09, "operation": 0x07, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
+            # --- 0x09 RTC ---
+            "0x09 RTC控制读取": {"device_id": 0x09, "operation": 0x04, "decoder": self._decode_payload_hex},
+            "0x09 RTC控制写入": {"device_id": 0x09, "operation": 0x07, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
             
-            # 0x10 NTC (doc says device_id is 0x10)
-            "0x10_read_cell_temp": {"device_id": 0x10, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "read_cell_temp": {"device_id": 0x10, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "0x10_read_pcb_temp": {"device_id": 0x10, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "read_pcb_temp": {"device_id": 0x10, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "0x10_read_host_temp": {"device_id": 0x10, "operation": 0x04, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "read_host_temp": {"device_id": 0x10, "operation": 0x04, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "0x10_read_host_pcb_temp": {"device_id": 0x10, "operation": 0x05, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
-            "read_host_pcb_temp": {"device_id": 0x10, "operation": 0x05, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
+            # --- 0x10 NTC ---
+            "0x10 NTC读取": {"device_id": 0x10, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
             
-            # 0x0A EEPROM
-            "0x0A_set_eeprom_address": {"device_id": 0x0A, "operation": 0x01, "payload": lambda kw: self._int_arg(kw, "ADDRESS", length=4).to_bytes(4, "big")},
-            "set_eeprom_address": {"device_id": 0x0A, "operation": 0x01, "payload": lambda kw: self._int_arg(kw, "ADDRESS", length=4).to_bytes(4, "big")},
-            "0x0A_read_eeprom_data": {"device_id": 0x0A, "operation": 0x03, "decoder": self._decode_payload_hex},
-            "read_eeprom_data": {"device_id": 0x0A, "operation": 0x03, "decoder": self._decode_payload_hex},
-            "0x0A_write_eeprom_data": {"device_id": 0x0A, "operation": 0x05, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
-            "write_eeprom_data": {"device_id": 0x0A, "operation": 0x05, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
+            # --- 0x0A EEPROM ---
+            "0x0A EEPROM控制读取": {"device_id": 0x0A, "operation": 0x03, "decoder": self._decode_payload_hex},
+            "0x0A EEPROM控制写入": {"device_id": 0x0A, "operation": 0x05, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
             
-            # 0x0B 电流
-            "0x0B_read_hall_current": {"device_id": 0x0B, "operation": 0x01, "decoder": self._decode_current},
-            "read_hall_current": {"device_id": 0x0B, "operation": 0x01, "decoder": self._decode_current},
-            "0x0B_read_hall_current_2": {"device_id": 0x0B, "operation": 0x03, "decoder": self._decode_current},
-            "read_hall_current_2": {"device_id": 0x0B, "operation": 0x03, "decoder": self._decode_current},
+            # --- 0x0B 霍尔电流 ---
+            "0x0B 霍尔电流读取": {"device_id": 0x0B, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "HALL", "CHANNEL")]), "decoder": self._decode_current},
             
-            # 0xFF 唤醒源/传感器/高边负载
-            "0xff_read_wakeup_source": {"device_id": 0xFF, "operation": 0x06, "decoder": self._decode_byte4},
-            "read_wakeup_source": {"device_id": 0xFF, "operation": 0x06, "decoder": self._decode_byte4},
-            "0xff_read_pressure_sensor": {"device_id": 0xFF, "operation": 0x0E, "decoder": self._decode_data_u32},
-            "read_pressure_sensor": {"device_id": 0xFF, "operation": 0x0E, "decoder": self._decode_data_u32},
-            "0xff_read_hsd_load_voltage": {"device_id": 0xFF, "operation": 0x11, "decoder": self._decode_index_u16},
-            "read_hsd_load_voltage": {"device_id": 0xFF, "operation": 0x11, "decoder": self._decode_index_u16},
+            # --- 0xFF 唤醒源 ---
+            "0xFF 唤醒源读取": {"device_id": 0xFF, "operation": 0x06, "decoder": self._decode_byte4},
         }
 
     def _int_arg(self, kwargs, *names, length: Optional[int] = None) -> int:
-        for name in names:
-            if name in kwargs:
-                value = kwargs[name]
+        # 扩展搜索名称，增加通用回退项
+        search_names = list(names)
+        search_names.extend([
+            "INDEX", "索引", "VALUE", "数值", "STATE", "状态", "参数1", "参数2", "ARG1", "ARG2",
+            "PWM通道", "GPIO通道", "ADC选择", "ADC", "读取模式", "MODE", "NTC索引", "霍尔通道", "读取项", "子索引/状态", "控制值"
+        ])
+        
+        for name in search_names:
+            u_name = name.upper()
+            if u_name in kwargs:
+                value = kwargs[u_name]
                 if isinstance(value, int):
                     return value
-                return int(str(value), 0)
-        raise ValueError(f"缺少参数: {'/'.join(names)}")
+                try:
+                    return int(str(value).strip(), 0)
+                except:
+                    continue
+        raise ValueError(f"缺少参数: {'/'.join(names)} (当前可用: {list(kwargs.keys())})")
 
     def _bytes_arg(self, kwargs, name: str, length: Optional[int] = None) -> bytes:
         if name not in kwargs:

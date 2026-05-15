@@ -150,38 +150,51 @@ class RNCANTab(QWidget):
         
         # --- 1. 连接与参数配置 ---
         config_main_layout = QHBoxLayout()
+        config_main_layout.setContentsMargins(0, 0, 0, 0)
         
         # 1.1 通信连接
         conn_group = QGroupBox("1. 通信连接设置")
         conn_layout = QGridLayout(conn_group)
+        conn_layout.setContentsMargins(5, 5, 5, 5)
+        conn_layout.setSpacing(5)
+        
         self.ip_edit = QLineEdit("192.168.1.10")
         self.port_edit = QLineEdit("5001")
+        self.port_edit.setFixedWidth(50)
         self.modbus_port_edit = QLineEdit("502")
+        self.modbus_port_edit.setFixedWidth(50)
         self.btn_connect = QPushButton("连接")
+        self.btn_connect.setFixedWidth(80)
         self.btn_connect.setStyleSheet("background-color: #1A237E; color: white; font-weight: bold;")
         self.btn_connect.clicked.connect(self.connect_device)
         self.btn_disconnect = QPushButton("断开")
+        self.btn_disconnect.setFixedWidth(80)
         self.btn_disconnect.setEnabled(False)
         self.btn_disconnect.clicked.connect(self.disconnect_device)
         
         self.combo_target_ch = QComboBox()
+        self.combo_target_ch.setFixedWidth(100)
         for i in range(1, 61): self.combo_target_ch.addItem(f"通道 {i}", i)
         self.combo_target_ch.currentIndexChanged.connect(self.on_target_board_changed)
         
         conn_layout.addWidget(QLabel("选择板卡:"), 0, 0)
         conn_layout.addWidget(self.combo_target_ch, 0, 1)
-        conn_layout.addWidget(QLabel("网关 IP:"), 1, 0)
+        conn_layout.addWidget(self.btn_connect, 0, 2)
+        conn_layout.addWidget(self.btn_disconnect, 0, 3)
+        
+        conn_layout.addWidget(QLabel("IP:"), 1, 0)
         conn_layout.addWidget(self.ip_edit, 1, 1)
-        conn_layout.addWidget(QLabel("数据端口:"), 2, 0)
-        conn_layout.addWidget(self.port_edit, 2, 1)
-        conn_layout.addWidget(QLabel("配置端口:"), 2, 2)
-        conn_layout.addWidget(self.modbus_port_edit, 2, 3)
-        conn_layout.addWidget(self.btn_connect, 1, 2, 1, 2)
-        conn_layout.addWidget(self.btn_disconnect, 3, 0, 1, 4)
+        conn_layout.addWidget(QLabel("端口:"), 1, 2)
+        conn_layout.addWidget(self.port_edit, 1, 3)
+        
+        config_main_layout.addWidget(conn_group)
         
         # 1.2 硬件参数配置
-        hw_group = QGroupBox("2. CAN 硬件参数配置 (Modbus)")
+        hw_group = QGroupBox("2. CAN 硬件参数配置")
         hw_layout = QGridLayout(hw_group)
+        hw_layout.setContentsMargins(5, 5, 5, 5)
+        hw_layout.setSpacing(5)
+        
         self.combo_ch = QComboBox(); self.combo_ch.addItems(["CAN1", "CAN2"])
         self.combo_mode = QComboBox(); self.combo_mode.addItems(["Classic", "CAN FD", "CAN FD + BRS"])
         self.combo_nom_baud = QComboBox(); self.combo_nom_baud.addItems(["125k", "250k", "500k", "800k", "1M"])
@@ -189,56 +202,60 @@ class RNCANTab(QWidget):
         self.combo_data_baud = QComboBox(); self.combo_data_baud.addItems(["1M", "2M", "4M", "5M", "8M"])
         self.combo_data_baud.setCurrentIndex(1) # 2M
         
-        self.btn_apply_hw = QPushButton("应用并保存配置")
+        self.btn_apply_hw = QPushButton("下发")
+        self.btn_apply_hw.setFixedWidth(60)
         self.btn_apply_hw.setStyleSheet("background-color: #F57C00; color: white; font-weight: bold;")
         self.btn_apply_hw.clicked.connect(self.apply_hw_config)
         
         hw_layout.addWidget(QLabel("通道:"), 0, 0); hw_layout.addWidget(self.combo_ch, 0, 1)
         hw_layout.addWidget(QLabel("模式:"), 0, 2); hw_layout.addWidget(self.combo_mode, 0, 3)
-        hw_layout.addWidget(QLabel("仲裁段:"), 1, 0); hw_layout.addWidget(self.combo_nom_baud, 1, 1)
-        hw_layout.addWidget(QLabel("数据段:"), 1, 2); hw_layout.addWidget(self.combo_data_baud, 1, 3)
-        hw_layout.addWidget(self.btn_apply_hw, 2, 0, 1, 4)
+        hw_layout.addWidget(QLabel("仲裁:"), 1, 0); hw_layout.addWidget(self.combo_nom_baud, 1, 1)
+        hw_layout.addWidget(QLabel("数据:"), 1, 2); hw_layout.addWidget(self.combo_data_baud, 1, 3)
+        hw_layout.addWidget(self.btn_apply_hw, 0, 4, 2, 1)
         
-        config_main_layout.addWidget(conn_group, 1)
-        config_main_layout.addWidget(hw_group, 1)
+        config_main_layout.addWidget(hw_group)
         layout.addLayout(config_main_layout)
 
         # 2. 报文发送列表
-        send_group = QGroupBox("3. 报文列表发送 (支持自定义次数与间隔)")
+        send_group = QGroupBox("3. 报文列表发送")
         send_layout = QVBoxLayout(send_group)
+        send_layout.setContentsMargins(5, 5, 5, 5)
         
         ctrl_layout = QHBoxLayout()
         self.combo_send_mode = QComboBox()
-        self.combo_send_mode.addItems(["顺序循环发送", "所有报文并行独立发送"])
+        self.combo_send_mode.addItems(["顺序循环", "并行发送"])
         self.spin_global_cycles = QSpinBox()
-        self.spin_global_cycles.setRange(0, 1000000); self.spin_global_cycles.setValue(1); self.spin_global_cycles.setSpecialValueText("无限循环")
+        self.spin_global_cycles.setRange(0, 1000000); self.spin_global_cycles.setValue(1); self.spin_global_cycles.setSpecialValueText("无限")
         
-        self.btn_start_send = QPushButton("开始执行发送")
+        self.btn_add_row = QPushButton("+ 添加")
+        self.btn_add_row.setFixedWidth(80) # 增加宽度以显示完全
+        self.btn_add_row.clicked.connect(self.add_send_row)
+        
+        self.btn_start_send = QPushButton("开始发送")
+        self.btn_start_send.setFixedWidth(100)
         self.btn_start_send.setStyleSheet("background-color: #2E7D32; color: white; font-weight: bold;")
         self.btn_start_send.clicked.connect(self.start_sending)
-        self.btn_stop_send = QPushButton("停止执行")
+        self.btn_stop_send = QPushButton("停止")
+        self.btn_stop_send.setFixedWidth(60)
         self.btn_stop_send.setEnabled(False)
         self.btn_stop_send.clicked.connect(self.stop_sending)
         
-        ctrl_layout.addWidget(QLabel("发送模式:"))
+        ctrl_layout.addWidget(QLabel("模式:"))
         ctrl_layout.addWidget(self.combo_send_mode)
-        ctrl_layout.addWidget(QLabel("全局循环:"))
+        ctrl_layout.addWidget(QLabel("循环:"))
         ctrl_layout.addWidget(self.spin_global_cycles)
         ctrl_layout.addStretch()
+        ctrl_layout.addWidget(self.btn_add_row)
         ctrl_layout.addWidget(self.btn_start_send)
         ctrl_layout.addWidget(self.btn_stop_send)
         
         self.send_table = QTableWidget(0, 8)
-        self.send_table.setHorizontalHeaderLabels(["通道", "ID (Hex)", "类型", "DLC", "数据 (Hex)", "次数", "间隔(ms)", "操作"])
+        self.send_table.setHorizontalHeaderLabels(["通道", "ID", "类型", "DLC", "数据", "次数", "间隔", "操作"])
         self.send_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.send_table.setFixedHeight(120)
-        
-        btn_add_row = QPushButton("+ 添加新报文")
-        btn_add_row.clicked.connect(self.add_send_row)
+        self.send_table.setFixedHeight(110) # 调整高度以显示约两行报文
         
         send_layout.addLayout(ctrl_layout)
         send_layout.addWidget(self.send_table)
-        send_layout.addWidget(btn_add_row)
         layout.addWidget(send_group)
 
         # 3. 报文监控与日志
@@ -287,11 +304,11 @@ class RNCANTab(QWidget):
         monitor_layout.addLayout(log_ctrl_layout)
         monitor_layout.addLayout(filter_layout)
         monitor_layout.addWidget(self.monitor_table)
-        layout.addWidget(monitor_group, 3) # 给监控区域更大的 stretch
+        layout.addWidget(monitor_group)
         
-        layout.setStretch(0, 0)
-        layout.setStretch(1, 1)
-        layout.setStretch(2, 3)
+        layout.setStretch(0, 0) # 配置区
+        layout.setStretch(1, 1) # 发送区
+        layout.setStretch(2, 8) # 监控区 (大幅增加)
         
         for _ in range(2): self.add_send_row()
 

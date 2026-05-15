@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                QComboBox, QPushButton, QGroupBox, QTextEdit, 
-                               QGridLayout, QFrame)
+                               QGridLayout, QFrame, QTabWidget)
 from PySide6.QtCore import Qt
 
-class DebugTab(QWidget):
+class SingleChannelDebugTab(QWidget):
     def __init__(self):
         super().__init__()
         self._init_ui()
@@ -91,3 +91,31 @@ class DebugTab(QWidget):
         right_panel.addWidget(log_group)
         
         main_layout.addLayout(right_panel, 3)
+
+class DebugTab(QWidget):
+    """
+    硬件调试主容器 Tab
+    内部包含一个 QTabWidget，集成所有单项硬件的调试页面
+    """
+    def __init__(self, device_manager=None):
+        super().__init__()
+        self.mgr = device_manager
+        self._init_ui()
+        
+    def _init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.sub_tabs = QTabWidget()
+        # 设置 Tab 样式为左侧显示或顶部显示（根据用户习惯，通常顶部更直观）
+        self.sub_tabs.setTabPosition(QTabWidget.North)
+        
+        # 1. 原始的单通道调试 (CAN/BMS)
+        self.tab_single_ch = SingleChannelDebugTab()
+        self.sub_tabs.addTab(self.tab_single_ch, "BMS 单通道调试")
+        
+        layout.addWidget(self.sub_tabs)
+
+    def add_debug_tab(self, widget, label):
+        """外部调用：向调试中心添加子页面"""
+        self.sub_tabs.addTab(widget, label)

@@ -8,7 +8,7 @@ class StepDialog(QDialog):
     def __init__(self, parent=None, step_data=None):
         super().__init__(parent)
         self.setWindowTitle("编辑指令 (子工步)")
-        self.resize(620, 720)
+        self.resize(620, 550)
         self.setStyleSheet("""
             QDialog { background-color: #1A1A2E; color: #E0E0E0; }
             QLabel { font-size: 14px; color: #B0B0B0; }
@@ -66,32 +66,26 @@ class StepDialog(QDialog):
         """)
         
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(25, 25, 25, 25)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(15)
         
-        # 1. 设备与大类选择
-        top_frame = QFrame()
+        # 1. 设备与大类选择 (分类整理)
+        top_frame = QFrame(self)
         top_layout = QFormLayout(top_frame)
         top_layout.setLabelAlignment(Qt.AlignRight)
         top_layout.setSpacing(15)
         
+        # 一级分类
+        self.category_combo = QComboBox()
+        self.category_combo.addItems(["设备操作", "报文交互", "三方协议", "通用交互"])
+        top_layout.addRow("一级分类:", self.category_combo)
+        
+        # 二级分类 (仅在设备操作下有效)
+        self.sub_category_combo = QComboBox()
+        self.sub_category_combo.addItems(["AFE", "继电器", "高压源", "模拟电池", "校准源", "直流源"])
+        top_layout.addRow("二级分类:", self.sub_category_combo)
+        
         self.device_combo = QComboBox()
-        self.device_combo.addItems([
-            "电池模拟器 (Simulator)", 
-            "NGI 高压源 (HV Source)", 
-            "1# AFE 电源 (AFE 1)", 
-            "2# AFE 电源 (AFE 2)", 
-            "3# AFE 电源 (AFE 3)", 
-            "主机板电源 (Main Power)",
-            "CA550 校准仪 (CA550)",
-            "Easy320 继电器 (Easy320)",
-            "老化功能板继电器 (Aging Board)",
-            "控制板供电电源 (Control Power)",
-            "CAN 交互",
-            "智界EOL协议",
-            "等待 (Wait)",
-            "同步屏障 (Synchronization Barrier)"
-        ])
         top_layout.addRow("控制设备:", self.device_combo)
         
         self.action_combo = QComboBox()
@@ -100,14 +94,26 @@ class StepDialog(QDialog):
         main_layout.addWidget(top_frame)
         
         # 分割线
-        line = QFrame()
+        line = QFrame(self)
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
         line.setStyleSheet("background-color: #0F3460;")
         main_layout.addWidget(line)
         
-        # 2. 动态参数配置区
-        self.param_stack = QStackedWidget()
+        # 2. 滚动区域 (包裹动态参数和策略区)
+        self.main_scroll = QScrollArea(self)
+        self.main_scroll.setWidgetResizable(True)
+        self.main_scroll.setFrameShape(QFrame.NoFrame)
+        self.main_scroll.setStyleSheet("background-color: transparent;")
+        
+        self.main_scroll_content = QWidget() # 容器 Widget
+        self.scroll_layout = QVBoxLayout(self.main_scroll_content)
+        self.scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self.scroll_layout.setSpacing(15)
+        
+        # 动态参数配置区
+        self.param_stack = QStackedWidget(self)
+        self.scroll_layout.addWidget(self.param_stack)
         
         # --- 页面 0: 仪表设置参数 (可多选) ---
         self.page_instr = QWidget()
@@ -274,41 +280,57 @@ class StepDialog(QDialog):
         # --- 页面 7: 智界 EOL 协议 ---
         self.page_eol = QWidget()
         eol_form = QFormLayout(self.page_eol)
-        self.eol_op = QComboBox()
-        self.eol_op.setEditable(False)
-        self.eol_op.addItems([
-            "0x03_read_insulation", "0x03_insulation_control",
-            "0x04_read_gpio", "0x04_write_gpio",
-            "0x05_read_pwm_duty", "0x05_read_pwm_freq",
-            "0x06_read_adc_value", "0x06_read_adc_raw",
-            "0x07_set_csc_node_count", "0x07_read_csc_hv", "0x07_csc_balance_control",
-            "0x07_read_cell_voltage", "0x07_read_stack_voltage", "0x07_read_fast_charge_impedance",
-            "0x08_read_crash_pwm_duty", "0x08_read_crash_pwm_freq",
-            "0x08_read_crash_impedance", "0x08_read_crash_pulse_width",
-            "0x09_read_rtc_time", "0x09_set_rtc_wakeup", "0x09_set_rtc_time",
-            "0x10_read_cell_temp", "0x10_read_pcb_temp", "0x10_read_host_temp", "0x10_read_host_pcb_temp",
-            "0x0a_set_eeprom_address", "0x0a_read_eeprom_data", "0x0a_write_eeprom_data",
-            "0x0b_read_hall_current", "0x0b_read_hall_current_2",
-            "0xff_read_wakeup_source", "0xff_read_pressure_sensor", "0xff_read_hsd_load_voltage"
-        ])
-        self.eol_param1_label = QLabel("参数1:")
-        self.eol_param1 = QComboBox()
-        self.eol_param2_label = QLabel("参数2:")
-        self.eol_param2 = QComboBox()
-        self.eol_args = QLineEdit("")
+        
+        # 核心通讯参数 (置顶)
         self.eol_channel = QSpinBox()
-        self.eol_channel.setRange(0, 255)
-        self.eol_channel.setValue(0)
+        self.eol_channel.setRange(0, 255); self.eol_channel.setValue(0)
+        self.eol_tx_id = QLineEdit("0x7F0")
+        self.eol_rx_id = QLineEdit("0x7F8")
+        
+        # 新增：CAN 类型与 DLC
+        self.eol_can_type = QComboBox()
+        self.eol_can_type.addItems(["Classic", "FD", "FD+BRS"])
+        self.eol_dlc = QSpinBox()
+        self.eol_dlc.setRange(0, 15); self.eol_dlc.setValue(8)
+        
+        # 业务参数
+        self.eol_param2_label = QLabel("读取模式:")
+        self.eol_param2 = QComboBox()
+        self.eol_param1_label = QLabel("ADC选择:")
+        self.eol_param1 = QComboBox()
+        
         self.eol_timeout = QSpinBox()
-        self.eol_timeout.setRange(1, 600000)
-        self.eol_timeout.setValue(1000)
-        self.eol_timeout.setSuffix(" ms")
-        eol_form.addRow("EOL操作:", self.eol_op)
-        eol_form.addRow(self.eol_param1_label, self.eol_param1)
-        eol_form.addRow(self.eol_param2_label, self.eol_param2)
-        eol_form.addRow("扩展参数:", self.eol_args)
+        self.eol_timeout.setRange(1, 600000); self.eol_timeout.setValue(1000); self.eol_timeout.setSuffix(" ms")
+
+        # 隐藏参数 (仅用于后台逻辑，需填充选项以支持数据匹配)
+        self.eol_op = QComboBox()
+        self.eol_op.addItems([
+            "0x03 绝缘控制读取", "0x03 绝缘控制写入",
+            "0x04 GPIO控制读取", "0x04 GPIO控制写入",
+            "0x05 PWM读取", "0x06 ADC读取",
+            "0x07 CSC控制读取", "0x07 CSC控制写入",
+            "0x08 CRASH读取", "0x09 RTC控制读取", "0x09 RTC控制写入",
+            "0x10 NTC读取", "0x0A EEPROM控制读取", "0x0A EEPROM控制写入",
+            "0x0B 霍尔电流读取", "0xFF 唤醒源读取"
+        ])
+        self.eol_op.setVisible(False)
+        self.eol_args = QLineEdit("")
+        self.eol_args.setVisible(False)
+
+        # 添加到布局 (按用户指定顺序)
         eol_form.addRow("RNCAN通道:", self.eol_channel)
-        eol_form.addRow("超时:", self.eol_timeout)
+        eol_form.addRow("发送ID:", self.eol_tx_id)
+        eol_form.addRow("接收ID:", self.eol_rx_id)
+        eol_form.addRow("CAN 类型:", self.eol_can_type)
+        eol_form.addRow("DLC:", self.eol_dlc)
+        eol_form.addRow(self.eol_param2_label, self.eol_param2)
+        eol_form.addRow(self.eol_param1_label, self.eol_param1)
+        eol_form.addRow("超时时间:", self.eol_timeout)
+        
+        # 兼容旧代码的占位符
+        eol_form.addRow("", self.eol_op) 
+        eol_form.addRow("", self.eol_args)
+        
         self.param_stack.addWidget(self.page_eol) # 7
 
         # --- 页面 8: 老化板继电器参数 (22路勾选模式) ---
@@ -341,10 +363,6 @@ class StepDialog(QDialog):
         ag_layout.addWidget(ag_scroll)
         self.param_stack.addWidget(self.page_aging_relay) # 8
 
-        main_layout.addWidget(self.param_stack)
-        
-        main_layout.addStretch()
-        
         # 3. 策略与判定设置
         policy_frame = QFrame()
         policy_layout = QFormLayout(policy_frame)
@@ -355,7 +373,11 @@ class StepDialog(QDialog):
         self.cb_judgment = QCheckBox("结果输出并参与最终判定")
         self.cb_judgment.setStyleSheet("color: #00E5FF; font-weight: bold;")
         policy_layout.addRow("", self.cb_judgment)
-        main_layout.addWidget(policy_frame)
+        
+        self.scroll_layout.addWidget(policy_frame)
+        
+        self.main_scroll.setWidget(self.main_scroll_content)
+        main_layout.addWidget(self.main_scroll)
         
         # 底部按钮
         btn_layout = QHBoxLayout()
@@ -371,6 +393,8 @@ class StepDialog(QDialog):
         main_layout.addLayout(btn_layout)
         
         # 信号连接
+        self.category_combo.currentIndexChanged.connect(self.on_category_changed)
+        self.sub_category_combo.currentIndexChanged.connect(self.on_sub_category_changed)
         self.device_combo.currentIndexChanged.connect(self.on_device_changed)
         self.action_combo.currentIndexChanged.connect(self.on_action_changed)
         self.eol_op.currentTextChanged.connect(self.on_eol_op_changed)
@@ -379,7 +403,7 @@ class StepDialog(QDialog):
         if step_data:
             self._load_data(step_data)
         else:
-            self.on_device_changed(0)
+            self.on_category_changed(0)
         self.on_eol_op_changed()
 
     def _combo_value(self, combo):
@@ -417,37 +441,66 @@ class StepDialog(QDialog):
     def _index_items(self, count, prefix=""):
         return [(f"{prefix}{i}", str(i)) for i in range(count)]
 
+    def _adc_items(self):
+        # ADC 选择列表，索引按 16 进制显示
+        items = [
+            ("0x00 KL30_IN1_V_A2D", "0"), ("0x01 WKD_EXT1_ADC", "1"), ("0x02 WKD_EXT2_ADC", "2"), 
+            ("0x03 WKD_INT1_INT2_A2D", "3"), ("0x04 WKD_INT3_INT4_A2D", "4"), ("0x05 WKD_EXT3_ADC", "5"), 
+            ("0x06 KL30_IN2_V_A2D", "6"), ("0x07 WKD_EXT6_ADC", "7"), ("0x08 HWREV_A2D", "8"), 
+            ("0x09 HSD_O_00_USNS", "9"), ("0x0A HSD_O_01_USNS", "10"), ("0x0B HSD_O_02_USNS", "11"), 
+            ("0x0C HSD_O_03_USNS", "12"), ("0x0D WKD_INT6_ADC", "13"), ("0x0E GB2015_CC2_PE", "14"), 
+            ("0x0F HSD_O_06_USNS", "15"), ("0x10 HSD_O_07_USNS", "16"), ("0x11 HSD_I_CS1_4", "17"), 
+            ("0x12 LSD_V_AD1", "18"), ("0x13 LSD_V_AD2", "19"), ("0x14 NTCF_MCU", "20"), 
+            ("0x15 HSD_I_CS7_8", "21"), ("0x16 SIG1_A_ADC", "22"), ("0x17 HALL_IN1_ADC", "23"), 
+            ("0x18 SIG3_A_ADC", "24"), ("0x19 LSD_V_AD3", "25"), ("0x1A SBC_VS1", "26"), 
+            ("0x1B HSD_O_04_USNS", "27"), ("0x1C LSD_V_AD4", "28"), ("0x1D HSD_O_05_USNS", "29"), 
+            ("0x1E NTCF_I_00", "30"), ("0x1F NTCF_I_01", "31"), ("0x20 INPUT2_USNS", "32"), 
+            ("0x21 INPUT3_USNS", "33"), ("0x22 HALL_5V_ADC", "34"), ("0x23 WKD_INT7_ADC", "35"), 
+            ("0x24 NTCF_I_02", "36"), ("0x25 NTCF_I_03", "37"), ("0x26 NTCF_I_04", "38"), 
+            ("0x27 HSD_I_CS5_6", "39"), ("0x28 NTCF_I_05", "40"), ("0x29 CHRG_GB2015_CC1", "41"), 
+            ("0x2A CHRG_GB_CC2", "42"), ("0x2B INPUT1_USNS", "43"), ("0x2C OUTPUT3_USNS", "44"), 
+            ("0x2D WKD_EXT4_ADC", "45"), ("0x2E Pulse1_ADC", "46"), ("0x2F OUTPUT2_USNS", "47"), 
+            ("0x30 OUTPUT1_USNS", "48")
+        ]
+        return items
+
     def on_eol_op_changed(self):
         op = self.eol_op.currentText()
         self._set_param_combo(self.eol_param1, self.eol_param1_label, "参数1:", [])
         self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
         self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
 
-        if "gpio" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "GPIO:", self._gpio_items())
-            if "write" in op:
-                self._set_param_combo(self.eol_param2, self.eol_param2_label, "LEVEL:", [("0 低电平", "0"), ("1 高电平", "1")])
-        elif "adc" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "INDEX:", self._index_items(49, "ADC "))
-        elif "pwm" in op and "crash" not in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM:", self._index_items(16, "PWM "))
-        elif "insulation_control" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "STATE:", [("0 P/N均断开", "0"), ("1 P闭合N断开", "1"), ("2 P断开N闭合", "2")])
-        elif "node_count" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "COUNT:", self._index_items(12, "节点 "))
-        elif "balance_control" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "CELL:", self._index_items(256, "Cell "))
-            self._set_param_combo(self.eol_param2, self.eol_param2_label, "STATE:", [("0 关闭", "0"), ("1 开启", "1")])
-        elif "cell_voltage" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "CELL:", self._index_items(256, "Cell "))
-        elif "temp" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "INDEX:", self._index_items(64, "NTC "))
-        elif "crash_impedance" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "INDEX:", [("0 sig1", "0"), ("1 sig3", "1")])
-        elif "eeprom_address" in op:
-            self.eol_args.setPlaceholderText("ADDRESS:0x00000000")
-        elif "eeprom_data" in op or "rtc" in op:
-            self.eol_args.setPlaceholderText("DATA:00000000")
+        if "0x04" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "GPIO通道:", self._gpio_items())
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取/写入:", [("读取电平", "READ"), ("写入高电平", "WRITE_HIGH"), ("写入低电平", "WRITE_LOW")])
+        elif "0x06" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "ADC选择:", self._adc_items())
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取模式:", [("转换值", "VALUE"), ("原始值", "RAW")])
+        elif "0x05" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM通道:", self._index_items(16, "PWM "))
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取内容:", [("占空比", "DUTY"), ("频率", "FREQ")])
+        elif "0x03" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作内容:", [("读取绝缘阻抗", "READ"), ("设置控制状态", "WRITE")])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "控制值:", [("0 P/N均断开", "0"), ("1 P闭合N断开", "1"), ("2 P断开N闭合", "2")])
+        elif "0x07" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [("单体电压", "CELL_VOLT"), ("总压/采样", "HV_VOLT"), ("设置节点数", "NODE_COUNT"), ("均衡控制", "BALANCE")])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "子索引/状态:", self._index_items(256, "Index "))
+        elif "0x10" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "NTC索引:", self._index_items(64, "NTC "))
+            self.eol_args.setPlaceholderText("无需额外参数")
+        elif "0x08" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取内容:", [("占空比", "0x01"), ("频率", "0x02"), ("阻抗", "0x03"), ("脉宽", "0x04")])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "通道索引:", [("sig1", "0"), ("sig3", "1")])
+        elif "0x0A" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作:", [("读取数据", "READ"), ("写入数据", "WRITE"), ("设置地址", "SET_ADDR")])
+            self.eol_args.setPlaceholderText("ADDRESS:0x00, DATA:00000000")
+        elif "0x09" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "RTC功能:", [("读取时间", "READ"), ("设置时间", "SET_TIME"), ("设置唤醒", "SET_WAKEUP")])
+            self.eol_args.setPlaceholderText("DATA:YYYYMMDDHHMMSS")
+        elif "0xFF" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取项:", [("唤醒源", "0x06"), ("压力传感器", "0x0E"), ("高边负载电压", "0x11")])
+        elif "0x0B" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "霍尔通道:", [("通道1", "0x01"), ("通道2", "0x03")])
 
     def _split_params(self, params_str):
         values = {}
@@ -461,7 +514,9 @@ class StepDialog(QDialog):
 
     def _load_data(self, data):
         """将已有数据填充到界面"""
-        # 暂时阻塞信号，避免初始化过程中的交叉触发
+        # 暂时阻塞信号
+        self.category_combo.blockSignals(True)
+        self.sub_category_combo.blockSignals(True)
         self.device_combo.blockSignals(True)
         self.action_combo.blockSignals(True)
 
@@ -470,35 +525,53 @@ class StepDialog(QDialog):
         params_str = data.get('params', '')
         step_type = data.get('type', '')
         kv = self._split_params(params_str)
-        is_eol_step = "EOL" in step_type.upper() or "智界EOL" in step_type or "EOL" in kv
-        if is_eol_step:
-            device = "智界EOL协议"
-            action = "执行EOL操作"
+        
+        # 1. 识别一级分类与二级分类
+        if "CAN" in device or "报文" in device:
+            self.category_combo.setCurrentText("报文交互")
+        elif "EOL" in step_type or "智界EOL" in device or "EOL" in kv:
+            self.category_combo.setCurrentText("三方协议")
+        elif "等待" in device or "同步屏障" in device:
+            self.category_combo.setCurrentText("通用交互")
+        else:
+            self.category_combo.setCurrentText("设备操作")
+            # 识别二级分类
+            if "AFE" in device: self.sub_category_combo.setCurrentText("AFE")
+            elif "继电器" in device or "Aging Board" in device: self.sub_category_combo.setCurrentText("继电器")
+            elif "HV Source" in device or "高压" in device: self.sub_category_combo.setCurrentText("高压源")
+            elif "Simulator" in device or "模拟器" in device: self.sub_category_combo.setCurrentText("模拟电池")
+            elif "CA550" in device or "校准" in device: self.sub_category_combo.setCurrentText("校准源")
+            elif "Power" in device or "电源" in device: self.sub_category_combo.setCurrentText("直流源")
 
-        # 1. 设置设备
+        # 触发二级/三级联动
+        self.on_category_changed()
+        self.on_sub_category_changed()
+
+        # 2. 匹配设备
         index = self.device_combo.findText(device)
+        if index < 0:
+            # 模糊匹配，例如 "1# AFE" 匹配 "AFE 1"
+            for i in range(self.device_combo.count()):
+                if device[:4] in self.device_combo.itemText(i):
+                    index = i; break
         if index >= 0:
             self.device_combo.setCurrentIndex(index)
         
-        # 无论是否找到设备，都强制执行一次联动刷新以填充 action_combo
-        self.on_device_changed(self.device_combo.currentIndex())
-            
-        # 2. 设置动作 (增加模糊匹配以兼容旧版数据)
+        self.on_device_changed()
+
+        # 3. 设置动作
         index = self.action_combo.findText(action)
         if index < 0:
-            # 尝试模糊匹配，例如 "设置电压/电流" 匹配 "设置参数"
             for i in range(self.action_combo.count()):
-                txt = self.action_combo.itemText(i)
-                if action[:2] in txt or txt[:2] in action: # 匹配前两个字，如 "设置"
-                    index = i
-                    break
-        
+                if action[:2] in self.action_combo.itemText(i):
+                    index = i; break
         if index >= 0:
             self.action_combo.setCurrentIndex(index)
         
-        # 刷新参数堆栈界面
         self.on_action_changed()
         
+        self.category_combo.blockSignals(False)
+        self.sub_category_combo.blockSignals(False)
         self.device_combo.blockSignals(False)
         self.action_combo.blockSignals(False)
 
@@ -562,7 +635,9 @@ class StepDialog(QDialog):
             self.on_eol_op_changed()
             self.eol_timeout.setValue(int(float(kv.get("TIMEOUT", "1000"))))
             self.eol_channel.setValue(int(float(kv.get("CH", "1"))))
-            used_keys = {"EOL", "TIMEOUT", "CH"}
+            if "TX_ID" in kv: self.eol_tx_id.setText(kv["TX_ID"])
+            if "RX_ID" in kv: self.eol_rx_id.setText(kv["RX_ID"])
+            used_keys = {"EOL", "TIMEOUT", "CH", "TX_ID", "RX_ID"}
             if self.eol_param1.isVisible():
                 key = self.eol_param1_label.text().replace(":", "").strip().upper()
                 if key in kv:
@@ -583,10 +658,14 @@ class StepDialog(QDialog):
             if "ID" in kv: self.c_id.setText(kv["ID"])
             if "DATA" in kv: self.c_data.setText(kv["DATA"])
             if "WAIT_ID" in kv: self.c_wait_id.setText(kv["WAIT_ID"])
-            if "TYPE" in kv: self.c_type.setCurrentIndex(max(0, min(2, int(kv["TYPE"]))))
-            if "DLC" in kv: self.c_dlc.setValue(int(kv["DLC"]))
-            if "CH" in kv: self.c_channel.setValue(int(kv["CH"]))
-            if "TIMEOUT" in kv: self.c_timeout.setValue(int(float(kv["TIMEOUT"])))
+            try:
+                if "TYPE" in kv: self.c_type.setCurrentIndex(max(0, min(2, int(kv["TYPE"]))))
+                if "DLC" in kv: self.c_dlc.setValue(int(kv["DLC"]))
+                if "CH" in kv: 
+                    try: self.c_channel.setValue(int(kv["CH"]))
+                    except: pass 
+                if "TIMEOUT" in kv: self.c_timeout.setValue(int(float(kv["TIMEOUT"])))
+            except: pass
 
             if "读取电流" in params_str:
                 self.rb_curr.setChecked(True)
@@ -630,12 +709,54 @@ class StepDialog(QDialog):
             range_str = params_str.split("Range:")[-1].split(" ")[0]
             self.ca_range.setCurrentText(range_str)
 
-    def on_device_changed(self, index):
+    def on_category_changed(self, index=0):
+        category = self.category_combo.currentText()
+        self.sub_category_combo.setVisible(category == "设备操作")
+        
+        self.device_combo.clear()
+        if category == "设备操作":
+            self.on_sub_category_changed()
+        elif category == "报文交互":
+            self.device_combo.addItems(["CAN 交互"])
+        elif category == "三方协议":
+            self.device_combo.addItems(["智界EOL协议"])
+        elif category == "通用交互":
+            self.device_combo.addItems(["等待 (Wait)", "同步屏障 (Synchronization Barrier)"])
+        
+        self.on_device_changed()
+
+    def on_sub_category_changed(self, index=0):
+        if self.category_combo.currentText() != "设备操作": return
+        
+        sub_cat = self.sub_category_combo.currentText()
+        self.device_combo.clear()
+        
+        if sub_cat == "AFE":
+            self.device_combo.addItems(["1# AFE 电源 (AFE 1)", "2# AFE 电源 (AFE 2)", "3# AFE 电源 (AFE 3)"])
+        elif sub_cat == "继电器":
+            self.device_combo.addItems(["Easy320 继电器 (Easy320)", "老化功能板继电器 (Aging Board)"])
+        elif sub_cat == "高压源":
+            self.device_combo.addItems(["NGI 高压源 (HV Source)"])
+        elif sub_cat == "模拟电池":
+            self.device_combo.addItems(["1# 电池模拟器 (Simulator 1)", "2# 电池模拟器 (Simulator 2)", "3# 电池模拟器 (Simulator 3)"])
+        elif sub_cat == "校准源":
+            self.device_combo.addItems(["CA550 校准仪 (CA550)"])
+        elif sub_cat == "直流源":
+            self.device_combo.addItems(["控制板供电电源 (Control Power)", "主机板电源 (Main Power)"])
+        
+        self.on_device_changed()
+
+    def on_device_changed(self, index=0):
         self.action_combo.clear()
         device_text = self.device_combo.currentText()
+        if not device_text: return
         
         if "智界EOL" in device_text:
-            self.action_combo.addItems(["执行EOL操作"])
+            self.action_combo.addItems([
+                "0x03 绝缘控制读取", "0x04 GPIO控制读取", "0x05 PWM读取", "0x06 ADC读取",
+                "0x07 CSC控制读取", "0x08 CRASH读取", "0x09 RTC控制读取", "0x10 NTC读取",
+                "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 唤醒源读取"
+            ])
         elif "CAN" in device_text:
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据"])
         elif "等待" in device_text:
@@ -648,9 +769,11 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["闭合勾选通道", "断开勾选通道", "全部断开"])
         elif "CA550" in device_text:
             self.action_combo.addItems(["参数设置", "数据回读"])
-        else: # 电源类: 模拟器, NGI, AFE, Main, Control Power
+        else: # 电源类
             if "Simulator" in device_text:
                 self.action_combo.addItems(["快捷批量配置", "回读数据"])
+            elif any(x in device_text for x in ["HV Source", "Control Power", "Main Power", "控制板", "主机板", "高压源"]):
+                self.action_combo.addItems(["设置参数", "回读数据"])
             else:
                 self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
         
@@ -662,6 +785,10 @@ class StepDialog(QDialog):
         
         if "智界EOL" in device:
             self.param_stack.setCurrentIndex(7)
+            # 同步 action 到内部 eol_op 逻辑，并保持其隐藏
+            self.eol_op.setCurrentText(action)
+            self.on_eol_op_changed()
+            self.eol_op.setVisible(False)
         elif "CAN" in device:
             self.param_stack.setCurrentIndex(1)
         elif "等待" in device:
@@ -757,19 +884,32 @@ class StepDialog(QDialog):
             params.append(f"CH:{self.c_channel.value()}")
         elif idx == 7: # 智界 EOL 协议
             step_type = "智界EOL协议"
-            params.append(f"EOL:{self.eol_op.currentText().strip()}")
-            if self.eol_param1.isVisible():
-                key = self.eol_param1_label.text().replace(":", "").strip().upper()
-                params.append(f"{key}:{self._combo_value(self.eol_param1)}")
-            if self.eol_param2.isVisible():
-                key = self.eol_param2_label.text().replace(":", "").strip().upper()
-                params.append(f"{key}:{self._combo_value(self.eol_param2)}")
-            for part in self.eol_args.text().split("/"):
-                part = part.strip()
-                if part:
-                    params.append(part)
+            eol_action = action
+            params.append(f"EOL:{eol_action}")
+            
+            # --- 核心业务参数匹配 (硬编码映射，解决 Label 匹配不可靠问题) ---
+            if "0x06" in eol_action:
+                params.append(f"ADC:{self._combo_value(self.eol_param1)}")
+                params.append(f"MODE:{self._combo_value(self.eol_param2)}")
+            elif "0x03" in eol_action:
+                params.append(f"STATE:{self._combo_value(self.eol_param1)}")
+            elif "0x04" in eol_action:
+                params.append(f"INDEX:{self._combo_value(self.eol_param1)}")
+                params.append(f"LEVEL:{self._combo_value(self.eol_param2)}")
+            elif "0x05" in eol_action:
+                params.append(f"PWM:{self._combo_value(self.eol_param1)}")
+            elif "0x10" in eol_action:
+                params.append(f"NTC:{self._combo_value(self.eol_param1)}")
+            elif "0x0B" in eol_action:
+                params.append(f"HALL:{self._combo_value(self.eol_param1)}")
+            
+            # 通用参数
             params.append(f"TIMEOUT:{self.eol_timeout.value()}")
             params.append(f"CH:{self.eol_channel.value()}")
+            params.append(f"TYPE:{self.eol_can_type.currentIndex()}")
+            params.append(f"DLC:{self.eol_dlc.value()}")
+            params.append(f"TX_ID:{self.eol_tx_id.text().strip()}")
+            params.append(f"RX_ID:{self.eol_rx_id.text().strip()}")
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")
@@ -789,7 +929,9 @@ class StepDialog(QDialog):
             params.append(f"Range:{self.sim_batch_range.currentText().split(' ')[0]}")
             params.append(f"CH:{self.sim_batch_channels.text()}")
         elif "全部" in action:
-            params.append("--")
+            if "开启" in action: params.append("开启")
+            elif "关闭" in action: params.append("关闭")
+            else: params.append("--")
 
         params_str = " / ".join(params) if params else "--"
         
