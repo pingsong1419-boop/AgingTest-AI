@@ -189,6 +189,7 @@ class ConfigTab(QWidget):
                 child.setData(0, Qt.UserRole, sub_data.get("device"))
                 child.setData(1, Qt.UserRole, sub_data.get("type"))
                 child.setData(2, Qt.UserRole, sub_data.get("is_judgment"))
+                child.setData(3, Qt.UserRole, sub_data.get("sync_exec", False))
                 
                 if sub_data.get("is_judgment"):
                     child.setForeground(0, QColor("#FFD700")) # 亮金色
@@ -520,6 +521,7 @@ class ConfigTab(QWidget):
                     "device": sub_node.data(0, Qt.UserRole), 
                     "type": sub_node.data(1, Qt.UserRole),
                     "is_judgment": sub_node.data(2, Qt.UserRole),
+                    "sync_exec": sub_node.data(3, Qt.UserRole),
                     "fail_strategy": sub_node.text(4)
                 }
                 item_data["sub_steps"].append(sub_data)
@@ -589,6 +591,7 @@ class ConfigTab(QWidget):
             item.setData(0, Qt.UserRole, data['device'])
             item.setData(1, Qt.UserRole, data['type'])
             item.setData(2, Qt.UserRole, data['is_judgment'])
+            item.setData(3, Qt.UserRole, data.get('sync_exec', False))
             
             if data['is_judgment']:
                 item.setForeground(0, QColor("#FFD700"))
@@ -634,7 +637,8 @@ class ConfigTab(QWidget):
                 'device': item.data(0, Qt.UserRole) or "",
                 'type': item.data(1, Qt.UserRole) or "",
                 'is_judgment': item.data(2, Qt.UserRole) or False,
-                'fail_strategy': item.text(4) # 补全 NG 策略
+                'sync_exec': item.data(3, Qt.UserRole) or False,
+                'fail_strategy': item.text(4)
             }
             dialog = StepDialog(self, step_data=data)
             if dialog.exec():
@@ -649,6 +653,7 @@ class ConfigTab(QWidget):
                 item.setData(0, Qt.UserRole, new_data['device'])
                 item.setData(1, Qt.UserRole, new_data['type'])
                 item.setData(2, Qt.UserRole, new_data['is_judgment'])
+                item.setData(3, Qt.UserRole, new_data.get('sync_exec', False))
                 
                 if new_data['is_judgment']:
                     item.setForeground(0, QColor("#FFD700"))

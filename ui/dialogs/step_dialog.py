@@ -374,6 +374,11 @@ class StepDialog(QDialog):
         self.cb_judgment.setStyleSheet("color: #00E5FF; font-weight: bold;")
         policy_layout.addRow("", self.cb_judgment)
         
+        self.cb_sync = QCheckBox("同步执行 (多通道集齐后执行一次)")
+        self.cb_sync.setToolTip("开启后，所有勾选的测试通道将在此处等待集齐，然后由其中一个通道代表全体执行控制指令，避免共享设备重复操作。")
+        self.cb_sync.setStyleSheet("color: #FFD700;") # 金色突出显示
+        policy_layout.addRow("", self.cb_sync)
+        
         self.scroll_layout.addWidget(policy_frame)
         
         self.main_scroll.setWidget(self.main_scroll_content)
@@ -576,11 +581,9 @@ class StepDialog(QDialog):
         self.action_combo.blockSignals(False)
 
         # 2. 判定勾选与策略
-        is_judgment = data.get('is_judgment')
-        self.cb_judgment.setChecked(bool(is_judgment))
-        
-        fail_strategy = data.get('fail_strategy', '失败停止')
-        self.fail_strategy_combo.setCurrentText(fail_strategy)
+        self.cb_judgment.setChecked(data.get('is_judgment', False))
+        self.cb_sync.setChecked(data.get('sync_exec', False))
+        self.fail_strategy_combo.setCurrentText(data.get('fail_strategy', "失败停止"))
 
         # 3. 解析参数字符串并尝试还原
 
@@ -941,6 +944,7 @@ class StepDialog(QDialog):
             'params': params_str,
             'type': step_type,
             'is_judgment': self.cb_judgment.isChecked(),
+            'sync_exec': self.cb_sync.isChecked(),
             'fail_strategy': self.fail_strategy_combo.currentText(),
-            'name': f"{device}-{action} ({params_str})"
+            'name': f"{device}-{action} ({params_str})" + (" [同步]" if self.cb_sync.isChecked() else "")
         }

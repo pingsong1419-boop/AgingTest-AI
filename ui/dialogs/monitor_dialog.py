@@ -155,8 +155,13 @@ class MonitorDialog(QDialog):
             return
             
         self.log_text.append(f"--- 启动单通道手动测试: CH-{self.channel_id} (保留全部项目列表) ---")
+        # 获取同步组信息
+        sync_group = None
+        if self.parent() and hasattr(self.parent(), "get_sync_group_for_channel"):
+            sync_group = self.parent().get_sync_group_for_channel(self.channel_id)
+            
         # 下发全量数据，引擎会自动跳过带 # 的项目
-        self.engine.start_channel_test(self.channel_id, full_data)
+        self.engine.start_channel_test(self.channel_id, full_data, sync_group=sync_group)
         self._connect_signals() # 重新绑定信号以获取最新 worker
 
     def run_all_test(self):
@@ -178,7 +183,12 @@ class MonitorDialog(QDialog):
             return
             
         self.log_text.append(f"--- 启动单通道完整测试: CH-{self.channel_id} ---")
-        self.engine.start_channel_test(self.channel_id, all_data)
+        # 获取同步组信息
+        sync_group = None
+        if self.parent() and hasattr(self.parent(), "get_sync_group_for_channel"):
+            sync_group = self.parent().get_sync_group_for_channel(self.channel_id)
+            
+        self.engine.start_channel_test(self.channel_id, all_data, sync_group=sync_group)
         self._connect_signals()
 
     def stop_test(self):

@@ -1,6 +1,7 @@
 import socket
 import time
 import struct
+import threading
 
 class Lingtu66100:
     """
@@ -12,6 +13,7 @@ class Lingtu66100:
         self.port = port
         self.sock = None
         self.is_connected = False
+        self._lock = threading.Lock()
 
     def connect(self) -> bool:
         # 如果当前已经是连接状态，先尝试安全断开
@@ -21,20 +23,10 @@ class Lingtu66100:
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
-            self.sock.settimeout(2.0)
+            self.sock.settimeout(5.0)
             self.sock.connect((self.ip, self.port))
             self.is_connected = True
-            
-            # 尝试握手，但不作为联机成功的唯一标准
-            try:
-                self.sock.send(b"*CLS\n")
-                time.sleep(0.1)
-                self.sock.send(b"*IDN?\n")
-                idn = self.sock.recv(1024).decode().strip()
-                print(f"[*] 模拟器 ({self.ip}) 握手成功: {idn}")
-            except:
-                print(f"[!] 模拟器 ({self.ip}) TCP 已连接，但 *IDN? 无响应")
-            
+            print(f"[*] 模拟器 ({self.ip}) TCP 链路已建立")
             return True
         except Exception as e:
             print(f"[Lingtu66100] 连接失败 ({self.ip}): {e}")
@@ -53,77 +45,96 @@ class Lingtu66100:
         self.is_connected = False
 
 
+    def _ensure_connected(self) -> bool:
+        """确保连接有效，如果断开则尝试重连"""
+        if self.is_connected and self.sock:
+            try:
+                # 发送一个换行符作为心跳，检测链路
+                self.sock.send(b"\n")
+                return True
+            except:
+                self.is_connected = False
+        
+        return self.connect()
+
+    def _safe_send(self, cmd_bytes: bytes, retries: int = 2) -> bool:
+        """带重试的发送逻辑"""
+        for i in range(retries + 1):
+            try:
+                if not self._ensure_connected(): continue
+                self.sock.send(cmd_bytes)
+                return True
+            except Exception as e:
+                print(f"[Lingtu66100] 发送失败 (尝试 {i+1}): {e}")
+                self.is_connected = False
+                time.sleep(0.2)
+        return False
+
     def set_voltage(self, channel: int, voltage: float, logger=None) -> bool:
-        """设置电压，并等待确认"""
-        if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
-            return False
-        try:
-            cmd = f"SOUR{channel}:VOLT {voltage}\n"
-            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
-            self.sock.send(cmd.encode())
-            # 等待操作完成
-            if logger: logger(f"[IP: {self.ip}] [TX] *OPC?")
-            self.sock.send(b"*OPC?\n")
-            res = self.sock.recv(10).decode().strip()
-            if logger: logger(f"[IP: {self.ip}] [RX] {res}")
-            return "1" in res
-        except Exception as e:
-            if logger: logger(f"[IP: {self.ip}] [!] 设置电压异常: {e}")
-            return False
+        """设置电压"""
+        with self._lock:
+            try:
+                channels = range(1, 19) if channel == 0 else [channel]
+                for ch in channels:
+                    cmd = f"SOUR{ch}:VOLT {voltage}\n"
+                    if not self._safe_send(cmd.encode()): return False
+                    time.sleep(0.05) 
+                
+                if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] 设置所有通道电压: {voltage}V")
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 设置电压异常: {e}")
+                return False
 
 
     def set_current_limit(self, channel: int, current: float, logger=None):
         """设置电流限制: SOURce[ch]:CURRent:LIMit <value>"""
-        if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+        if not self._ensure_connected():
             return False
         try:
-            cmd = f"SOUR{channel}:CURR {current}\n"
-            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
-            self.sock.send(cmd.encode())
+            channels = range(1, 19) if channel == 0 else [channel]
+            for ch in channels:
+                cmd = f"SOUR{ch}:CURR {current}\n"
+                self.sock.send(cmd.encode())
+                time.sleep(0.05)
             return True
         except Exception as e:
             if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
+            self.is_connected = False
             return False
 
     def set_range(self, channel: int, range_str: str, logger=None) -> bool:
-        """
-        设置量程: SOURce[ch]:CURRent:RANGe <HIGH|LOW>
-        range_str: "HIGH" 或 "LOW"
-        """
-        if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+        """设置量程: SOURce[ch]:CURRent:RANGe <HIGH|LOW>"""
+        if not self._ensure_connected():
             return False
         try:
-            # 这里的指令根据 66100 协议手册调整，通常为 SOUR:CURR:RANG
-            cmd = f"SOUR{channel}:CURR:RANG {range_str}\n"
-            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
-            self.sock.send(cmd.encode())
+            channels = range(1, 19) if channel == 0 else [channel]
+            for ch in channels:
+                cmd = f"SOUR{ch}:CURR:RANG {range_str}\n"
+                self.sock.send(cmd.encode())
+                time.sleep(0.05)
             return True
         except Exception as e:
             if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
+            self.is_connected = False
             return False
 
     def output_control(self, channel: int, state: bool, logger=None) -> bool:
-        """控制输出开关，并等待确认"""
-        if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
-            return False
-        try:
-            val = 1 if state else 0
-            cmd = f"OUTP{channel}:STAT {val}\n"
-            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
-            self.sock.send(cmd.encode())
-            
-            if logger: logger(f"[IP: {self.ip}] [TX] *OPC?")
-            self.sock.send(b"*OPC?\n")
-            res = self.sock.recv(10).decode().strip()
-            if logger: logger(f"[IP: {self.ip}] [RX] {res}")
-            return "1" in res
-        except Exception as e:
-            if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
-            return False
+        """控制输出开关"""
+        with self._lock:
+            try:
+                val = 1 if state else 0
+                channels = range(1, 19) if channel == 0 else [channel]
+                for ch in channels:
+                    cmd = f"OUTP{ch}:STAT {val}\n"
+                    if not self._safe_send(cmd.encode()): return False
+                    time.sleep(0.1) 
+                
+                if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
+                return False
 
 
     def measure_voltage(self, channel: int, logger=None) -> float:

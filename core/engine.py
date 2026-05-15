@@ -35,6 +35,7 @@ class SubStep:
         self.type = type
         self.params = params
         self.fail_strategy = fail_strategy
+        self.is_sync = params.get("sync_exec", False) # 是否为同步执行工步
 
 class TestStep:
     def __init__(self, name: str, step_type: StepType, ng_strategy: NGStrategy = NGStrategy.STOP_ON_ANY):
@@ -215,8 +216,8 @@ class ChannelWorker(QObject):
         hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
         return result.success, result_value
 
-    def execute_sub_step(self, sub_step: SubStep):
-        if not self.is_running: return
+    def _execute_sub_step_logic(self, sub_step: SubStep, ignore_sync: bool = False):
+        """核心执行逻辑，返回 (success, result_value)"""
         mgr = self.device_manager
         params = sub_step.params
         retry_tag = f" [重试 {self._retry_count}]" if self._retry_count > 0 else ""
@@ -232,15 +233,34 @@ class ChannelWorker(QObject):
                 self.is_waiting_for_sync = True
                 self.reached_barrier.emit(self.channel_id, sub_step)
                 self.log_message.emit(self.channel_id, "[#] 进入同步屏障，等待其他通道...")
-                return
+                return True, None
 
             elif sub_step.type == SubStepType.SET_INSTRUMENT:
                 device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
+            if sub_step.type == SubStepType.SET_INSTRUMENT:
+                device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
+                action = params.get("action", "")
+                
+                # 定义通用校验逻辑 (增加 2s 稳定延时)
+                def verify_and_wait(dev_obj, target_v, ch=None, delay=2.0, threshold=None):
+                    if not dev_obj: return True
+                    import time; time.sleep(delay)
+                    if threshold is None: return True # 如果不指定阈值，则仅延时，不校验
+                    try:
+                        v_real = dev_obj.measure_voltage(ch) if ch is not None else dev_obj.measure_voltage()
+                        if v_real is None or v_real < 0: return True 
+                        if abs(v_real - target_v) > threshold:
+                            hw_logger(f"[!] 电压校验失败: 设定 {target_v:.4f}V, 实测 {v_real:.4f}V, 误差 {abs(v_real-target_v):.4f}V > {threshold}V")
+                            return False
+                        hw_logger(f"[*] 电压校验通过: 实测 {v_real:.4f}V")
+                        return True
+                    except: return True
+
                 if "ca550" in device and self.engine:
                     if not self.engine.request_resource("ca550", self.channel_id):
                         self.is_waiting_for_sync = True
                         self.log_message.emit(self.channel_id, "[#] CA550 资源忙，进入排队等待...")
-                        return
+                        return True, None
                 
                 target_ch = None
                 if "CH:" in p_str:
@@ -248,9 +268,6 @@ class ChannelWorker(QObject):
                     if ch_match: target_ch = int(ch_match.group(1))
 
                 if "simulator" in device or "电池模拟器" in device:
-                    action = params.get("action", "")
-                    
-                    # 确定具体的模拟器实例 (如果有 1#, 2#, 3# 标识)
                     target_sim = None
                     if "1#" in device: target_sim = mgr.simulators[0]
                     elif "2#" in device: target_sim = mgr.simulators[1]
@@ -263,94 +280,74 @@ class ChannelWorker(QObject):
                         range_str = "HIGH" if "Range:HIGH" in p_str else "LOW"
                         ch_str = p_str.split("CH:")[-1].strip().upper() if "CH:" in p_str else "ALL"
                         
-                        # 如果指定了具体的模拟器 (如 1#), 则 "ALL" 仅作用于该模拟器
                         if target_sim:
                             if ch_str == "ALL":
-                                target_sim.set_voltage(0, volt, logger=hw_logger) # 0 通常表示全通道
+                                target_sim.set_voltage(0, volt, logger=hw_logger)
                                 target_sim.set_current_limit(0, curr_ma/1000.0, logger=hw_logger)
                                 target_sim.set_range(0, range_str, logger=hw_logger)
                                 success = target_sim.output_control(0, output_on, logger=hw_logger)
+                                if success and output_on: success = verify_and_wait(target_sim, volt, ch=1, threshold=0.002)
                             else:
                                 try:
                                     target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
                                     for ch in target_channels:
                                         if 1 <= ch <= 18:
                                             target_sim.set_voltage(ch, volt)
-                                            target_sim.set_current_limit(ch, curr_ma/1000.0)
-                                            target_sim.set_range(ch, range_str)
                                             target_sim.output_control(ch, output_on)
+                                            if output_on: success = success and verify_and_wait(target_sim, volt, ch=ch, threshold=0.002)
                                 except: success = False
                         else:
-                            # 原始逻辑：广播到所有模拟器
                             if ch_str == "ALL":
                                 mgr.broadcast_voltage(volt, logger=hw_logger)
-                                mgr.broadcast_current(curr_ma/1000.0, logger=hw_logger)
-                                mgr.broadcast_range(range_str, logger=hw_logger)
                                 success = mgr.broadcast_output(output_on, logger=hw_logger)
-                            else:
-                                try:
-                                    target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
-                                    for sim in mgr.simulators:
-                                        if not sim.is_connected: continue
-                                        for ch in target_channels:
-                                            if 1 <= ch <= 18:
-                                                sim.set_voltage(ch, volt)
-                                                sim.set_current_limit(ch, curr_ma/1000.0)
-                                                sim.set_range(ch, range_str)
-                                                sim.output_control(ch, output_on)
-                                except: success = False
-                        self.on_sub_step_complete(); return
+                                if success and output_on: success = verify_and_wait(mgr.simulators[0], volt, ch=1, threshold=0.002)
+                            else: success = False
+                        return success, None
 
-                    # 单路控制逻辑
                     ch_to_use = target_ch if target_ch is not None else self.channel_id
-                    
                     if target_sim:
-                        # 如果指定了模拟器，则 local_ch 怎么算？
-                        # 这里我们假设如果指定了 1#, 则 ch_to_use 就是该机器上的物理通道 (1-18)
-                        # 如果 ch_to_use > 18，可能需要取模
                         physical_ch = (ch_to_use - 1) % 18 + 1
-                        if "V" in p_str: success = success and target_sim.set_voltage(physical_ch, self._parse_numeric(p_str.split("V")[0]), logger=hw_logger)
-                        if "A" in p_str:
-                            a_match = re.search(r"([\d\.]+)\s*A", p_str)
-                            if a_match: success = success and target_sim.set_current_limit(physical_ch, float(a_match.group(1)), logger=hw_logger)
+                        if "V" in p_str: 
+                            v_val = self._parse_numeric(p_str.split("V")[0])
+                            success = success and target_sim.set_voltage(physical_ch, v_val, logger=hw_logger)
+                            if success: success = verify_and_wait(target_sim, v_val, ch=physical_ch, threshold=0.002)
                         if "开启输出" in p_str: success = success and target_sim.output_control(physical_ch, True, logger=hw_logger)
                         elif "关闭输出" in p_str: success = success and target_sim.output_control(physical_ch, False, logger=hw_logger)
                     else:
-                        if "V" in p_str: success = success and mgr.set_voltage(ch_to_use, self._parse_numeric(p_str.split("V")[0]), logger=hw_logger)
-                        if "A" in p_str:
-                            a_match = re.search(r"([\d\.]+)\s*A", p_str)
-                            if a_match: success = success and mgr.set_current(ch_to_use, float(a_match.group(1)), logger=hw_logger)
+                        if "V" in p_str: 
+                            v_val = self._parse_numeric(p_str.split("V")[0])
+                            success = success and mgr.set_voltage(ch_to_use, v_val, logger=hw_logger)
+                            if success:
+                                sim, ch = mgr._get_sim_and_ch(ch_to_use)
+                                success = verify_and_wait(sim, v_val, ch=ch, threshold=0.002)
                         if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
-                        elif "关闭输出" in p_str: success = success and mgr.output_control(ch_to_use, False, logger=hw_logger)
-                
+
                 elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device or "hv source" in device:
                         act = params.get("action", "")
-                        if "输出控制" in act or "开启" in act or "关闭" in act:
-                            success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper() or "开启" in act, channel=target_ch, logger=hw_logger)
+                        target_v = self._parse_numeric(p_str) if "V" in p_str or action == "" else None
+                        success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper() or "开启" in act, channel=target_ch, logger=hw_logger)
+                        if success and target_v is not None: success = verify_and_wait(mgr.hv_source, target_v)
                         elif "清除保护" in act: success = mgr.hv_source.clear_errors(logger=hw_logger)
-                        else: success = mgr.hv_source.set_voltage(self._parse_numeric(p_str), channel=target_ch, logger=hw_logger)
+                        elif target_v is not None: 
+                            success = mgr.hv_source.set_voltage(target_v, channel=target_ch, logger=hw_logger)
+                            if success: success = verify_and_wait(mgr.hv_source, target_v)
                     else:
-                        if "2#" in device: target_dev = mgr.afe_pwr_2
-                        elif "3#" in device: target_dev = mgr.afe_pwr_3
-                        elif "afe" in device: target_dev = mgr.afe_power_1
-                        elif "main" in device: target_dev = mgr.dut_power
-                        else: target_dev = mgr.ctrl_board_power
-                        if not target_dev: hw_logger(f"错误: {device} 未初始化"); success = False
-                        else:
+                        target_dev = mgr.afe_pwr_2 if "2#" in device else mgr.afe_pwr_3 if "3#" in device else mgr.afe_power_1 if "afe" in device else mgr.dut_power if "main" in device else mgr.ctrl_board_power
+                        if target_dev:
                             if any(x in p_str.upper() for x in ["V", "A", "ON", "OFF"]) or "开启" in p_str or "关闭" in p_str:
-                                if "V" in p_str.upper(): target_dev.set_voltage(self._parse_numeric(p_str.upper().split("V")[0]), logger=hw_logger)
-                                if "A" in p_str.upper():
-                                    a_m = re.search(r"([\d\.]+)\s*A", p_str.upper())
-                                    if a_m: target_dev.set_current(float(a_m.group(1)), logger=hw_logger)
+                                if "V" in p_str.upper():
+                                    v_val = self._parse_numeric(p_str.upper().split("V")[0])
+                                    success = target_dev.set_voltage(v_val, logger=hw_logger)
+                                    if success: success = verify_and_wait(target_dev, v_val)
                                 if "开启" in p_str or "ON" in p_str.upper(): target_dev.output_control(True, logger=hw_logger)
-                                elif "关闭" in p_str or "OFF" in p_str.upper(): target_dev.output_control(False, logger=hw_logger)
                             else:
                                 act = params.get("action", "")
                                 if "输出控制" in act: target_dev.output_control("开启" in p_str or "ON" in p_str.upper(), logger=hw_logger)
-                                elif "设置电流" in act: target_dev.set_current(self._parse_numeric(p_str), logger=hw_logger)
-                                elif "清除保护" in act and hasattr(target_dev, "clear_errors"): target_dev.clear_errors(logger=hw_logger)
-                                else: target_dev.set_voltage(self._parse_numeric(p_str), logger=hw_logger)
+                                else:
+                                    v_val = self._parse_numeric(p_str)
+                                    success = target_dev.set_voltage(v_val, logger=hw_logger)
+                                    if success: success = verify_and_wait(target_dev, v_val)
 
                 elif "aging_board" in device or "aging board" in device or "老化" in device:
                     board = mgr.boards.get(self.channel_id)
@@ -396,12 +393,10 @@ class ChannelWorker(QObject):
                 target_ch = int(re.search(r"CH:(\d+)", p_str).group(1)) if "CH:" in p_str else None
                 if "simulator" in device or "电池模拟器" in device:
                     ch = target_ch if target_ch is not None else self.channel_id
-                    # 确定具体的模拟器实例 (如果有 1#, 2#, 3# 标识)
                     target_sim = None
                     if "1#" in device: target_sim = mgr.simulators[0]
                     elif "2#" in device: target_sim = mgr.simulators[1]
                     elif "3#" in device: target_sim = mgr.simulators[2]
-                    
                     if target_sim:
                         physical_ch = (ch - 1) % 18 + 1
                         result_value = target_sim.measure_voltage(physical_ch) if "电压" in p_str else target_sim.measure_current(physical_ch)
@@ -456,7 +451,7 @@ class ChannelWorker(QObject):
                             if rem % 1000 == 0 or rem == ms: self.log_message.emit(self.channel_id, f"      [倒计时] 剩余 {rem/1000:.0f}s...")
                             i = min(1000, rem); rem -= i; QTimer.singleShot(i, tick)
                     tick()
-                return
+                return True, None
 
         except Exception as e:
             self.log_message.emit(self.channel_id, f"[!] 执行异常: {str(e)}"); success = False
@@ -464,7 +459,27 @@ class ChannelWorker(QObject):
         if success and params.get("is_judgment") and result_value is not None:
             self.current_step_results.append(result_value)
         self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS" if success else "FAIL", result_value)
-        if success: self._retry_count = 0; self.on_sub_step_complete()
+        return success, result_value
+
+    def execute_sub_step(self, sub_step: SubStep, ignore_sync: bool = False):
+        if not self.is_running: return
+        params = sub_step.params
+        is_sync = bool(params.get("sync_exec", False))
+        if is_sync and not ignore_sync:
+            self.is_waiting_for_sync = True
+            self.log_message.emit(self.channel_id, f"      [同步] 等待所有活跃通道集齐...")
+            self.reached_barrier.emit(self.channel_id, sub_step)
+            return
+
+        success, result_value = self._execute_sub_step_logic(sub_step, ignore_sync)
+        
+        # 核心修复：如果是异步工步（延时）或正在等待同步，不在此处触发推进
+        if sub_step.type == SubStepType.WAIT or self.is_waiting_for_sync:
+            return
+            
+        if success: 
+            self._retry_count = 0
+            self.on_sub_step_complete()
         else:
             if sub_step.fail_strategy == SubStepFailStrategy.RETRY_3 and self._retry_count < 3:
                 self._retry_count += 1
@@ -506,6 +521,7 @@ class TestEngine(QObject):
         self.workers, self.threads, self.zombie_threads = {}, {}, []
         self._lock = threading.RLock()
         self.sync_barrier_channels = set()
+        self.sync_groups = {}
         self.resource_locks = {"ca550": None}
         self.resource_queues = {"ca550": []}
 
@@ -528,16 +544,67 @@ class TestEngine(QObject):
         with self._lock:
             if not self.sync_barrier_channels: self._current_barrier_sub_step = sub_step
             self.sync_barrier_channels.add(cid)
-            total, waiting = len(self.workers), len(self.sync_barrier_channels)
-            self.barrier_status_changed.emit(waiting, total)
             self.channel_sync_status_changed.emit(cid, True)
+            self._check_and_release_barrier()
+
+    def _check_and_release_barrier(self):
+        """检查同步状态，如果集齐则释放所有通道"""
+        with self._lock:
+            first_cid = list(self.sync_barrier_channels)[0] if self.sync_barrier_channels else None
+            if not first_cid: return
+            
+            group = self.sync_groups.get(first_cid, set(self.workers.keys()))
+            active_group_members = [cid for cid in group if cid in self.workers]
+            total = len(group)
+            waiting = len(self.sync_barrier_channels)
+            self.barrier_status_changed.emit(waiting, total)
+            
             if waiting >= total > 0:
-                if hasattr(self, '_current_barrier_sub_step') and self._current_barrier_sub_step:
-                    ga = self._current_barrier_sub_step.params.get("global_action")
-                    if ga: self._execute_global_action(ga)
-                for ch_id in list(self.sync_barrier_channels):
-                    if ch_id in self.workers: self.workers[ch_id].resume_from_sync(); self.channel_sync_status_changed.emit(ch_id, False)
-                self.sync_barrier_channels.clear(); self._current_barrier_sub_step = None; self.barrier_status_changed.emit(0, total)
+                # 1. 确定集齐，准备执行
+                channels_to_release = list(self.sync_barrier_channels)
+                self.sync_barrier_channels.clear()
+                sub = self._current_barrier_sub_step
+                self._current_barrier_sub_step = None
+                
+                # 2. 选择执行主体
+                exec_cid = channels_to_release[0]
+                active_group_members = [cid for cid in group if cid in self.workers]
+                
+                def run_sync_op():
+                    try:
+                        master_success, master_result = True, None
+                        if sub and sub.params.get("sync_exec"):
+                            if exec_cid in self.workers:
+                                worker = self.workers[exec_cid]
+                                worker.log_message.emit(exec_cid, f"[*] 同步集齐 ({active_group_members})，开始执行共享控制...")
+                                master_success, master_result = worker._execute_sub_step_logic(sub, ignore_sync=True)
+                        
+                        # 执行完后，回到主线程分发结果给其他组员
+                        for ch_id in channels_to_release:
+                            if ch_id in self.workers:
+                                w = self.workers[ch_id]
+                                
+                                # 捕获当前闭包变量
+                                def make_release(target_w=w, success=master_success, res=master_result):
+                                    def do_release():
+                                        if target_w.channel_id != exec_cid:
+                                            target_w.sub_step_finished.emit(target_w.channel_id, target_w.current_step_index, target_w.current_sub_step_index, "PASS" if success else "FAIL", res)
+                                        target_w.resume_from_sync()
+                                        self.channel_sync_status_changed.emit(target_w.channel_id, False)
+                                    return do_release
+
+                                # 核心修复：必须指定 w 作为 context，才能跨线程投递到 w 所在的事件循环
+                                QTimer.singleShot(0, w, make_release())
+                                
+                        QTimer.singleShot(0, self, lambda: self.barrier_status_changed.emit(0, total))
+                    except Exception as e:
+                        print(f"[TestEngine] 同步执行线程崩溃: {e}")
+                        # 兜底释放，防止死锁
+                        for ch_id in channels_to_release:
+                            if ch_id in self.workers: QTimer.singleShot(0, self.workers[ch_id].resume_from_sync)
+
+                # 异步执行，不阻塞当前线程
+                threading.Thread(target=run_sync_op, daemon=True).start()
 
     def _execute_global_action(self, ga):
         mgr = self.device_manager
@@ -554,7 +621,14 @@ class TestEngine(QObject):
                 elif "电流" in act: mgr.broadcast_current(val)
         except Exception as e: print(f"Global action error: {e}")
 
-    def start_channel_test(self, cid, recipe_data, test_id=-1):
+    def start_channel_test(self, cid, recipe_data, test_id=-1, sync_group=None):
+        if sync_group:
+            with self._lock:
+                # 记录该通道所属的同步组 (即所有勾选的通道集合)
+                group_set = set(sync_group)
+                for member in group_set:
+                    self.sync_groups[member] = group_set
+                    
         steps = []
         for item in recipe_data:
             s_str = item.get('strategy', "任何NG停止")
@@ -587,7 +661,9 @@ class TestEngine(QObject):
 
     def stop_channel_test(self, cid):
         with self._lock:
-            if cid in self.sync_barrier_channels: self.sync_barrier_channels.remove(cid)
+            if cid in self.sync_barrier_channels:
+                self.sync_barrier_channels.remove(cid)
+                self._check_and_release_barrier() # 移除后检查是否满足其他通道的集齐条件
             if cid in self.threads:
                 t, w = self.threads[cid], self.workers[cid]
                 try: w.test_finished.disconnect()
@@ -595,6 +671,7 @@ class TestEngine(QObject):
                 w.stop(); t.quit()
                 if QThread.currentThread() != t: t.wait(500)
                 del self.workers[cid]; del self.threads[cid]; self.zombie_threads.append(t)
+                if cid in self.sync_groups: del self.sync_groups[cid]
                 t.finished.connect(t.deleteLater); t.finished.connect(lambda tt=t: self._cleanup_zombie(tt)); w.deleteLater()
 
     def _cleanup_zombie(self, t):

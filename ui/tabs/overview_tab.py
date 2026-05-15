@@ -228,20 +228,27 @@ class OverviewTab(QWidget):
 
         if not hasattr(self, 'channel_recipes'):
             self.channel_recipes = {}
+        if not hasattr(self, 'sync_groups'):
+            self.sync_groups = {}
 
-        count = 0
-        for i, ch in enumerate(self.channel_widgets):
-            if ch.chk_select.isChecked():
-                ch_id = i + 1
-                # 缓存配方数据
-                self.channel_recipes[ch_id] = recipe_data.get("items", [])
-                
-                # 更新 UI 状态
-                ch.set_status("已配方", "#AAAAAA")
-                count += 1
+        selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.chk_select.isChecked()]
+        count = len(selected_cids)
+        
+        for ch_id in selected_cids:
+            # 缓存配方数据
+            self.channel_recipes[ch_id] = recipe_data.get("items", [])
+            # 记录该通道所属的同步组（即本次下发的所有通道）
+            self.sync_groups[ch_id] = selected_cids
+            
+            # 更新 UI 状态
+            self.channel_widgets[ch_id-1].set_status("已配方", "#AAAAAA")
         
         from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(self, "下发成功", f"已成功将配方内容加载至 {count} 个通道。")
+        QMessageBox.information(self, "下发成功", f"已成功将配方内容加载至 {count} 个通道，并建立了同步组。")
+
+    def get_sync_group_for_channel(self, channel_id):
+        """获取通道所属的同步组列表"""
+        return getattr(self, 'sync_groups', {}).get(channel_id, [])
 
     def get_recipe_for_channel(self, channel_id):
         """供监控窗口查询已分配但尚未启动的配方"""
