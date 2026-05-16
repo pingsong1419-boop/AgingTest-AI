@@ -10,12 +10,13 @@
             "strategy": "任何NG停止",
             "sub_steps": [
                 {
-                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL) [同步]",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
                     "device": "1# 电池模拟器 (Simulator 1)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -25,15 +26,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "fail_strategy": "失败停止"
-                },
-                {
-                    "name": "1# 电池模拟器 (Simulator 1)-回读数据 (读取电压)",
-                    "action": "回读数据",
-                    "params": "读取电压",
-                    "device": "1# 电池模拟器 (Simulator 1)",
-                    "type": "读取仪表",
-                    "is_judgment": true,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -46,12 +39,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
                     "device": "1# 电池模拟器 (Simulator 1)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -61,6 +55,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -73,12 +68,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL) [同步]",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
                     "device": "2# 电池模拟器 (Simulator 2)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -88,15 +84,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "fail_strategy": "失败停止"
-                },
-                {
-                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
-                    "action": "快捷批量配置",
-                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
-                    "device": "2# 电池模拟器 (Simulator 2)",
-                    "type": "设置仪表",
-                    "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -109,12 +97,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
                     "device": "2# 电池模拟器 (Simulator 2)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -124,6 +113,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -136,12 +126,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL) [同步]",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
                     "device": "3# 电池模拟器 (Simulator 3)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -151,15 +142,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "fail_strategy": "失败停止"
-                },
-                {
-                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL)",
-                    "action": "快捷批量配置",
-                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
-                    "device": "3# 电池模拟器 (Simulator 3)",
-                    "type": "设置仪表",
-                    "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -172,12 +155,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL)",
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
                     "action": "快捷批量配置",
                     "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
-                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "device": "3# 电池模拟器 (Simulator 3)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -187,6 +171,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -199,12 +184,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 开启输出)",
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 开启输出) [同步]",
                     "action": "设置参数",
                     "params": "100.0V / 36.0A / 开启输出",
                     "device": "1# AFE 电源 (AFE 1)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -214,6 +200,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -226,12 +213,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 关闭输出)",
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 关闭输出) [同步]",
                     "action": "设置参数",
                     "params": "100.0V / 36.0A / 关闭输出",
                     "device": "1# AFE 电源 (AFE 1)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -241,6 +229,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -253,12 +242,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 开启输出)",
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 开启输出) [同步]",
                     "action": "设置参数",
                     "params": "100.0V / 12.0A / 开启输出",
                     "device": "2# AFE 电源 (AFE 2)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -268,6 +258,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -280,13 +271,14 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 关闭输出)",
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 关闭输出) [同步]",
                     "action": "设置参数",
                     "params": "100.0V / 12.0A / 关闭输出",
                     "device": "2# AFE 电源 (AFE 2)",
                     "type": "设置仪表",
                     "is_judgment": false,
-                    "fail_strategy": "失败停止"
+                    "sync_exec": true,
+                    "fail_strategy": "重试3次"
                 },
                 {
                     "name": "等待 (Wait)-固定延时 (2000ms)",
@@ -295,6 +287,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -307,12 +300,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 开启输出)",
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 开启输出) [同步]",
                     "action": "设置参数",
                     "params": "100.0V / 12.0A / 开启输出",
                     "device": "3# AFE 电源 (AFE 3)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -322,6 +316,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -334,12 +329,13 @@
             "strategy": "NG继续",
             "sub_steps": [
                 {
-                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 关闭输出)",
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 关闭输出) [同步]",
                     "action": "设置参数",
                     "params": "100.0V / 12.0A / 关闭输出",
                     "device": "3# AFE 电源 (AFE 3)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": true,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -349,6 +345,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -367,6 +364,7 @@
                     "device": "CA550 校准仪 (CA550)",
                     "type": "校准仪设置",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -376,6 +374,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -394,6 +393,7 @@
                     "device": "CA550 校准仪 (CA550)",
                     "type": "校准仪设置",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -403,6 +403,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -421,6 +422,7 @@
                     "device": "主机板电源 (Main Power)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -430,6 +432,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -448,6 +451,7 @@
                     "device": "主机板电源 (Main Power)",
                     "type": "读取仪表",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -457,6 +461,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -475,6 +480,7 @@
                     "device": "主机板电源 (Main Power)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -484,6 +490,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -502,6 +509,7 @@
                     "device": "控制板供电电源 (Control Power)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -511,6 +519,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -529,6 +538,7 @@
                     "device": "控制板供电电源 (Control Power)",
                     "type": "读取仪表",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -538,6 +548,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -556,6 +567,7 @@
                     "device": "控制板供电电源 (Control Power)",
                     "type": "设置仪表",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -565,6 +577,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -583,6 +596,7 @@
                     "device": "Easy320 继电器 (Easy320)",
                     "type": "继电器控制",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -592,6 +606,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -610,6 +625,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -619,6 +635,7 @@
                     "device": "Easy320 继电器 (Easy320)",
                     "type": "继电器控制",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -637,6 +654,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -646,6 +664,7 @@
                     "device": "老化功能板继电器 (Aging Board)",
                     "type": "继电器控制",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -664,6 +683,7 @@
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -673,6 +693,7 @@
                     "device": "老化功能板继电器 (Aging Board)",
                     "type": "继电器控制",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -691,6 +712,7 @@
                     "device": "CAN 交互",
                     "type": "CAN发送",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -709,6 +731,7 @@
                     "device": "智界EOL协议",
                     "type": "智界EOL协议",
                     "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]

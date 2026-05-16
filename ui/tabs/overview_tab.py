@@ -194,13 +194,26 @@ class OverviewTab(QWidget):
         menu.exec(self.channel_widgets[channel_id-1].mapToGlobal(pos))
 
     def show_channel_details(self, channel_id):
-        """弹出详细监控对话框"""
-        from ui.dialogs.monitor_dialog import MonitorDialog
-        dialog = MonitorDialog(self, channel_id=channel_id, engine=self.engine)
-        dialog.show() # 使用非模态显示，允许同时看多个通道
-        # 为了防止对话框被回收，需要保存引用
+        """弹出详细监控对话框 (防止重复打开)"""
         if not hasattr(self, 'monitor_dialogs'):
             self.monitor_dialogs = {}
+            
+        # 检查是否已经存在该通道的窗口，且窗口未被销毁
+        existing_dialog = self.monitor_dialogs.get(channel_id)
+        if existing_dialog:
+            try:
+                # 尝试检查窗口是否可见（如果已被用户关闭，调用会抛异常或返回不可见）
+                if existing_dialog.isVisible():
+                    existing_dialog.activateWindow() # 激活窗口
+                    existing_dialog.raise_()         # 置于顶层
+                    return
+            except:
+                # 窗口可能已被销毁，清除引用准备重建
+                del self.monitor_dialogs[channel_id]
+
+        from ui.dialogs.monitor_dialog import MonitorDialog
+        dialog = MonitorDialog(self, channel_id=channel_id, engine=self.engine)
+        dialog.show()
         self.monitor_dialogs[channel_id] = dialog
         
         # 模拟展示几个特殊状态

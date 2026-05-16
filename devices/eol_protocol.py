@@ -74,6 +74,11 @@ class EOLProtocol:
                 time.sleep(0.2) # 重试前稍作等待
 
             local_log(f"Waiting for EOL response (ID=0x{resp_id:X}, timeout={timeout}s)...")
+            
+            # 在发送前强制清空接收缓存中的旧报文，确保不会解析到上一轮的残留数据
+            if hasattr(self.can_driver, 'clear_rx_history'):
+                self.can_driver.clear_rx_history(resp_id)
+                
             send_time = time.time()
             if not self.can_driver.send_can_message(self.channel_id, req_id, can_type, dlc, request_data):
                 if attempt == 1: return EOLResult(False, error="CAN发送失败")
@@ -84,7 +89,8 @@ class EOLProtocol:
                 channel_id=None, 
                 predicate=matcher,
                 timeout=timeout,
-                since_time=send_time
+                since_time=send_time,
+                consume=True # 匹配成功后立即从缓存中移除，防止重复解析
             )
             if msg:
                 break
