@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox,
                                QLabel, QScrollArea, QFrame)
 from PySide6.QtCore import Qt
+import re
 
 class ChannelWidget(QFrame):
     def __init__(self, channel_id):
@@ -17,6 +18,20 @@ class ChannelWidget(QFrame):
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
         self.chk_select = QCheckBox()
+        self.chk_select.setFixedSize(20, 20)
+        self.chk_select.setStyleSheet("""
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border: 2px solid #00E5FF;
+                border-radius: 3px;
+                background-color: #1A1A2E;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #00FF00; /* 选中时变为鲜绿色 */
+                border: 2px solid #FFFFFF;
+            }
+        """)
         top_layout.addWidget(self.chk_select)
         
         title = QLabel(f"CH-{channel_id:02d}")
@@ -143,6 +158,12 @@ class OverviewTab(QWidget):
             ch_id = i + 1
             ch_widget = ChannelWidget(ch_id)
             
+            # 禁用 CH-49 至 CH-60
+            if ch_id > 48:
+                ch_widget.setEnabled(False)
+                ch_widget.set_status("已禁用", "#555555")
+                ch_widget.setStyleSheet("background-color: #121212; border: 1px solid #222222;")
+            
             # 开启右键菜单策略
             ch_widget.setContextMenuPolicy(Qt.CustomContextMenu)
             ch_widget.customContextMenuRequested.connect(lambda pos, cid=ch_id: self.show_context_menu(pos, cid))
@@ -189,16 +210,22 @@ class OverviewTab(QWidget):
 
     def open_scan_dialog(self):
         from ui.dialogs.scan_dialog import ScanDialog
-        # 智能提取配方里设定的从机数量
-        recipe_text = self.combo_recipe.currentText()
-        slaves_count = 3 # 默认3从机
-        if "从" in recipe_text:
-            try:
-                idx = recipe_text.find("从")
-                slaves_count = int(recipe_text[idx-1])
-            except:
-                pass
-                
+        recipe_name = self.combo_recipe.currentText()
+        if not recipe_name:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "未选择配方", "请先选择一个测试配方，以便确定主从拓扑结构。")
+            return
+            
+        # 从数据库/文件加载配方以获取拓扑
+        recipe_data = self.db_manager.load_recipe_json(recipe_name)
+        slaves_count = 0
+        if recipe_data:
+            topology = recipe_data.get("topology", "1主3从")
+            # 提取数字，例如 "1主3从" -> 3
+            match = re.search(r"(\d)从", topology)
+            if match:
+                slaves_count = int(match.group(1))
+        
         # 实例化扫码核心对话框
         dialog = ScanDialog(self, db_manager=self.db_manager, slaves_count=slaves_count)
         # 连接扫码完成的自定义信号到当前界面的刷新函数
@@ -257,10 +284,22 @@ class OverviewTab(QWidget):
         return []
 
     def toggle_select_all(self):
-        # 如果当前有未选中的，则全选；如果全部都选中了，则取消全选
-        any_unselected = any(not ch.chk_select.isChecked() for ch in self.channel_widgets)
+        # 统计当前活跃通道的选中状态
+        active_widgets = [ch for ch in self.channel_widgets if ch.isEnabled()]
+        if not active_widgets:
+            return
+            
+        all_checked = all(ch.chk_select.isChecked() for ch in active_widgets)
+        target_state = not all_checked  # 如果全选了就取消，否则全选
+        
+        # print(f"[DEBUG] Toggle Select All: target={target_state}")
+        for ch in active_widgets:
+            ch.chk_select.setChecked(target_state)
+
+    def clear_all_selections(self):
+        """清空所有通道的勾选状态"""
         for ch in self.channel_widgets:
-            ch.chk_select.setChecked(any_unselected)
+            ch.chk_select.setChecked(False)
 
     def update_sync_status(self, waiting, total):
         """更新全局同步指示器"""

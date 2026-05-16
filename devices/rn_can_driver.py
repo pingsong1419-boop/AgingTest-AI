@@ -74,6 +74,9 @@ class RNCANDriver:
                 self._receive_thread = threading.Thread(target=self._receive_loop, daemon=True)
                 self._receive_thread.start()
                 
+                # 等待接收线程启动并稳定
+                time.sleep(0.1)
+                
                 print(f"[RNCAN] Connected to {self.ip}:{self.port}")
                 return True
             except Exception as e:
@@ -102,8 +105,13 @@ class RNCANDriver:
                 # 阻塞式接收
                 data = self.sock.recv(4096)
                 if not data:
-                    print("[RNCAN] Remote host closed connection")
+                    print(f"[RNCAN] Remote host closed connection ({self.ip})")
                     self.is_connected = False
+                    with self.lock:
+                        if self.sock:
+                            try: self.sock.close()
+                            except: pass
+                            self.sock = None
                     break
                 
                 buffer += data
@@ -134,7 +142,9 @@ class RNCANDriver:
                     
                     # 解析内容
                     can_type = frame_body[0]
-                    can_id = struct.unpack('>I', frame_body[1:5])[0]
+                    # Mask out potential flag bits (like 0x80000000 for extended frames)
+                    raw_id = struct.unpack('>I', frame_body[1:5])[0]
+                    can_id = raw_id & 0x1FFFFFFF 
                     dlc = frame_body[5]
                     
                     # DLC 转换数据长度
@@ -158,12 +168,14 @@ class RNCANDriver:
                             'timestamp': timestamp,
                             'direction': 'RX'
                         }
-                        if can_id == 0x7F8:
-                            print(f"[RNCAN] RX CH:{channel_id} ID=0x{can_id:X} DATA={msg_data.hex(' ').upper()}")
+                        # Debug: Log all EOL related IDs
+                        # if (can_id & 0x7F0) == 0x7F0:
+                        #     print(f"[RNCAN-DEBUG] RX CH:{channel_id} ID=0x{can_id:X} DATA={msg_data.hex(' ').upper()} (RawID=0x{raw_id:X})")
                         if not self.msg_queue.full():
                             self.msg_queue.put(msg_info)
                         with self._rx_condition:
                             self._rx_history.append(msg_info)
+                            # print(f"[RNCAN-DEBUG] NotifyAll for ID=0x{can_id:X}")
                             self._rx_condition.notify_all()
                     else:
                         print(f"[RNCAN] CRC ERROR: calc=0x{crc_calc:04X}, rec=0x{crc_received:04X}")
@@ -184,6 +196,7 @@ class RNCANDriver:
             # 尝试主动重连一次
             if not self.connect():
                 return False
+            time.sleep(0.1) # 给接收线程一点缓冲区时间
             
         try:
             target_len = self.dlc_to_length(dlc)
@@ -213,36 +226,40 @@ class RNCANDriver:
             packet += struct.pack('>H', crc16)
             
             with self.lock:
-                if self.sock:
-                    try:
-                        self.sock.sendall(packet)
-                    except (socket.error, socket.timeout) as e:
-                        print(f"[RNCAN] Socket send error: {e}, attempting reconnect...")
-                        self.is_connected = False
-                        if self.connect():
-                            self.sock.sendall(packet) # 重连后重试发送
-                        else:
-                            return False
-                    
-                    # 触发本地回调以显示在发送日志中
-                    msg_info = {
-                        'timestamp_rel': time.time(),
-                        'channel': channel_id,
-                        'can_id': can_id,
-                        'can_type': can_type,
-                        'dlc': dlc,
-                        'data': data,
-                        'timestamp': int(time.time()*1000) % 0xFFFFFFFF,
-                        'direction': 'TX'
-                    }
-                    if not self.msg_queue.full():
-                        self.msg_queue.put(msg_info)
-                    if self.on_message_received:
-                        self.on_message_received(msg_info)
-                    return True
-            return False
+                if not self.sock or not self.is_connected:
+                    if not self.connect():
+                        return False
+                
+                try:
+                    self.sock.sendall(packet)
+                except Exception as e:
+                    print(f"[RNCAN] Socket send error: {e}, attempting reconnect...")
+                    self.is_connected = False
+                    if self.connect():
+                        try:
+                            self.sock.sendall(packet)
+                        except: return False
+                    else:
+                        return False
+                
+                # 触发本地回调以显示在发送日志中
+                msg_info = {
+                    'timestamp_rel': time.time(),
+                    'channel': channel_id,
+                    'can_id': can_id,
+                    'can_type': can_type,
+                    'dlc': dlc,
+                    'data': data,
+                    'timestamp': int(time.time()*1000) % 0xFFFFFFFF,
+                    'direction': 'TX'
+                }
+                if not self.msg_queue.full():
+                    self.msg_queue.put(msg_info)
+                if self.on_message_received:
+                    self.on_message_received(msg_info)
+                return True
         except Exception as e:
-            print(f"[RNCAN] Send fatal error: {e}")
+            print(f"[RNCAN] Send error ({self.ip}): {e}")
             self.is_connected = False
             return False
 
@@ -257,26 +274,41 @@ class RNCANDriver:
                 )
 
     def wait_for_message(self, can_id: Optional[int] = None, channel_id: Optional[int] = None,
-                         predicate: Optional[Callable] = None, timeout: float = 1.0):
+                         predicate: Optional[Callable[[dict], bool]] = None, timeout: float = 1.0,
+                         since_time: Optional[float] = None) -> Optional[dict]:
+        """等待符合条件的 CAN 报文"""
         deadline = time.time() + max(0.0, timeout)
-        seen_index = 0
-        with self._rx_condition:
-            while True:
-                history = list(self._rx_history)
-                for msg in history[seen_index:]:
+        
+        # 如果未提供起始时间，则以当前时间为准 (减去一点冗余防止竞态)
+        start_time = since_time if since_time is not None else (time.time() - 0.050)
+        
+        while time.time() < deadline:
+            with self._rx_condition:
+                # 检查队列中是否有符合条件的报文
+                # 我们从后往前查，寻找最新且符合条件的
+                for msg in reversed(self._rx_history):
+                    # 只处理本次调用之后收到的报文 (容差 5ms)
+                    if msg.get('timestamp_rel', 0) < start_time - 0.005:
+                        break
+                        
                     if can_id is not None and msg.get('can_id') != can_id:
                         continue
                     if channel_id is not None and msg.get('channel') != channel_id:
                         continue
-                    if predicate and not predicate(msg):
-                        continue
-                    return msg
-                seen_index = len(history)
-
+                    
+                    if predicate:
+                        try:
+                            if predicate(msg): return msg
+                        except: continue
+                    else:
+                        return msg
+                
+                # 如果没找到，等待新报文
                 remaining = deadline - time.time()
-                if remaining <= 0:
-                    return None
-                self._rx_condition.wait(remaining)
+                if remaining > 0:
+                    self._rx_condition.wait(remaining)
+        
+        return None
 
     def send_and_wait_response(self, channel_id: int, can_id: int, can_type: int, dlc: int,
                                data: bytes, response_id: int, timeout: float = 1.0,

@@ -46,25 +46,49 @@ class EOLProtocol:
             print(log_msg)
 
         def matcher(msg):
+            mid = msg.get('can_id')
             data = msg.get("data", b"")
-            return (
+            # 记录所有进入 matcher 的报文，排查 seen_index 是否正常
+            # print(f"[MATCHER-TRACE] ID=0x{mid:X} DATA={data.hex(' ').upper()}")
+            
+            match = (
                 len(data) >= 4
                 and data[0] == self.RESPONSE_PREFIX
                 and data[1] == (device_id & 0xFF)
                 and data[2] == (operation & 0xFF)
             )
+            # 调试：打印所有 ID 匹配的报文内容，确认匹配逻辑是否失效
+            # if mid == resp_id:
+            #     print(f"[EOL-DEBUG] Candidate Message: ID=0x{mid:X} DATA={data.hex(' ').upper()} Match={match} (Expected: {hex(self.RESPONSE_PREFIX)} {hex(device_id)} {hex(operation)})")
+            return match
 
-        msg = self.can_driver.send_and_wait_response(
-            channel_id=self.channel_id,
-            can_id=req_id,
-            can_type=can_type,
-            dlc=dlc,
-            data=request_data,
-            response_id=resp_id,
-            timeout=timeout,
-            matcher=matcher
-        )
-        if not msg:
+        def local_log(msg):
+            if logger: logger(msg)
+            else: print(msg)
+
+        # 增加重试机制，应对网络抖动或硬件繁忙
+        import time
+        for attempt in range(2):
+            if attempt > 0:
+                local_log(f"EOL 重试 {attempt}...")
+                time.sleep(0.2) # 重试前稍作等待
+
+            local_log(f"Waiting for EOL response (ID=0x{resp_id:X}, timeout={timeout}s)...")
+            send_time = time.time()
+            if not self.can_driver.send_can_message(self.channel_id, req_id, can_type, dlc, request_data):
+                if attempt == 1: return EOLResult(False, error="CAN发送失败")
+                continue
+
+            msg = self.can_driver.wait_for_message(
+                can_id=resp_id,
+                channel_id=None, 
+                predicate=matcher,
+                timeout=timeout,
+                since_time=send_time
+            )
+            if msg:
+                break
+        else:
             return EOLResult(False, error="EOL响应超时")
 
         raw = msg.get("data", b"")
@@ -204,9 +228,12 @@ class EOLProtocol:
         return raw[5] if len(raw) > 5 else None
 
     def _decode_index_u16(self, raw: bytes):
+        """解析返回报文中的 U16 数据 (通常在 Byte 5, 6)"""
         if len(raw) < 7:
             return 0
-        return (raw[5] << 8) | raw[6]
+        # 高位在前，低位在后 (Big Endian)
+        val = (raw[5] << 8) | raw[6]
+        return val
 
     def _decode_data_u32(self, raw: bytes):
         data = raw[4:8]

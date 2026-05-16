@@ -103,6 +103,11 @@ class MonitorDialog(QDialog):
         self.btn_run.clicked.connect(self.run_selected_test)
         self.btn_run.setStyleSheet("background-color: #17A2B8; color: white; padding: 10px; border-radius: 5px; font-weight: bold;")
         btn_layout.addWidget(self.btn_run)
+
+        self.btn_unselect_all = QPushButton("取消全部勾选")
+        self.btn_unselect_all.clicked.connect(self.unselect_all_steps)
+        self.btn_unselect_all.setStyleSheet("background-color: #3E3E5C; color: white; padding: 10px; border-radius: 5px;")
+        btn_layout.addWidget(self.btn_unselect_all)
         
         self.btn_start_all = QPushButton("开启全部测试")
         self.btn_start_all.clicked.connect(self.run_all_test)
@@ -200,6 +205,20 @@ class MonitorDialog(QDialog):
         self.lbl_status.setStyleSheet("color: #FF4C29; font-weight: bold;")
         self.progress_bar.setValue(0)
 
+    def unselect_all_steps(self):
+        """清空树中所有测试项的勾选状态"""
+        for i in range(self.step_tree.topLevelItemCount()):
+            self.step_tree.topLevelItem(i).setCheckState(0, Qt.Unchecked)
+
+    def _get_checked_step_names(self):
+        """获取当前已勾选的工步名称列表"""
+        checked_names = []
+        for i in range(self.step_tree.topLevelItemCount()):
+            item = self.step_tree.topLevelItem(i)
+            if item.checkState(0) == Qt.Checked:
+                checked_names.append(item.text(0))
+        return checked_names
+
     def _connect_signals(self):
         if not self.engine: return
         worker = self.engine.workers.get(self.channel_id)
@@ -240,6 +259,7 @@ class MonitorDialog(QDialog):
 
     def load_steps(self, steps):
         """加载 TestStep 对象列表 (转换为 dict 存储以便重跑)"""
+        checked_names = self._get_checked_step_names()
         self.step_tree.clear()
         self.step_items = {}
         self.sub_step_items = {}
@@ -260,6 +280,9 @@ class MonitorDialog(QDialog):
                 "sub_steps": sub_data_list
             }
             
+            # 如果之前是勾选状态，则保持
+            state = Qt.Checked if step.name in checked_names else Qt.Unchecked
+            
             parent = QTreeWidgetItem([
                 step.name, 
                 str(step.min_limit) if step.min_limit else "--", 
@@ -267,7 +290,7 @@ class MonitorDialog(QDialog):
                 "--", 
                 "等待执行"
             ])
-            parent.setCheckState(0, Qt.Unchecked)
+            parent.setCheckState(0, state)
             parent.setData(0, Qt.UserRole, step_data)
             parent.setBackground(0, QColor("#1F1F35"))
             self.step_tree.addTopLevelItem(parent)
@@ -284,6 +307,7 @@ class MonitorDialog(QDialog):
 
     def load_steps_from_data(self, steps_data):
         """加载原始 JSON 数据列表"""
+        checked_names = self._get_checked_step_names()
         self.step_tree.clear()
         self.step_items = {}
         self.sub_step_items = {}
@@ -295,7 +319,11 @@ class MonitorDialog(QDialog):
                 "--", 
                 "待命"
             ])
-            parent.setCheckState(0, Qt.Unchecked)
+            
+            # 如果之前是勾选状态，则保持
+            state = Qt.Checked if step.get('name', '未命名') in checked_names else Qt.Unchecked
+            
+            parent.setCheckState(0, state)
             parent.setData(0, Qt.UserRole, step) # 直接存原始 dict
             parent.setBackground(0, QColor("#1F1F35"))
             self.step_tree.addTopLevelItem(parent)

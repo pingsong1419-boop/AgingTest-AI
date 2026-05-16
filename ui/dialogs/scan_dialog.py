@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QLineEdit, QPushButton, QFrame, QListWidget, QScrollArea)
 from PySide6.QtCore import Qt, Signal, QTimer
+import re
 
 class ScanDialog(QDialog):
     """
@@ -18,7 +19,7 @@ class ScanDialog(QDialog):
         self.slaves_count = slaves_count
         
         self.setWindowTitle("扫码入站绑定")
-        self.setFixedSize(750, 600)
+        self.setFixedSize(750, 650)
         self.setStyleSheet("background-color: #1A1A2E; color: white;")
         
         # 数据缓存
@@ -26,17 +27,16 @@ class ScanDialog(QDialog):
         self.shelf_code = ""
         self.master_code = ""
         self.slave_codes = []
-        
-        # 加载货架映射
-        self.shelf_mapping = {}
-        if self.db_manager:
-            configs = self.db_manager.load_channel_config()
-            for cfg in configs:
-                s_code = cfg.get("shelf_code", "").strip()
-                if s_code:
-                    self.shelf_mapping[s_code] = int(cfg.get("channel_id", -1))
 
+        # 扫码校验规则 (可配置)
+        self.rules = {
+            "shelf": r"^(\d{2})-([ABC])(\d{2})$",
+            "master": r".+", # 默认允许任意非空
+            "slave": r".+"   # 默认允许任意非空
+        }
+        
         self._init_ui()
+        self._update_step_prompt()
         
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -67,48 +67,32 @@ class ScanDialog(QDialog):
         self.scan_input.returnPressed.connect(self.process_scan)
         layout.addWidget(self.scan_input)
         
-        # 详细信息预览区
-        info_frame = QFrame()
-        info_frame.setStyleSheet("background-color: #16213E; border-radius: 10px; padding: 15px;")
-        info_layout = QVBoxLayout(info_frame)
+        # 扫码槽位显示区 (动态生成)
+        self.slots_frame = QFrame()
+        self.slots_frame.setStyleSheet("background-color: #16213E; border-radius: 10px; padding: 15px;")
+        slots_layout = QVBoxLayout(self.slots_frame)
         
         self.lbl_ch_info = QLabel("测试通道: --")
-        self.lbl_ch_info.setStyleSheet("font-size: 20px; font-weight: bold; color: #4ECCA3;")
-        info_layout.addWidget(self.lbl_ch_info)
+        self.lbl_ch_info.setStyleSheet("font-size: 22px; font-weight: bold; color: #00E5FF;")
+        self.lbl_ch_info.setAlignment(Qt.AlignCenter)
+        slots_layout.addWidget(self.lbl_ch_info)
         
-        self.lbl_shelf_info = QLabel("货架编号: --")
-        self.lbl_shelf_info.setStyleSheet("font-size: 16px; color: #AAAAAA;")
-        self.lbl_shelf_info.setWordWrap(True)
-        info_layout.addWidget(self.lbl_shelf_info)
+        # 货架码槽位
+        self.slot_shelf = self._create_slot_widget("货架编号 [必扫]")
+        slots_layout.addWidget(self.slot_shelf)
         
-        self.lbl_master_info = QLabel("主机编码: --")
-        self.lbl_master_info.setStyleSheet("font-size: 18px; font-weight: bold; border-top: 1px solid #3E3E5C; padding-top: 10px;")
-        self.lbl_master_info.setWordWrap(True)
-        self.lbl_master_info.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        info_layout.addWidget(self.lbl_master_info)
+        # 主机码槽位
+        self.slot_master = self._create_slot_widget("主机编码 [必扫]")
+        slots_layout.addWidget(self.slot_master)
         
-        slave_lbl = QLabel("从机列表:")
-        slave_lbl.setStyleSheet("font-size: 14px; color: #888888;")
-        info_layout.addWidget(slave_lbl)
-        
-        self.list_slaves = QListWidget()
-        self.list_slaves.setFixedHeight(120)
-        self.list_slaves.setStyleSheet("""
-            QListWidget {
-                font-size: 14px;
-                background: #1A1A2E; 
-                border: 1px solid #3E3E5C;
-                border-radius: 5px;
-                padding: 5px;
-            }
-            QListWidget::item {
-                padding: 5px;
-                border-bottom: 1px solid #2A2A3E;
-            }
-        """)
-        info_layout.addWidget(self.list_slaves)
-        
-        layout.addWidget(info_frame)
+        # 从机码槽位 (根据 slaves_count 动态添加)
+        self.slave_slots = []
+        for i in range(self.slaves_count):
+            slot = self._create_slot_widget(f"从机编码 #{i+1}")
+            slots_layout.addWidget(slot)
+            self.slave_slots.append(slot)
+            
+        layout.addWidget(self.slots_frame)
         
         # 底部按钮
         btn_layout = QHBoxLayout()
@@ -124,47 +108,121 @@ class ScanDialog(QDialog):
         
         self.scan_input.setFocus()
 
+    def _create_slot_widget(self, title):
+        frame = QFrame()
+        frame.setStyleSheet("background-color: #1A1A2E; border: 1px solid #3E3E5C; border-radius: 5px; padding: 5px;")
+        lyt = QHBoxLayout(frame)
+        
+        lbl_title = QLabel(title)
+        lbl_title.setFixedWidth(120)
+        lbl_title.setStyleSheet("color: #AAAAAA; font-weight: bold;")
+        lyt.addWidget(lbl_title)
+        
+        lbl_val = QLabel("--")
+        lbl_val.setStyleSheet("font-size: 16px; color: #FFFFFF; font-family: 'Consolas';")
+        lyt.addWidget(lbl_val)
+        
+        frame.title_label = lbl_title
+        frame.val_label = lbl_val
+        return frame
+
+    def parse_shelf_code(self, code):
+        """
+        货架码规则: XX-YZZ (如 01-A02)
+        01-A01 -> CH-01, 01-A16 -> CH-16
+        01-B01 -> CH-17, 01-B16 -> CH-32
+        01-C01 -> CH-33, 01-C16 -> CH-48
+        CH-49及以上禁用
+        """
+        match = re.match(r"^(\d{2})-([ABC])(\d{2})$", code)
+        if not match:
+            return -1
+        cabinet, car, slot = match.groups()
+        if cabinet != "01": # 目前固定为1号
+            return -1
+        
+        slot_num = int(slot)
+        if not (1 <= slot_num <= 16):
+            return -1
+            
+        offset = {"A": 0, "B": 16, "C": 32}
+        channel_id = offset[car] + slot_num
+        
+        if channel_id > 48:
+            return -1
+            
+        return channel_id
+
+    def _update_step_prompt(self):
+        """根据当前状态更新顶部提示语"""
+        if self.target_channel == -1:
+            self.lbl_step.setText("🔍 [第一步] 请扫描【货架二维码】")
+            self.lbl_step.setStyleSheet("color: #00E5FF; font-size: 22px; font-weight: bold;")
+        elif not self.master_code:
+            self.lbl_step.setText("🔍 [第二步] 请扫描【主机条码】")
+            self.lbl_step.setStyleSheet("color: #FFD700; font-size: 22px; font-weight: bold;")
+        elif len(self.slave_codes) < self.slaves_count:
+            curr = len(self.slave_codes) + 1
+            self.lbl_step.setText(f"🔍 [第三步] 请扫描【从机条码】({curr}/{self.slaves_count})")
+            self.lbl_step.setStyleSheet("color: #FF8C00; font-size: 22px; font-weight: bold;")
+        else:
+            self.lbl_step.setText("✅ 扫码完成！正在提交...")
+            self.lbl_step.setStyleSheet("color: #00FF00; font-size: 22px; font-weight: bold;")
+
     def process_scan(self):
         code = self.scan_input.text().strip()
         self.scan_input.clear()
         if not code: return
         
-        # 状态机逻辑
-        print(f"[DEBUG] 扫码输入: {code}, 当前目标通道: {self.target_channel}")
-        
+        # 第一步：货架码
         if self.target_channel == -1:
-            # 第一步：识别货架码
-            if code in self.shelf_mapping:
-                self.target_channel = self.shelf_mapping[code]
+            ch_id = self.parse_shelf_code(code)
+            if ch_id != -1:
+                self.target_channel = ch_id
                 self.shelf_code = code
                 self.lbl_ch_info.setText(f"测试通道: CH-{self.target_channel:02d}")
-                self.lbl_shelf_info.setText(f"货架编号: {code}")
-                self.lbl_step.setText("✅ 货架已识别！请扫描【主机条码】")
-                self.lbl_step.setStyleSheet("color: #FFD700; font-size: 20px;")
-                print(f"[DEBUG] 识别到货架: {code} -> 通道: {self.target_channel}")
+                self.slot_shelf.val_label.setText(code)
+                self.slot_shelf.val_label.setStyleSheet("font-size: 18px; color: #00FF00; font-weight: bold; font-family: 'Consolas';")
+                self.slot_shelf.setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 5px;")
+                self._update_step_prompt()
             else:
-                self.lbl_step.setText(f"❌ 未识别货架码: {code}")
-                self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 18px;")
-                print(f"[DEBUG] 未识别的货架码: {code}")
+                self.lbl_step.setText(f"❌ 货架码不符规则: {code}")
+                self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+            return
+
+        # 第二步：主机码
+        if not self.master_code:
+            if re.match(self.rules["master"], code):
+                self.master_code = code
+                self.slot_master.val_label.setText(code)
+                self.slot_master.val_label.setStyleSheet("font-size: 18px; color: #00FF00; font-weight: bold; font-family: 'Consolas';")
+                self.slot_master.setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 5px;")
                 
-        elif not self.master_code:
-            # 第二步：扫主机
-            self.master_code = code
-            self.lbl_master_info.setText(f"主机编码: {code}")
-            if self.slaves_count > 0:
-                self.lbl_step.setText(f"请继续扫描【从机条码】(1/{self.slaves_count})")
+                if self.slaves_count == 0:
+                    self.finalize_scan()
+                else:
+                    self._update_step_prompt()
             else:
-                self.finalize_scan()
+                self.lbl_step.setText(f"❌ 主机码不符规则")
+            return
+
+        # 第三步：从机码
+        if len(self.slave_codes) < self.slaves_count:
+            if re.match(self.rules["slave"], code):
+                idx = len(self.slave_codes)
+                self.slave_codes.append(code)
                 
-        elif len(self.slave_codes) < self.slaves_count:
-            # 第三步：扫从机
-            self.slave_codes.append(code)
-            self.list_slaves.addItem(f"Slave {len(self.slave_codes)}: {code}")
-            
-            if len(self.slave_codes) < self.slaves_count:
-                self.lbl_step.setText(f"请继续扫描【从机条码】({len(self.slave_codes) + 1}/{self.slaves_count})")
+                self.slave_slots[idx].val_label.setText(code)
+                self.slave_slots[idx].val_label.setStyleSheet("font-size: 18px; color: #00FF00; font-weight: bold; font-family: 'Consolas';")
+                self.slave_slots[idx].setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 5px;")
+                
+                if len(self.slave_codes) == self.slaves_count:
+                    self.finalize_scan()
+                else:
+                    self._update_step_prompt()
             else:
-                self.finalize_scan()
+                self.lbl_step.setText(f"❌ 从机码不符规则")
+            return
 
     def finalize_scan(self):
         self.lbl_step.setText("✅ 扫码匹配成功！正在入站...")
@@ -179,10 +237,21 @@ class ScanDialog(QDialog):
         self.shelf_code = ""
         self.master_code = ""
         self.slave_codes = []
+        
         self.lbl_ch_info.setText("测试通道: --")
-        self.lbl_shelf_info.setText("货架编号: --")
-        self.lbl_master_info.setText("主机编码: --")
-        self.list_slaves.clear()
-        self.lbl_step.setText("请扫描【货架二维码】以定位测试通道")
-        self.lbl_step.setStyleSheet("color: #00E5FF; font-size: 16px;")
+        
+        self.slot_shelf.val_label.setText("--")
+        self.slot_shelf.val_label.setStyleSheet("font-size: 16px; color: #FFFFFF; font-family: 'Consolas';")
+        self.slot_shelf.setStyleSheet("background-color: #1A1A2E; border: 1px solid #3E3E5C; border-radius: 5px;")
+        
+        self.slot_master.val_label.setText("--")
+        self.slot_master.val_label.setStyleSheet("font-size: 16px; color: #FFFFFF; font-family: 'Consolas';")
+        self.slot_master.setStyleSheet("background-color: #1A1A2E; border: 1px solid #3E3E5C; border-radius: 5px;")
+        
+        for slot in self.slave_slots:
+            slot.val_label.setText("--")
+            slot.val_label.setStyleSheet("font-size: 16px; color: #FFFFFF; font-family: 'Consolas';")
+            slot.setStyleSheet("background-color: #1A1A2E; border: 1px solid #3E3E5C; border-radius: 5px;")
+            
+        self._update_step_prompt()
         self.scan_input.setFocus()

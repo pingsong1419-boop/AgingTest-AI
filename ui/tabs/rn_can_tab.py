@@ -142,7 +142,7 @@ class RNCANTab(QWidget):
         
         self.ui_timer = QTimer(self)
         self.ui_timer.timeout.connect(self.update_monitor)
-        self.ui_timer.start(50)
+        self.ui_timer.start(100) # 优化：降低刷新频率至 100ms
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -228,7 +228,7 @@ class RNCANTab(QWidget):
         self.spin_global_cycles.setRange(0, 1000000); self.spin_global_cycles.setValue(1); self.spin_global_cycles.setSpecialValueText("无限")
         
         self.btn_add_row = QPushButton("+ 添加")
-        self.btn_add_row.setFixedWidth(80) # 增加宽度以显示完全
+        self.btn_add_row.setFixedWidth(80) 
         self.btn_add_row.clicked.connect(self.add_send_row)
         
         self.btn_start_send = QPushButton("开始发送")
@@ -252,7 +252,7 @@ class RNCANTab(QWidget):
         self.send_table = QTableWidget(0, 8)
         self.send_table.setHorizontalHeaderLabels(["通道", "ID", "类型", "DLC", "数据", "次数", "间隔", "操作"])
         self.send_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.send_table.setFixedHeight(110) # 调整高度以显示约两行报文
+        self.send_table.setFixedHeight(110) 
         
         send_layout.addLayout(ctrl_layout)
         send_layout.addWidget(self.send_table)
@@ -284,6 +284,8 @@ class RNCANTab(QWidget):
         self.monitor_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.monitor_table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeToContents)
         self.monitor_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.monitor_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.monitor_table.setAlternatingRowColors(False) # 优化：禁用交替色，提高性能
         
         # 筛选工具栏
         filter_layout = QHBoxLayout()
@@ -298,17 +300,14 @@ class RNCANTab(QWidget):
         filter_layout.addWidget(self.combo_filter_type)
         filter_layout.addWidget(self.edit_filter_data)
         
-        self.table = QTableWidget(0, 7) # 保持原名或改名，目前代码中用的是 self.monitor_table
-        # 注意：之前的代码中 monitor 用的变量名是 self.monitor_table，这里修正一致性
-        
         monitor_layout.addLayout(log_ctrl_layout)
         monitor_layout.addLayout(filter_layout)
         monitor_layout.addWidget(self.monitor_table)
         layout.addWidget(monitor_group)
         
-        layout.setStretch(0, 0) # 配置区
-        layout.setStretch(1, 1) # 发送区
-        layout.setStretch(2, 8) # 监控区 (大幅增加)
+        layout.setStretch(0, 0)
+        layout.setStretch(1, 1)
+        layout.setStretch(2, 8)
         
         for _ in range(2): self.add_send_row()
 
@@ -339,7 +338,6 @@ class RNCANTab(QWidget):
         if self.current_board:
             self.driver = self.current_board.can
             self.ip_edit.setText(self.current_board.ip)
-            # 根据连接状态更新按钮
             if self.driver.is_connected:
                 self.btn_connect.setText("已连接"); self.btn_connect.setStyleSheet("background-color: #2E7D32; color: white;")
                 self.btn_disconnect.setEnabled(True)
@@ -351,23 +349,12 @@ class RNCANTab(QWidget):
         ip = self.ip_edit.text()
         try: modbus_port = int(self.modbus_port_edit.text())
         except: modbus_port = 502
-        
-        self.btn_apply_hw.setEnabled(False)
-        self.btn_apply_hw.setText("正在下发...")
-        
-        self.config_worker = ConfigWorker(
-            ip, modbus_port, 
-            self.combo_ch.currentIndex(),
-            self.combo_mode.currentIndex(),
-            self.combo_nom_baud.currentIndex(),
-            self.combo_data_baud.currentIndex()
-        )
-        self.config_worker.finished.connect(self.on_hw_config_finished)
-        self.config_worker.start()
+        self.btn_apply_hw.setEnabled(False); self.btn_apply_hw.setText("正在下发...")
+        self.config_worker = ConfigWorker(ip, modbus_port, self.combo_ch.currentIndex(), self.combo_mode.currentIndex(), self.combo_nom_baud.currentIndex(), self.combo_data_baud.currentIndex())
+        self.config_worker.finished.connect(self.on_hw_config_finished); self.config_worker.start()
 
     def on_hw_config_finished(self, success, message):
-        self.btn_apply_hw.setEnabled(True)
-        self.btn_apply_hw.setText("应用并保存配置")
+        self.btn_apply_hw.setEnabled(True); self.btn_apply_hw.setText("应用并保存配置")
         if success: QMessageBox.information(self, "配置成功", message)
         else: QMessageBox.critical(self, "配置失败", message)
 
@@ -375,11 +362,9 @@ class RNCANTab(QWidget):
         ip = self.ip_edit.text()
         try: port = int(self.port_edit.text())
         except: port = 5001
-        
         self.btn_connect.setEnabled(False); self.btn_connect.setText("正在连接...")
         self.conn_worker = ConnectWorker(self.driver, ip, port)
-        self.conn_worker.finished.connect(self.on_connect_finished)
-        self.conn_worker.start()
+        self.conn_worker.finished.connect(self.on_connect_finished); self.conn_worker.start()
 
     def on_connect_finished(self, success):
         if success:
@@ -451,73 +436,57 @@ class RNCANTab(QWidget):
 
     def update_monitor(self):
         if not self.driver: return
-        
-        processed = 0
-        self.monitor_table.setUpdatesEnabled(False)
-        
-        # 获取当前筛选条件
-        filter_id = self.edit_filter_id.text().strip().lower()
-        filter_dir = self.combo_filter_dir.currentText()
-        filter_type = self.combo_filter_type.currentText()
-        filter_data = self.edit_filter_data.text().strip().lower().replace(" ", "")
+        if self.driver.msg_queue.empty(): return
 
-        while not self.driver.msg_queue.empty() and processed < 100:
+        # 1. 批量提取数据
+        all_msgs = []
+        while not self.driver.msg_queue.empty() and len(all_msgs) < 1000:
             msg = self.driver.msg_queue.get()
-            processed += 1
-            
-            # 写日志 (日志通常记录原始所有报文)
-            if self.is_logging:
-                self._write_log(msg)
-            
-            # --- 执行筛选逻辑 ---
-            # 1. 方向筛选
-            if filter_dir != "全部方向" and msg['direction'] != filter_dir:
-                continue
-            
-            # 2. ID 筛选
-            if filter_id:
-                try:
-                    # 支持 0x 前缀或纯 16 进制
-                    msg_id_hex = f"{msg['can_id']:x}"
-                    if msg_id_hex != filter_id and f"0x{msg_id_hex}" != filter_id:
-                        continue
-                except: continue
-                
-            # 3. 类型筛选
-            if filter_type != "全部类型":
-                msg_type_str = ["Classic", "FD", "FD+BRS"][msg['can_type']]
-                if msg_type_str != filter_type:
-                    continue
-            
-            # 4. 数据筛选
-            if filter_data:
-                msg_hex = msg['data'].hex().lower()
-                if filter_data not in msg_hex:
-                    continue
+            all_msgs.append(msg)
+            if self.is_logging: self._write_log(msg)
+        if not all_msgs: return
 
-            # 更新 UI 表格
+        # 2. 筛选
+        f_id = self.edit_filter_id.text().strip().lower()
+        f_dir = self.combo_filter_dir.currentText()
+        f_type = self.combo_filter_type.currentText()
+        f_data = self.edit_filter_data.text().strip().lower().replace(" ", "")
+
+        display_msgs = []
+        for msg in all_msgs:
+            if f_dir != "全部方向" and msg['direction'] != f_dir: continue
+            if f_id:
+                mid = f"{msg['can_id']:x}"
+                if mid != f_id and f"0x{mid}" != f_id: continue
+            if f_type != "全部类型":
+                tstr = ["Classic", "FD", "FD+BRS"][msg['can_type']]
+                if tstr != f_type: continue
+            if f_data and f_data not in msg['data'].hex().lower(): continue
+            display_msgs.append(msg)
+
+        # 3. 限制 UI 刷新量 (仅显示最新的 50 条)
+        if len(display_msgs) > 50: display_msgs = display_msgs[-50:]
+
+        self.monitor_table.setUpdatesEnabled(False)
+        for msg in display_msgs:
             row = self.monitor_table.rowCount()
             self.monitor_table.insertRow(row)
-            
-            dir_item = QTableWidgetItem(msg['direction'])
-            if msg['direction'] == 'TX': dir_item.setForeground(QColor("blue"))
-            else: dir_item.setForeground(QColor("green"))
-            
-            self.monitor_table.setItem(row, 0, dir_item)
+            item = QTableWidgetItem(msg['direction'])
+            item.setForeground(QColor("blue") if msg['direction'] == 'TX' else QColor("green"))
+            self.monitor_table.setItem(row, 0, item)
             self.monitor_table.setItem(row, 1, QTableWidgetItem(f"CH{msg['channel']+1}"))
             self.monitor_table.setItem(row, 2, QTableWidgetItem(f"0x{msg['can_id']:X}"))
             self.monitor_table.setItem(row, 3, QTableWidgetItem(["Classic", "FD", "FD+BRS"][msg['can_type']]))
             self.monitor_table.setItem(row, 4, QTableWidgetItem(str(msg['dlc'])))
             self.monitor_table.setItem(row, 5, QTableWidgetItem(msg['data'].hex(' ').upper()))
-            
-            t_str = datetime.fromtimestamp(msg['timestamp_rel']).strftime('%H:%M:%S.%f')[:-3]
-            self.monitor_table.setItem(row, 6, QTableWidgetItem(t_str))
-            
-            if row > 500: # 增加显示上限
-                self.monitor_table.removeRow(0)
-            
-            self.monitor_table.scrollToBottom()
-        
+            ts = datetime.fromtimestamp(msg['timestamp_rel']).strftime('%H:%M:%S.%f')[:-3]
+            self.monitor_table.setItem(row, 6, QTableWidgetItem(ts))
+
+        # 4. 维护行数
+        while self.monitor_table.rowCount() > 300:
+            self.monitor_table.removeRow(0)
+
+        self.monitor_table.scrollToBottom()
         self.monitor_table.setUpdatesEnabled(True)
 
     def _write_log(self, msg):
