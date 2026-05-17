@@ -1,11 +1,16 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox,
                                QLabel, QScrollArea, QFrame)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 import re
 
 class ChannelWidget(QFrame):
     def __init__(self, channel_id):
         super().__init__()
+        # 初始化条码缓存属性
+        self.shelf_barcode = ""
+        self.master_barcode = ""
+        self.slave_barcodes = []
+
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         # 增加高度以容纳多行条码文本(包含货架、主机、最多3个从机)
         self.setMinimumSize(220, 200) # 增加宽度以适配 5 列布局，视觉更舒展
@@ -82,6 +87,10 @@ class ChannelWidget(QFrame):
         
     def set_barcodes(self, shelf, master, slaves_list):
         """后续业务用于更新界面的接口，slaves_list 是一个包含从机条码的列表"""
+        self.shelf_barcode = shelf
+        self.master_barcode = master
+        self.slave_barcodes = slaves_list
+
         self.lbl_shelf.setText(f"货架: {shelf}")
         self.lbl_master.setText(f"主机: {master}")
         
@@ -92,6 +101,24 @@ class ChannelWidget(QFrame):
                 lbl.show()
             else:
                 lbl.hide() # 如果当前通道配置少于3个从机，直接隐藏多余的标签节省视觉空间
+
+    def reset_widget(self):
+        """恢复通道卡片至默认等待扫码状态"""
+        self.set_status("等待扫码", "#A0A0B0")
+        self.lbl_shelf.setText("货架: --")
+        self.lbl_master.setText("主机: --")
+        self.lbl_s1.setText("从1: --")
+        self.lbl_s1.show()
+        self.lbl_s2.setText("从2: --")
+        self.lbl_s2.show()
+        self.lbl_s3.setText("从3: --")
+        self.lbl_s3.show()
+        self.chk_select.setChecked(False)
+
+        # 清空条码缓存
+        self.shelf_barcode = ""
+        self.master_barcode = ""
+        self.slave_barcodes = []
 
 
 class OverviewTab(QWidget):
@@ -121,14 +148,25 @@ class OverviewTab(QWidget):
         self.btn_apply.clicked.connect(self.apply_recipe_to_selected)
         control_panel.addWidget(self.btn_apply)
         
-        self.btn_start = QPushButton("启动扫码/测试")
-        self.btn_start.setStyleSheet("background-color: #28A745; border-color: #1e7e34;")
+        self.btn_start = QPushButton("启动扫码")
+        self.btn_start.setStyleSheet("background-color: #17A2B8; border-color: #117A8B;")
         self.btn_start.clicked.connect(self.open_scan_dialog)
         control_panel.addWidget(self.btn_start)
         
+        self.btn_run_test = QPushButton("开始测试")
+        self.btn_run_test.setStyleSheet("background-color: #28A745; border-color: #1e7e34;")
+        self.btn_run_test.clicked.connect(self.start_selected_tests)
+        control_panel.addWidget(self.btn_run_test)
+        
         self.btn_stop = QPushButton("强制停止测试")
         self.btn_stop.setStyleSheet("background-color: #DC3545; border-color: #bd2130;")
+        self.btn_stop.clicked.connect(self.stop_selected_tests)
         control_panel.addWidget(self.btn_stop)
+        
+        self.btn_report_path = QPushButton("📁 报表路径")
+        self.btn_report_path.setStyleSheet("background-color: #6C757D; border-color: #545b62;")
+        self.btn_report_path.clicked.connect(self.select_report_path)
+        control_panel.addWidget(self.btn_report_path)
         
         control_panel.addStretch()
         
@@ -152,6 +190,8 @@ class OverviewTab(QWidget):
         if self.engine:
             self.engine.barrier_status_changed.connect(self.update_sync_status)
             self.engine.channel_sync_status_changed.connect(self.on_channel_sync_changed)
+            self.engine.channel_step_started.connect(self.on_channel_step_started)
+            self.engine.channel_test_finished.connect(self.on_channel_test_finished)
         
         # --- 下方：通道网格 ---
         scroll = QScrollArea()
@@ -200,6 +240,7 @@ class OverviewTab(QWidget):
         # 也可以加其他快捷操作
         menu.addSeparator()
         stop_action = QAction("停止当前通道", self)
+        stop_action.triggered.connect(lambda: self.stop_single_channel_test(channel_id))
         menu.addAction(stop_action)
         
         menu.exec(self.channel_widgets[channel_id-1].mapToGlobal(pos))
@@ -245,19 +286,184 @@ class OverviewTab(QWidget):
             if match:
                 slaves_count = int(match.group(1))
         
+        # 收集主界面勾选的测试通道
+        checked_channels = [i + 1 for i, w in enumerate(self.channel_widgets) if w.chk_select.isChecked()]
+        if not checked_channels:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "未选择通道", "请先在主界面勾选需要扫码入站的测试通道！")
+            return
+            
+        # 识别已扫码完成的勾选通道
+        already_completed = []
+        for cid in checked_channels:
+            w = self.channel_widgets[cid - 1]
+            has_shelf = bool(w.shelf_barcode)
+            has_master = bool(w.master_barcode)
+            slaves_scanned = [s for s in w.slave_barcodes if s]
+            has_all_slaves = len(slaves_scanned) >= slaves_count
+            if has_shelf and has_master and has_all_slaves:
+                already_completed.append(cid)
+            
         # 实例化扫码核心对话框
-        dialog = ScanDialog(self, db_manager=self.db_manager, slaves_count=slaves_count)
+        dialog = ScanDialog(self, db_manager=self.db_manager, slaves_count=slaves_count, checked_channels=checked_channels, already_completed=already_completed)
         # 连接扫码完成的自定义信号到当前界面的刷新函数
         dialog.scan_completed.connect(self.on_scan_completed)
         dialog.exec()
         
+    @Slot(int, str, str, object)
     def on_scan_completed(self, target_channel, shelf, master, slaves):
+        print(f"[DEBUG] on_scan_completed signal received in OverviewTab!")
+        print(f"[DEBUG] Target Channel: {target_channel}, Shelf: {shelf}, Master: {master}, Slaves: {slaves}")
         # 找到对应的通道 UI 并更新数据 (target_channel 是 1-60)
         idx = target_channel - 1
         if 0 <= idx < len(self.channel_widgets):
             ch_widget = self.channel_widgets[idx]
             ch_widget.set_barcodes(shelf, master, slaves)
             ch_widget.set_status("就绪(可测试)", "#00E5FF")
+            print(f"[DEBUG] Channel {target_channel} barcodes and status updated successfully.")
+            self.speak_text(f"通道 {target_channel} 扫码完成")
+        else:
+            print(f"[DEBUG] Target Channel index {idx} out of range (0-59)!")
+
+    def speak_text(self, text):
+        import threading
+        import subprocess
+        def run():
+            cmd = f"Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.Rate = 4; $synth.Speak('{text}')"
+            subprocess.run(["powershell", "-Command", cmd], capture_output=True)
+        threading.Thread(target=run, daemon=True).start()
+
+    def start_selected_tests(self):
+        """开始测试勾选的通道，开始前做严格校验（配方下发和扫码完整性）"""
+        # 1. 查找勾选的活跃通道
+        selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+        if not selected_cids:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "启动测试失败", "请先勾选需要启动测试的通道！")
+            return
+
+        # 2. 判断是否选择了配方
+        recipe_name = self.combo_recipe.currentText()
+        if not recipe_name:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "启动测试失败", "请选择测试配方并下发！")
+            return
+
+        # 3. 加载配方拓扑结构以获取预期的从机数量
+        recipe_data = self.db_manager.load_recipe_json(recipe_name)
+        expected_slaves = 0
+        if recipe_data:
+            topology = recipe_data.get("topology", "1主3从")
+            import re
+            match = re.search(r"(\d)从", topology)
+            if match:
+                expected_slaves = int(match.group(1))
+
+        # 4. 判断各勾选通道的配方下发和扫码完整性
+        no_recipe_channels = []
+        incomplete_channels = []
+
+        for cid in selected_cids:
+            ch_widget = self.channel_widgets[cid - 1]
+            
+            # 校验是否下发了配方
+            if not hasattr(self, 'channel_recipes') or cid not in self.channel_recipes:
+                no_recipe_channels.append(cid)
+                continue
+                
+            # 校验货架、主机、以及所有预期的从机是否都扫码成功
+            has_shelf = bool(ch_widget.shelf_barcode)
+            has_master = bool(ch_widget.master_barcode)
+            slaves_scanned = [s for s in ch_widget.slave_barcodes if s]
+            has_all_slaves = len(slaves_scanned) >= expected_slaves
+            
+            if not (has_shelf and has_master and has_all_slaves):
+                incomplete_channels.append(cid)
+
+        # 5. 如果有通道未下发配方，不允许启动
+        if no_recipe_channels:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, 
+                "启动测试被拦截", 
+                f"通道 {', '.join(map(str, no_recipe_channels))} 尚未下发配方！\n\n请勾选对应通道并点击“下发配方至勾选通道”后再试。"
+            )
+            return
+
+        # 6. 如果有通道扫码不完整，不允许启动
+        if incomplete_channels:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self, 
+                "启动测试被拦截 (扫码未完成)", 
+                f"以下勾选的通道条码扫码不完整，不允许启动测试：\n通道 {', '.join(map(str, incomplete_channels))}\n\n请点击“启动扫码”补全所有条码后再试！"
+            )
+            return
+
+        # 7. 通过全部校验，正式下发测试指令启动引擎
+        if not self.engine:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "错误", "测试引擎未初始化！")
+            return
+
+        for cid in selected_cids:
+            # 缓存中获取配方项
+            recipe_items = self.channel_recipes[cid]
+            
+            # 获取对应的条码以进行数据库新建测试记录
+            ch_widget = self.channel_widgets[cid - 1]
+            shelf = ch_widget.shelf_barcode
+            master = ch_widget.master_barcode
+            slaves = [s for s in ch_widget.slave_barcodes if s]
+            
+            test_id = -1
+            if self.db_manager:
+                test_id = self.db_manager.start_new_test(cid, shelf, master, slaves, recipe_name)
+                
+            # 启动单个通道测试，传递真实的 test_id，同时加入本组的同步列表中
+            self.engine.start_channel_test(cid, recipe_items, test_id=test_id, sync_group=selected_cids)
+            # 界面反馈：立刻更新通道状态为“测试中”，使用绿色
+            self.channel_widgets[cid - 1].set_status("测试中", "#28A745")
+            
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "启动成功", f"成功启动 {len(selected_cids)} 个通道的电池老化测试！")
+
+    @Slot(int, str)
+    def on_channel_step_started(self, cid, step_name):
+        idx = cid - 1
+        if 0 <= idx < len(self.channel_widgets):
+            self.channel_widgets[idx].set_status(f"测试中({step_name})", "#28A745")
+
+    @Slot(int, bool)
+    def on_channel_test_finished(self, cid, success):
+        idx = cid - 1
+        if 0 <= idx < len(self.channel_widgets):
+            status = "完成(PASS)" if success else "完成(NG)"
+            color = "#28A745" if success else "#DC3545"
+            self.channel_widgets[idx].set_status(status, color)
+
+    def stop_selected_tests(self):
+        """强制停止选中的测试通道"""
+        selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+        if not selected_cids:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "停止测试失败", "请先勾选需要停止测试的通道！")
+            return
+            
+        if self.engine:
+            for cid in selected_cids:
+                self.engine.stop_channel_test(cid)
+                ch_widget = self.channel_widgets[cid - 1]
+                ch_widget.set_status("已停止", "#DC3545")
+                
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "停止成功", f"已成功停止 {len(selected_cids)} 个通道的电池老化测试！")
+
+    def stop_single_channel_test(self, channel_id):
+        """停止单个物理通道测试"""
+        if self.engine:
+            self.engine.stop_channel_test(channel_id)
+            self.channel_widgets[channel_id - 1].set_status("已停止", "#DC3545")
 
     def apply_recipe_to_selected(self):
         """将选中的配方内容加载到缓存，并更新 UI"""
@@ -288,9 +494,24 @@ class OverviewTab(QWidget):
             
             # 更新 UI 状态
             self.channel_widgets[ch_id-1].set_status("已配方", "#AAAAAA")
+
+        # 未勾选的通道恢复至默认等待扫码状态，通道停止测试
+        for i, ch in enumerate(self.channel_widgets):
+            ch_id = i + 1
+            if ch.isEnabled() and ch_id not in selected_cids:
+                # 恢复 UI 状态为等待扫码
+                ch.reset_widget()
+                # 停止物理通道测试
+                if self.engine:
+                    self.engine.stop_channel_test(ch_id)
+                # 清除可能缓存的配方及同步组
+                if ch_id in self.channel_recipes:
+                    del self.channel_recipes[ch_id]
+                if ch_id in self.sync_groups:
+                    del self.sync_groups[ch_id]
         
         from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(self, "下发成功", f"已成功将配方内容加载至 {count} 个通道，并建立了同步组。")
+        QMessageBox.information(self, "下发成功", f"已成功将配方内容加载至 {count} 个通道，并建立了同步组。\n未勾选的通道已重置并停止测试。")
 
     def get_sync_group_for_channel(self, channel_id):
         """获取通道所属的同步组列表"""
@@ -366,3 +587,21 @@ class OverviewTab(QWidget):
         # 如果更新后原来的选项还在，则保持选中状态
         if current in recipe_list:
             self.combo_recipe.setCurrentText(current)
+
+    def select_report_path(self):
+        """选择报表保存根目录"""
+        from PySide6.QtWidgets import QFileDialog
+        import os
+        sys_cfg = {}
+        if self.db_manager:
+            sys_cfg = self.db_manager.load_sys_config() or {}
+        
+        current_path = sys_cfg.get("report_root_path", os.path.abspath("reports"))
+        
+        dir_path = QFileDialog.getExistingDirectory(self, "选择报表保存根目录", current_path)
+        if dir_path:
+            sys_cfg["report_root_path"] = dir_path
+            if self.db_manager:
+                self.db_manager.save_sys_config(sys_cfg)
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "设置成功", f"报表保存根目录已成功设置为：\n{dir_path}")

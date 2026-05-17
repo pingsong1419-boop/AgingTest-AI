@@ -750,6 +750,13 @@ class StepDialog(QDialog):
                 self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
         
         if not self.is_loading:
+            category = self.category_combo.currentText()
+            if category == "设备操作":
+                is_excluded = any(x in device_text for x in ["老化功能板继电器", "Easy320", "控制板供电电源"])
+                self.cb_sync.setChecked(not is_excluded)
+            else:
+                self.cb_sync.setChecked(False)
+            
             self.on_action_changed()
 
     def on_action_changed(self):

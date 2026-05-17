@@ -65,10 +65,20 @@ class DBManager:
                 upper_limit REAL,
                 measured_value REAL,
                 result TEXT,
+                duration REAL,
                 timestamp DATETIME,
                 FOREIGN KEY (test_id) REFERENCES test_main(test_id)
             )
         ''')
+        
+        # 兼容性迁移：检查是否包含 duration 列，若无则 Alter Table 增加
+        try:
+            cursor.execute("PRAGMA table_info(test_items_results)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if "duration" not in columns:
+                cursor.execute("ALTER TABLE test_items_results ADD COLUMN duration REAL DEFAULT 0.0")
+        except Exception as migration_err:
+            print(f"[-] 数据库迁移报错 (duration列): {migration_err}")
         
         conn.commit()
         conn.close()
@@ -155,14 +165,14 @@ class DBManager:
         params = (test_id, step_name, voltage, current, temp, now)
         self._execute_async(sql, params, wait=False)
 
-    def log_item_result(self, test_id: int, name: str, low: float, high: float, val: float, res: str):
+    def log_item_result(self, test_id: int, name: str, low: float, high: float, val: float, res: str, duration: float = 0.0):
         """记录某个测试项目的最终判定结果 (异步不等待)"""
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sql = '''
-            INSERT INTO test_items_results (test_id, item_name, lower_limit, upper_limit, measured_value, result, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO test_items_results (test_id, item_name, lower_limit, upper_limit, measured_value, result, duration, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         '''
-        params = (test_id, name, low, high, val, res, now)
+        params = (test_id, name, low, high, val, res, duration, now)
         self._execute_async(sql, params, wait=False)
 
     def finish_test(self, test_id: int, result: str):
@@ -174,6 +184,238 @@ class DBManager:
         
         # 测试结束后生成本地备份文件
         self.export_to_xtml(test_id)
+        
+        # 自动生成用户要求的报表报告 CSV / HTML
+        self.generate_report(test_id)
+
+    def generate_report(self, test_id: int):
+        """生成详细测试报表 CSV 和 premium HTML 报告"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM test_main WHERE test_id = ?", (test_id,))
+        main_info = cursor.fetchone()
+        if not main_info:
+            conn.close()
+            return
+            
+        master_code = main_info[3] or "未知主机"
+        slave_codes_str = main_info[4] or ""
+        recipe_name = main_info[5] or "默认配方"
+        start_time_str = main_info[6] or "未知开始时间"
+        end_time_str = main_info[7] or "未知结束时间"
+        overall_result = main_info[8] or "RUNNING"
+        
+        cursor.execute("SELECT item_name, lower_limit, upper_limit, measured_value, result, duration, timestamp FROM test_items_results WHERE test_id = ?", (test_id,))
+        items = cursor.fetchall()
+        conn.close()
+        
+        # 解析从机条码列表
+        slaves_list = [s.strip() for s in slave_codes_str.split(",") if s.strip()]
+        
+        # 1. 确定报表根路径
+        sys_cfg = self.load_sys_config()
+        report_root = sys_cfg.get("report_root_path", os.path.abspath("reports"))
+        
+        # 2. 所在文件夹按测试配方命名
+        recipe_folder = os.path.join(report_root, recipe_name)
+        os.makedirs(recipe_folder, exist_ok=True)
+        
+        # 3. 报表命名：主机条码 + 测试开始时间 + 结束时间
+        def sanitize_filename(name):
+            return "".join(c for c in name if c.isalnum() or c in ('-', '_', ' ')).strip()
+            
+        safe_master = sanitize_filename(master_code)
+        safe_start = sanitize_filename(start_time_str.replace(":", "-").replace(" ", "_"))
+        safe_end = sanitize_filename(end_time_str.replace(":", "-").replace(" ", "_"))
+        filename_base = f"{safe_master}_{safe_start}_to_{safe_end}"
+        
+        csv_path = os.path.join(recipe_folder, f"{filename_base}.csv")
+        html_path = os.path.join(recipe_folder, f"{filename_base}.html")
+        
+        # 4. 写入 CSV
+        import csv
+        try:
+            with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+                writer = csv.writer(f)
+                writer.writerow(["BMS老化测试详细判定报表"])
+                writer.writerow([])
+                writer.writerow(["基本信息"])
+                writer.writerow(["通道号", main_info[1]])
+                writer.writerow(["货架号", main_info[2]])
+                writer.writerow(["主机条码", master_code])
+                # 体现每个从机条码与对应关系
+                for idx, sv in enumerate(slaves_list):
+                    writer.writerow([f"从机{idx+1}条码", sv])
+                writer.writerow(["测试配方", recipe_name])
+                writer.writerow(["测试开始时间", start_time_str])
+                writer.writerow(["测试结束时间", end_time_str])
+                writer.writerow(["测试总判定", overall_result])
+                writer.writerow([])
+                writer.writerow(["详细判定数据"])
+                writer.writerow(["测试项名称", "下限", "上限", "测量值", "判定结果", "执行时间(秒)", "记录时间"])
+                
+                for item in items:
+                    writer.writerow([
+                        item[0],
+                        item[1] if item[1] is not None else "--",
+                        item[2] if item[2] is not None else "--",
+                        item[3] if item[3] is not None else "--",
+                        item[4],
+                        f"{item[5]:.2f}" if item[5] is not None else "0.00",
+                        item[6]
+                    ])
+            print(f"[+] 成功生成 CSV 报表: {csv_path}")
+        except Exception as e:
+            print(f"[-] 生成 CSV 报表失败: {e}")
+            
+        # 5. 写入 HTML
+        try:
+            # 动态生成从机基本信息的 HTML 栅格项
+            slaves_html_items = ""
+            for idx, sv in enumerate(slaves_list):
+                slaves_html_items += f'            <div class="info-item"><span class="info-label">从机{idx+1}条码:</span>{sv}</div>\n'
+                
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BMS 测试报告 - {master_code}</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }}
+        .container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }}
+        h1 {{
+            color: #1a1a2e;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 10px;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }}
+        .section-title {{
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f3460;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecca3;
+            padding-left: 10px;
+        }}
+        .info-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }}
+        .info-item {{
+            font-size: 14px;
+        }}
+        .info-label {{
+            font-weight: bold;
+            color: #666;
+            margin-right: 10px;
+        }}
+        .result-badge {{
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }}
+        .result-pass {{ background-color: #d4edda; color: #155724; }}
+        .result-ng {{ background-color: #f8d7da; color: #721c24; }}
+        .result-running {{ background-color: #fff3cd; color: #856404; }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }}
+        th, td {{
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }}
+        th {{
+            background-color: #0f3460;
+            color: #fff;
+            font-weight: 600;
+        }}
+        tr:hover {{ background-color: #f8f9fa; }}
+        .text-center {{ text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BMS 老化测试详细判定报告</h1>
+        
+        <div class="section-title">基本信息</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">通道号:</span>CH-{main_info[1]:02d}</div>
+            <div class="info-item"><span class="info-label">货架号:</span>{main_info[2]}</div>
+            <div class="info-item"><span class="info-label">主机条码:</span>{master_code}</div>
+{slaves_html_items}            <div class="info-item"><span class="info-label">测试配方:</span>{recipe_name}</div>
+            <div class="info-item"><span class="info-label">测试总判定:</span>
+                <span class="result-badge {'result-pass' if overall_result == 'PASS' else 'result-ng' if overall_result == 'NG' else 'result-running'}">{overall_result}</span>
+            </div>
+            <div class="info-item"><span class="info-label">测试开始时间:</span>{start_time_str}</div>
+            <div class="info-item"><span class="info-label">测试结束时间:</span>{end_time_str}</div>
+        </div>
+        
+        <div class="section-title">详细判定数据</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>测试项名称</th>
+                    <th class="text-center">下限</th>
+                    <th class="text-center">上限</th>
+                    <th class="text-center">测量值</th>
+                    <th class="text-center">判定结果</th>
+                    <th class="text-center">执行用时(秒)</th>
+                    <th>记录时间</th>
+                </tr>
+            </thead>
+            <tbody>""")
+                
+                for item in items:
+                    res_class = "result-pass" if item[4] == "PASS" else "result-ng"
+                    f.write(f"""
+                <tr>
+                    <td>{item[0]}</td>
+                    <td class="text-center">{item[1] if item[1] is not None else "--"}</td>
+                    <td class="text-center">{item[2] if item[2] is not None else "--"}</td>
+                    <td class="text-center">{item[3] if item[3] is not None else "--"}</td>
+                    <td class="text-center"><span class="result-badge {res_class}">{item[4]}</span></td>
+                    <td class="text-center">{item[5]:.2f if item[5] is not None else 0.00}</td>
+                    <td>{item[6]}</td>
+                </tr>""")
+                    
+                f.write("""
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>""")
+            print(f"[+] 成功生成 HTML 报表: {html_path}")
+        except Exception as e:
+            print(f"[-] 生成 HTML 报表失败: {e}")
 
     def export_to_xtml(self, test_id: int):
         """导出单个测试记录为 XTML (直接读取，需确保主库已同步)"""
@@ -213,7 +455,7 @@ class DBManager:
             f.write("  </ItemsResults>\n")
             f.write("</TestReport>")
             
-        print(f"✅ 测试数据(含判定项)已导出备份: {file_path}")
+        print(f"[OK] 测试数据(含判定项)已导出备份: {file_path}")
 
     # --- 配方 (Recipe) JSON 存储逻辑 ---
     

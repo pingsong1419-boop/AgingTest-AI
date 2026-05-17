@@ -73,6 +73,17 @@ class ChannelWorker(QObject):
         self.test_id = -1
         self._retry_count = 0
         self.last_hw_log = ""
+        
+        # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
+        self.log_history = []
+        self.step_statuses = {}
+        self.sub_step_statuses = {}
+        self.current_progress = 0.0
+        self.step_start_times = {}
+        self.log_message.connect(lambda _, msg: self.log_history.append(msg))
+        self.step_finished.connect(lambda _, name, is_pass: self.step_statuses.__setitem__(name, is_pass))
+        self.sub_step_finished.connect(lambda _, step_idx, sub_idx, status, result: self.sub_step_statuses.__setitem__((step_idx, sub_idx), (status, result)))
+        self.progress_updated.connect(lambda _, prog, __: setattr(self, "current_progress", prog))
 
     def set_test_info(self, test_id: int):
         self.test_id = test_id
@@ -90,6 +101,9 @@ class ChannelWorker(QObject):
         if self.engine:
             self.engine.release_resource("ca550", self.channel_id)
         self.log_message.emit(self.channel_id, "[!] 收到停止指令")
+        if self.db_manager and self.test_id != -1:
+            self.db_manager.finish_test(self.test_id, "STOPPED")
+            self.test_id = -1
 
     def resume_from_sync(self):
         if self.is_waiting_for_sync:
@@ -115,6 +129,8 @@ class ChannelWorker(QObject):
             return
             
         self.step_started.emit(self.channel_id, step.name)
+        import time
+        self.step_start_times[step.name] = time.time()
         self.current_sub_step_index = 0
         self.current_step_results = []
         self.run_next_sub_step()
@@ -341,6 +357,7 @@ class ChannelWorker(QObject):
                                     success = target_dev.set_voltage(v_val, logger=hw_logger)
                                     if success: success = verify_and_wait(target_dev, v_val)
                                 if "开启" in p_str or "ON" in p_str.upper(): target_dev.output_control(True, logger=hw_logger)
+                                if "关闭" in p_str or "OFF" in p_str.upper(): target_dev.output_control(False, logger=hw_logger)
                             else:
                                 act = params.get("action", "")
                                 if "输出控制" in act: target_dev.output_control("开启" in p_str or "ON" in p_str.upper(), logger=hw_logger)
@@ -503,18 +520,44 @@ class ChannelWorker(QObject):
                 f_val = self._parse_numeric(val)
                 if step.min_limit is not None and f_val < float(step.min_limit): is_pass = False
                 if step.max_limit is not None and f_val > float(step.max_limit): is_pass = False
-        if (step.min_limit or step.max_limit) and self.db_manager and self.test_id != -1:
-            val = self.current_step_results[0] if self.current_step_results else 0.0
-            self.db_manager.log_item_result(self.test_id, step.name, float(step.min_limit or 0), float(step.max_limit or 0), self._parse_numeric(val), "PASS" if is_pass else "NG")
+                
+        # 计算用时
+        import time
+        start_time = getattr(self, "step_start_times", {}).get(step.name, time.time())
+        duration = round(time.time() - start_time, 2)
+        
+        # 始终将测试项判定记录写入数据库，以供报告生成使用
+        if self.db_manager and self.test_id != -1:
+            val = self.current_step_results[0] if self.current_step_results else None
+            min_lim = float(step.min_limit) if step.min_limit is not None else None
+            max_lim = float(step.max_limit) if step.max_limit is not None else None
+            self.db_manager.log_item_result(
+                self.test_id, 
+                step.name, 
+                min_lim, 
+                max_lim, 
+                self._parse_numeric(val) if val is not None else None, 
+                "PASS" if is_pass else "NG",
+                duration
+            )
+            
         self.step_finished.emit(self.channel_id, step.name, is_pass)
         if not is_pass and step.ng_strategy == NGStrategy.STOP_ON_ANY:
-            self.log_message.emit(self.channel_id, f"[!] 触发NG停止策略: {step.name}"); self.test_finished.emit(self.channel_id, False); self.is_running = False; return
+            self.log_message.emit(self.channel_id, f"[!] 触发NG停止策略: {step.name}")
+            if self.db_manager and self.test_id != -1:
+                self.db_manager.finish_test(self.test_id, "NG")
+                self.test_id = -1
+            self.test_finished.emit(self.channel_id, False)
+            self.is_running = False
+            return
         self.current_step_index += 1; self.run_next_step()
 
 class TestEngine(QObject):
     all_channels_finished = Signal()
     barrier_status_changed = Signal(int, int)
     channel_sync_status_changed = Signal(int, bool)
+    channel_step_started = Signal(int, str)
+    channel_test_finished = Signal(int, bool)
     def __init__(self, device_manager=None, db_manager=None):
         super().__init__()
         self.device_manager, self.db_manager = device_manager, db_manager
@@ -655,6 +698,8 @@ class TestEngine(QObject):
             if cid in self.workers: self.stop_channel_test(cid)
         t = QThread(); w = ChannelWorker(cid, steps, self.device_manager, self.db_manager, engine=self)
         w.set_test_info(test_id); w.moveToThread(t); w.reached_barrier.connect(self.handle_barrier_reached)
+        w.step_started.connect(self.channel_step_started)
+        w.test_finished.connect(self.channel_test_finished)
         t.started.connect(w.start); from PySide6.QtCore import Qt
         w.test_finished.connect(lambda: self.stop_channel_test(cid), Qt.QueuedConnection)
         self.workers[cid], self.threads[cid] = w, t; t.start()

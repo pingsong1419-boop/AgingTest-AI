@@ -245,7 +245,47 @@ class MonitorDialog(QDialog):
             worker.sub_step_finished.connect(self.on_sub_step_finished)
             worker.log_message.connect(self.on_log_message)
             worker.progress_updated.connect(self.on_progress_updated)
+            
+            # 还原历史日志，防止重复追加
+            self.log_text.clear()
+            for msg in worker.log_history:
+                self.log_text.append(msg)
+                
+            # 还原进度条
+            self.progress_bar.setValue(int(worker.current_progress))
+            
+            # 加载并还原测试工步树
             self.load_steps(worker.steps)
+            
+            # 还原各工步与子工步的判定及测试详情
+            for step_idx in range(self.step_tree.topLevelItemCount()):
+                item = self.step_tree.topLevelItem(step_idx)
+                step_name = item.text(0)
+                
+                # 检查工步状态
+                if step_idx == worker.current_step_index:
+                    item.setText(4, "执行中...")
+                    item.setForeground(4, QColor("#00E5FF"))
+                elif step_name in worker.step_statuses:
+                    is_pass = worker.step_statuses[step_name]
+                    item.setText(4, "PASS" if is_pass else "NG")
+                    item.setForeground(4, QColor("#4ECCA3") if is_pass else QColor("#FF4C29"))
+                    
+                # 检查子工步状态
+                for sub_idx in range(item.childCount()):
+                    sub_item = item.child(sub_idx)
+                    status_tuple = worker.sub_step_statuses.get((step_idx, sub_idx))
+                    if status_tuple:
+                        status, result = status_tuple
+                        sub_item.setText(4, status)
+                        sub_item.setForeground(4, QColor("#4ECCA3") if status == "PASS" else QColor("#FF4C29"))
+                        if result is not None:
+                            sub_item.setText(3, str(result))
+                            sub_item.setForeground(3, QColor("#00E5FF"))
+                    elif step_idx == worker.current_step_index and sub_idx == worker.current_sub_step_index:
+                        sub_item.setText(4, "执行中...")
+                        sub_item.setForeground(4, QColor("#00E5FF"))
+                        
             self.lbl_status.setText("状态: 运行中")
             self.lbl_status.setStyleSheet("color: #4ECCA3; font-weight: bold;")
         else:
