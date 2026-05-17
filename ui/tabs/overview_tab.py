@@ -8,8 +8,18 @@ class ChannelWidget(QFrame):
         super().__init__()
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         # 增加高度以容纳多行条码文本(包含货架、主机、最多3个从机)
-        self.setMinimumSize(180, 190)
-        self.setContentsMargins(6, 6, 6, 6)
+        self.setMinimumSize(220, 200) # 增加宽度以适配 5 列布局，视觉更舒展
+        self.setContentsMargins(8, 8, 8, 8)
+        self.setStyleSheet("""
+            QFrame {
+                background-color: #1A1A2E; 
+                border: 1px solid #3E3E5C; 
+                border-radius: 12px; 
+            }
+            QFrame:hover {
+                border: 1px solid #00E5FF; /* 悬停时边框高亮 */
+            }
+        """)
         
         layout = QVBoxLayout(self)
         layout.setSpacing(4)
@@ -17,8 +27,9 @@ class ChannelWidget(QFrame):
         # 顶部：复选框和通道号
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(5) # 微调间距，使其更加紧凑但不重叠
         self.chk_select = QCheckBox()
-        self.chk_select.setFixedSize(20, 20)
+        self.chk_select.setFixedSize(25, 25) # 增加大小，防止 18px+2px边框被裁切
         self.chk_select.setStyleSheet("""
             QCheckBox::indicator {
                 width: 18px;
@@ -36,7 +47,7 @@ class ChannelWidget(QFrame):
         
         title = QLabel(f"CH-{channel_id:02d}")
         title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("font-weight: bold; font-size: 14px; background-color: #31314C; border-radius: 3px; padding: 4px;")
+        title.setStyleSheet("font-weight: bold; font-size: 14px; background-color: #31314C; border-radius: 6px; padding: 4px; border: none;")
         top_layout.addWidget(title)
         top_layout.addStretch()
         
@@ -56,7 +67,7 @@ class ChannelWidget(QFrame):
         self.lbl_s3 = QLabel("从3: --")
         
         # 为了和深色主题匹配，给每个信息框加底色和边框
-        label_style = "font-size: 11px; color: #CCCCCC; background-color: #1F1F35; border: 1px solid #3E3E5C; border-radius: 2px; padding: 2px;"
+        label_style = "font-size: 11px; color: #CCCCCC; background-color: #1F1F35; border: 1px solid #3E3E5C; border-radius: 4px; padding: 2px;"
         
         self.barcode_labels = [self.lbl_shelf, self.lbl_master, self.lbl_s1, self.lbl_s2, self.lbl_s3]
         for lbl in self.barcode_labels:
@@ -153,7 +164,7 @@ class OverviewTab(QWidget):
         
         # 初始化 60 个通道的监控卡片
         self.channel_widgets = []
-        columns = 8  # 每行减少为 8 个通道，避免横向挤压
+        columns = 5  # 每行改为 5 个通道
         for i in range(60):
             ch_id = i + 1
             ch_widget = ChannelWidget(ch_id)
@@ -162,7 +173,7 @@ class OverviewTab(QWidget):
             if ch_id > 48:
                 ch_widget.setEnabled(False)
                 ch_widget.set_status("已禁用", "#555555")
-                ch_widget.setStyleSheet("background-color: #121212; border: 1px solid #222222;")
+                ch_widget.setStyleSheet("background-color: #121212; border: 1px solid #222222; border-radius: 12px;")
             
             # 开启右键菜单策略
             ch_widget.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -194,19 +205,27 @@ class OverviewTab(QWidget):
         menu.exec(self.channel_widgets[channel_id-1].mapToGlobal(pos))
 
     def show_channel_details(self, channel_id):
-        """弹出详细监控对话框"""
-        from ui.dialogs.monitor_dialog import MonitorDialog
-        dialog = MonitorDialog(self, channel_id=channel_id, engine=self.engine)
-        dialog.show() # 使用非模态显示，允许同时看多个通道
-        # 为了防止对话框被回收，需要保存引用
+        """弹出详细监控对话框 (防止重复打开)"""
         if not hasattr(self, 'monitor_dialogs'):
             self.monitor_dialogs = {}
+            
+        # 检查是否已经存在该通道的窗口，且窗口未被销毁
+        existing_dialog = self.monitor_dialogs.get(channel_id)
+        if existing_dialog:
+            try:
+                # 尝试检查窗口是否可见（如果已被用户关闭，调用会抛异常或返回不可见）
+                if existing_dialog.isVisible():
+                    existing_dialog.activateWindow() # 激活窗口
+                    existing_dialog.raise_()         # 置于顶层
+                    return
+            except:
+                # 窗口可能已被销毁，清除引用准备重建
+                del self.monitor_dialogs[channel_id]
+
+        from ui.dialogs.monitor_dialog import MonitorDialog
+        dialog = MonitorDialog(self, channel_id=channel_id, engine=self.engine)
+        dialog.show()
         self.monitor_dialogs[channel_id] = dialog
-        
-        # 模拟展示几个特殊状态
-        self.channel_widgets[0].set_status("TESTING", "green")
-        self.channel_widgets[1].set_status("NG", "red")
-        self.channel_widgets[2].set_status("TESTING", "green")
 
     def open_scan_dialog(self):
         from ui.dialogs.scan_dialog import ScanDialog

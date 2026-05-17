@@ -112,36 +112,34 @@ class AgingBoardController:
         logger.info(f"功能板 {self.ip} 已断开连接")
 
     def set_relay_by_name(self, name: str, state: bool) -> bool:
-        """
-        根据名称控制继电器 (如 'KL15')
-        :param name: RELAY_MAP 中的名称
-        :param state: True 开启, False 关闭
-        """
-        if name not in self.RELAY_MAP:
-            logger.warning(f"未知继电器名称: {name}")
-            return False
-        return self.write_relay(self.RELAY_MAP[name], state)
-
-    def set_relay_by_name(self, name: str, state: bool) -> bool:
-        """根据继电器名称控制开关"""
+        """根据继电器名称控制开关 (如 'KL15')"""
         if name not in self.RELAY_MAP:
             logger.error(f"未知继电器名称: {name}")
             return False
         return self.write_relay(self.RELAY_MAP[name], state)
 
     def write_relay(self, address: int, state: bool) -> bool:
-        """根据线圈地址写入单个继电器"""
-        if not self.is_connected:
-            if not self.connect(): return False
-        try:
-            result = self.client.write_coil(address=address, value=state, device_id=self.slave_id)
-            if not result.isError():
-                self.relay_states[address] = state
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"写入线圈 {address} 异常: {e}")
-            return False
+        """根据线圈地址写入单个继电器 (带自动重试与链路自愈)"""
+        for attempt in range(2): # 最多尝试 2 次
+            try:
+                if not self.is_connected or not self.client.is_socket_open():
+                    if not self.connect():
+                        if attempt == 1: return False # 第二次还连不上就放弃
+                        continue
+
+                result = self.client.write_coil(address=address, value=state, device_id=self.slave_id)
+                if result and not result.isError():
+                    self.relay_states[address] = state
+                    return True
+                
+                # 如果是 Modbus 错误，尝试重置连接后在下一次循环中重试
+                logger.warning(f"写入线圈 {address} 失败 (Modbus Error), 正在尝试重连重试...")
+                self.disconnect()
+            except Exception as e:
+                logger.error(f"写入线圈 {address} 异常 (Attempt {attempt+1}): {e}")
+                self.disconnect() # 发生异常必须断开以触发下次重连
+                time.sleep(0.1)
+        return False
 
     def read_relays(self, count: int = 22) -> list:
         """读取所有继电器当前状态 (0-21)"""

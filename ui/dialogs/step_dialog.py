@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 class StepDialog(QDialog):
     def __init__(self, parent=None, step_data=None):
         super().__init__(parent)
+        self.is_loading = False # 状态位：标记是否处于数据加载还原中
         self.setWindowTitle("编辑指令 (子工步)")
         self.resize(620, 550)
         self.setStyleSheet("""
@@ -404,12 +405,12 @@ class StepDialog(QDialog):
         self.action_combo.currentIndexChanged.connect(self.on_action_changed)
         self.eol_op.currentTextChanged.connect(self.on_eol_op_changed)
         
-        # 初始状态
+        # 初始状态：如果有传入数据则执行加载，否则执行默认初始化
         if step_data:
             self._load_data(step_data)
         else:
             self.on_category_changed(0)
-        self.on_eol_op_changed()
+            self.on_eol_op_changed()
 
     def _combo_value(self, combo):
         return combo.currentData() if combo.currentData() is not None else combo.currentText()
@@ -470,7 +471,11 @@ class StepDialog(QDialog):
         return items
 
     def on_eol_op_changed(self):
+        # 注意：这里不能简单的 if self.is_loading: return
+        # 因为 _load_data 显式调用它来生成 combo 项
+        # 但我们通过判断 combo 是否已有项来决定是否跳过 clear
         op = self.eol_op.currentText()
+        if not op: return
         self._set_param_combo(self.eol_param1, self.eol_param1_label, "参数1:", [])
         self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
         self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
@@ -518,215 +523,180 @@ class StepDialog(QDialog):
         return values
 
     def _load_data(self, data):
-        """将已有数据填充到界面"""
-        # 暂时阻塞信号
-        self.category_combo.blockSignals(True)
-        self.sub_category_combo.blockSignals(True)
-        self.device_combo.blockSignals(True)
-        self.action_combo.blockSignals(True)
+        """全量还原：分类、设备、动作、策略及参数 (终极加固版)"""
+        self.is_loading = True
+        try:
+            device = data.get('device', '')
+            action = data.get('action', '')
+            params_str = str(data.get('params', ''))
+            step_type = data.get('type', '')
+            kv = self._split_params(params_str)
+            
+            # 1. 还原一级分类 (Category)
+            category = "设备操作"
+            if "CAN" in device or "报文" in device: category = "报文交互"
+            elif "EOL" in step_type or "智界EOL" in device or "EOL" in kv: category = "三方协议"
+            elif "等待" in device or "固定延时" in action: category = "通用交互"
+            
+            self.category_combo.setCurrentText(category)
+            self.on_category_changed()
 
-        device = data.get('device', '')
-        action = data.get('action', '')
-        params_str = data.get('params', '')
-        step_type = data.get('type', '')
-        kv = self._split_params(params_str)
-        
-        # 1. 识别一级分类与二级分类
-        if "CAN" in device or "报文" in device:
-            self.category_combo.setCurrentText("报文交互")
-        elif "EOL" in step_type or "智界EOL" in device or "EOL" in kv:
-            self.category_combo.setCurrentText("三方协议")
-        elif "等待" in device or "同步屏障" in device:
-            self.category_combo.setCurrentText("通用交互")
-        else:
-            self.category_combo.setCurrentText("设备操作")
-            # 识别二级分类
-            if "AFE" in device: self.sub_category_combo.setCurrentText("AFE")
-            elif "继电器" in device or "Aging Board" in device: self.sub_category_combo.setCurrentText("继电器")
-            elif "HV Source" in device or "高压" in device: self.sub_category_combo.setCurrentText("高压源")
-            elif "Simulator" in device or "模拟器" in device: self.sub_category_combo.setCurrentText("模拟电池")
-            elif "CA550" in device or "校准" in device: self.sub_category_combo.setCurrentText("校准源")
-            elif "Power" in device or "电源" in device: self.sub_category_combo.setCurrentText("直流源")
+            # 2. 还原二级分类 (Sub-Category) - 仅限设备操作
+            if category == "设备操作":
+                sub_cat = "AFE"
+                if "AFE" in device: sub_cat = "AFE"
+                elif "继电器" in device or "Aging Board" in device or "Easy320" in device: sub_cat = "继电器"
+                elif "HV Source" in device or "高压" in device: sub_cat = "高压源"
+                elif "Simulator" in device or "模拟" in device: sub_cat = "模拟电池"
+                elif "CA550" in device or "校准" in device: sub_cat = "校准源"
+                elif "Power" in device or "电源" in device: sub_cat = "直流源"
+                
+                self.sub_category_combo.setCurrentText(sub_cat)
+                self.on_sub_category_changed()
 
-        # 触发二级/三级联动
-        self.on_category_changed()
-        self.on_sub_category_changed()
-
-        # 2. 匹配设备
-        index = self.device_combo.findText(device)
-        if index < 0:
-            # 模糊匹配，例如 "1# AFE" 匹配 "AFE 1"
+            # 3. 还原控制设备 (Device)
+            # 使用模糊匹配，防止因为后缀不同导致失败
             for i in range(self.device_combo.count()):
-                if device[:4] in self.device_combo.itemText(i):
-                    index = i; break
-        if index >= 0:
-            self.device_combo.setCurrentIndex(index)
-        
-        self.on_device_changed()
+                if self.device_combo.itemText(i) == device or device in self.device_combo.itemText(i):
+                    self.device_combo.setCurrentIndex(i)
+                    break
+            self.on_device_changed()
 
-        # 3. 设置动作
-        index = self.action_combo.findText(action)
-        if index < 0:
-            for i in range(self.action_combo.count()):
-                if action[:2] in self.action_combo.itemText(i):
-                    index = i; break
-        if index >= 0:
-            self.action_combo.setCurrentIndex(index)
-        
-        self.on_action_changed()
-        
-        self.category_combo.blockSignals(False)
-        self.sub_category_combo.blockSignals(False)
-        self.device_combo.blockSignals(False)
-        self.action_combo.blockSignals(False)
-
-        # 2. 判定勾选与策略
-        self.cb_judgment.setChecked(data.get('is_judgment', False))
-        self.cb_sync.setChecked(data.get('sync_exec', False))
-        self.fail_strategy_combo.setCurrentText(data.get('fail_strategy', "失败停止"))
-
-        # 3. 解析参数字符串并尝试还原
-
-        # --- 模拟器批量参数还原 ---
-        if "mA" in params_str:
-            import re
-            ma_match = re.search(r"([\d.]+)mA", params_str)
-            if ma_match: self.sim_batch_curr.setValue(float(ma_match.group(1)))
+            # 4. 还原功能动作 (Action)
+            idx = self.action_combo.findText(action)
+            if idx >= 0: self.action_combo.setCurrentIndex(idx)
+            self.on_action_changed()
             
-            v_match = re.search(r"([\d.]+)V", params_str)
-            if v_match: self.sim_batch_volt.setValue(float(v_match.group(1)))
-            
-            if "ON" in params_str: self.sim_batch_output.setCurrentText("ON")
-            elif "OFF" in params_str: self.sim_batch_output.setCurrentText("OFF")
-            
-            if "Range:HIGH" in params_str: self.sim_batch_range.setCurrentIndex(0)
-            elif "Range:LOW" in params_str: self.sim_batch_range.setCurrentIndex(1)
-            
-            if "CH:" in params_str:
-                self.sim_batch_channels.setText(params_str.split("CH:")[-1])
+            # 5. 还原执行指令策略
+            self.cb_judgment.setChecked(data.get('is_judgment', False))
+            self.cb_sync.setChecked(data.get('sync_exec', False))
+            self.fail_strategy_combo.setCurrentText(data.get('fail_strategy', "失败停止"))
 
-        # --- 通用参数还原 ---
-        if "V" in params_str:
+            # 6. 还原具体业务参数 (特征匹配法 + 异常隔离)
             import re
-            v_match = re.search(r'([\d.]+)V', params_str)
-            if v_match:
-                self.cb_volt.setChecked(True)
-                self.i_volt.setValue(float(v_match.group(1)))
-        
-        if "A" in params_str:
-            import re
-            a_match = re.search(r'([\d.]+)A', params_str)
-            if a_match:
-                self.cb_curr.setChecked(True)
-                self.i_curr.setValue(float(a_match.group(1)))
-
-        if "开启" in params_str:
-            self.cb_output.setChecked(True)
-            self.output_combo.setCurrentText("开启输出")
-        elif "关闭" in params_str:
-            self.cb_output.setChecked(True)
-            self.output_combo.setCurrentText("关闭输出")
-
-        if "ms" in params_str:
-            import re
-            ms_match = re.search(r'(\d+)ms', params_str)
-            if ms_match:
-                self.w_time.setValue(int(ms_match.group(1)))
-
-        if "EOL" in kv:
-            self.eol_op.setCurrentText(kv.get("EOL", ""))
-            self.on_eol_op_changed()
-            self.eol_timeout.setValue(int(float(kv.get("TIMEOUT", "1000"))))
-            self.eol_channel.setValue(int(float(kv.get("CH", "1"))))
-            if "TX_ID" in kv: self.eol_tx_id.setText(kv["TX_ID"])
-            if "RX_ID" in kv: self.eol_rx_id.setText(kv["RX_ID"])
-            used_keys = {"EOL", "TIMEOUT", "CH", "TX_ID", "RX_ID"}
-            if self.eol_param1.isVisible():
-                key = self.eol_param1_label.text().replace(":", "").strip().upper()
-                if key in kv:
-                    self._set_combo_by_value(self.eol_param1, kv[key])
-                    used_keys.add(key)
-            if self.eol_param2.isVisible():
-                key = self.eol_param2_label.text().replace(":", "").strip().upper()
-                if key in kv:
-                    self._set_combo_by_value(self.eol_param2, kv[key])
-                    used_keys.add(key)
-            eol_args = []
-            for key, value in kv.items():
-                if key not in used_keys:
-                    eol_args.append(f"{key}:{value}")
-            self.eol_args.setText(" / ".join(eol_args))
-            self.param_stack.setCurrentIndex(7)
-        else:
-            if "ID" in kv: self.c_id.setText(kv["ID"])
-            if "DATA" in kv: self.c_data.setText(kv["DATA"])
-            if "WAIT_ID" in kv: self.c_wait_id.setText(kv["WAIT_ID"])
+            
+            # --- 电压/电流框 (通用) ---
             try:
-                if "TYPE" in kv: self.c_type.setCurrentIndex(max(0, min(2, int(kv["TYPE"]))))
-                if "DLC" in kv: self.c_dlc.setValue(int(kv["DLC"]))
-                if "CH" in kv: 
-                    try: self.c_channel.setValue(int(kv["CH"]))
-                    except: pass 
-                if "TIMEOUT" in kv: self.c_timeout.setValue(int(float(kv["TIMEOUT"])))
+                v_match = re.search(r'([\d.]+)V', params_str)
+                if v_match:
+                    val = float(v_match.group(1))
+                    if hasattr(self, 'i_volt'): self.i_volt.setValue(val)
+                    if hasattr(self, 'sim_batch_volt'): self.sim_batch_volt.setValue(val)
+                
+                a_match = re.search(r'([\d.]+)A', params_str)
+                if a_match: 
+                    if hasattr(self, 'i_curr'): self.i_curr.setValue(float(a_match.group(1)))
+                
+                ma_match = re.search(r'([\d.]+)mA', params_str)
+                if ma_match:
+                    val = float(ma_match.group(1))
+                    if hasattr(self, 'sim_batch_curr'): self.sim_batch_curr.setValue(val)
+                
+                if "开启" in params_str or "ON" in params_str:
+                    if hasattr(self, 'output_combo'): self.output_combo.setCurrentText("开启输出")
+                    if hasattr(self, 'sim_batch_output'): self.sim_batch_output.setCurrentText("ON")
+                elif "关闭" in params_str or "OFF" in params_str:
+                    if hasattr(self, 'output_combo'): self.output_combo.setCurrentText("关闭输出")
+                    if hasattr(self, 'sim_batch_output'): self.sim_batch_output.setCurrentText("OFF")
+                    
+                self.cb_volt.setChecked("V" in params_str)
+                self.cb_curr.setChecked("A" in params_str)
+                self.cb_output.setChecked("开启" in params_str or "关闭" in params_str or "ON" in params_str)
             except: pass
 
-            if "读取电流" in params_str:
-                self.rb_curr.setChecked(True)
+            # --- CAN 参数 (Page 1) ---
+            try:
+                if "ID" in kv: self.c_id.setText(kv["ID"])
+                if "DATA" in kv: self.c_data.setText(kv["DATA"])
+                if "WAIT_ID" in kv: self.c_wait_id.setText(kv["WAIT_ID"])
+                if "TIMEOUT" in kv: self.c_timeout.setValue(int(float(kv["TIMEOUT"])))
+                if "TYPE" in kv: self.c_type.setCurrentIndex(int(kv["TYPE"]))
+                if "DLC" in kv: self.c_dlc.setValue(int(kv["DLC"]))
+                if "CH" in kv: self.c_channel.setValue(int(kv["CH"]))
+            except: pass
 
-        if self.param_stack.currentIndex() == 4: # Easy320 通道还原
-            for cb in self.easy320_checks: cb.setChecked(False)
-            for s in params_str.split(","):
-                try:
-                    c_idx = int(s.strip()) - 1
-                    if 0 <= c_idx < 32: self.easy320_checks[c_idx].setChecked(True)
-                except: pass
+            # --- CA550 (Page 5) ---
+            try:
+                if "CA550" in device:
+                    val_match = re.search(r'Val:([\d.-]+)', params_str)
+                    if val_match: self.ca_val.setValue(float(val_match.group(1)))
+                    if "RANGE" in kv: self.ca_range.setCurrentText(kv["RANGE"])
+                    if "OUTPUT" in kv: self.ca_output_state.setCurrentText(kv["OUTPUT"])
+                    # 精准匹配输出类型
+                    for i in range(self.ca_type.count()):
+                        t_text = self.ca_type.itemText(i).split(" ")[0]
+                        if f"Type:{t_text}" in params_str or (t_text in params_str and "Type:" not in params_str):
+                            self.ca_type.setCurrentIndex(i); break
+            except: pass
+
+            # --- 延时参数 (Page 2) ---
+            try:
+                ms_match = re.search(r'(\d+)ms', params_str)
+                if ms_match: self.w_time.setValue(int(ms_match.group(1)))
+            except: pass
+
+            # --- 继电器控制 (Page 4/8) ---
+            try:
+                if "继电器" in step_type or "Easy320" in device or "Aging Board" in device:
+                    channels = params_str.split(",")
+                    for c in channels:
+                        try:
+                            clean_c = re.sub(r'[^\d]', '', c) # 只保留数字
+                            if clean_c:
+                                c_idx = int(clean_c) - 1
+                                if 0 <= c_idx < 32:
+                                    if "Easy320" in device: self.easy320_checks[c_idx].setChecked(True)
+                                    if "Aging Board" in device and c_idx < 22: self.aging_relay_checks[c_idx].setChecked(True)
+                        except: pass
+            except: pass
+
+            # --- 智界 EOL 协议 (Page 7) ---
+            try:
+                if "EOL" in step_type or "EOL" in kv:
+                    self.eol_op.setCurrentText(kv.get("EOL", action))
+                    self.on_eol_op_changed()
+                    if "TIMEOUT" in kv: self.eol_timeout.setValue(int(float(kv["TIMEOUT"])))
+                    if "CH" in kv: self.eol_channel.setValue(int(float(kv["CH"])))
+                    if "TX_ID" in kv: self.eol_tx_id.setText(kv["TX_ID"])
+                    if "RX_ID" in kv: self.eol_rx_id.setText(kv["RX_ID"])
+                    
+                    mappings = [("0x06", ["ADC", "MODE"]), ("0x03", ["STATE"]), ("0x04", ["INDEX", "LEVEL"]), 
+                                ("0x05", ["PWM"]), ("0x10", ["NTC"]), ("0x0B", ["HALL"])]
+                    for code, keys in mappings:
+                        if code in str(kv.get("EOL", "")):
+                            for k in keys:
+                                if k in kv:
+                                    combo = self.eol_param1 if k in ["ADC", "STATE", "INDEX", "PWM", "NTC", "HALL"] else self.eol_param2
+                                    self._set_combo_by_value(combo, kv[k])
+            except: pass
         
-        if self.param_stack.currentIndex() == 8: # 老化板继电器通道还原
-            for cb in self.aging_relay_checks: cb.setChecked(False)
-            for s in params_str.split(","):
-                try:
-                    c_idx = int(s.strip()) - 1
-                    if 0 <= c_idx < 22: self.aging_relay_checks[c_idx].setChecked(True)
-                except: pass
-                
-        if "Type:" in params_str:
-            import re
-            type_match = re.search(r'Type:([^\s/]+)', params_str)
-            if type_match:
-                type_str = type_match.group(1)
-                for i in range(self.ca_type.count()):
-                    if self.ca_type.itemText(i).startswith(type_str):
-                        self.ca_type.setCurrentIndex(i)
-                        break
-        if "Val:" in params_str:
-            import re
-            val_match = re.search(r'Val:([\d.-]+)', params_str)
-            if val_match:
-                self.ca_val.setValue(float(val_match.group(1)))
-
-        if "Output:" in params_str:
-            out_str = params_str.split("Output:")[-1].split(" ")[0]
-            self.ca_output_state.setCurrentText(out_str)
-            
-        if "Range:" in params_str:
-            range_str = params_str.split("Range:")[-1].split(" ")[0]
-            self.ca_range.setCurrentText(range_str)
+        except Exception as e:
+            print(f"Error in _load_data: {e}")
+        finally:
+            self.is_loading = False
+            self.update()
 
     def on_category_changed(self, index=0):
         category = self.category_combo.currentText()
         self.sub_category_combo.setVisible(category == "设备操作")
         
+        self.sub_category_combo.clear()
         self.device_combo.clear()
+        
         if category == "设备操作":
-            self.on_sub_category_changed()
+            self.sub_category_combo.addItems(["AFE", "直流源", "高压源", "模拟电池", "继电器", "校准源"])
         elif category == "报文交互":
             self.device_combo.addItems(["CAN 交互"])
         elif category == "三方协议":
             self.device_combo.addItems(["智界EOL协议"])
         elif category == "通用交互":
-            self.device_combo.addItems(["等待 (Wait)", "同步屏障 (Synchronization Barrier)"])
+            self.device_combo.addItems(["等待 (Wait)"])
         
-        self.on_device_changed()
+        if not self.is_loading:
+            if category == "设备操作":
+                self.on_sub_category_changed()
+            else:
+                self.on_device_changed()
 
     def on_sub_category_changed(self, index=0):
         if self.category_combo.currentText() != "设备操作": return
@@ -747,7 +717,8 @@ class StepDialog(QDialog):
         elif sub_cat == "直流源":
             self.device_combo.addItems(["控制板供电电源 (Control Power)", "主机板电源 (Main Power)"])
         
-        self.on_device_changed()
+        if not self.is_loading:
+            self.on_device_changed()
 
     def on_device_changed(self, index=0):
         self.action_combo.clear()
@@ -764,8 +735,6 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据"])
         elif "等待" in device_text:
             self.action_combo.addItems(["固定延时"])
-        elif "同步屏障" in device_text:
-            self.action_combo.addItems(["等待全通道同步"])
         elif "Easy320" in device_text:
             self.action_combo.addItems(["闭合勾选通道", "断开勾选通道", "全部断开"])
         elif "老化" in device_text:
@@ -780,7 +749,8 @@ class StepDialog(QDialog):
             else:
                 self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
         
-        self.on_action_changed()
+        if not self.is_loading:
+            self.on_action_changed()
 
     def on_action_changed(self):
         device = self.device_combo.currentText()

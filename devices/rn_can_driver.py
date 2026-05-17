@@ -274,21 +274,21 @@ class RNCANDriver:
                 )
 
     def wait_for_message(self, can_id: Optional[int] = None, channel_id: Optional[int] = None,
-                         predicate: Optional[Callable[[dict], bool]] = None, timeout: float = 1.0,
-                         since_time: Optional[float] = None) -> Optional[dict]:
+                          predicate: Optional[Callable[[dict], bool]] = None, timeout: float = 1.0,
+                          since_time: Optional[float] = None, consume: bool = False) -> Optional[dict]:
         """等待符合条件的 CAN 报文"""
         deadline = time.time() + max(0.0, timeout)
         
-        # 如果未提供起始时间，则以当前时间为准 (减去一点冗余防止竞态)
-        start_time = since_time if since_time is not None else (time.time() - 0.050)
+        # 如果未提供起始时间，则以当前时间为准 (减去极小冗余防止竞态)
+        start_time = since_time if since_time is not None else (time.time() - 0.005)
         
         while time.time() < deadline:
             with self._rx_condition:
                 # 检查队列中是否有符合条件的报文
-                # 我们从后往前查，寻找最新且符合条件的
-                for msg in reversed(self._rx_history):
-                    # 只处理本次调用之后收到的报文 (容差 5ms)
-                    if msg.get('timestamp_rel', 0) < start_time - 0.005:
+                match_index = -1
+                for i, msg in enumerate(reversed(self._rx_history)):
+                    # 只处理本次调用之后收到的报文 (容差缩减至 1ms)
+                    if msg.get('timestamp_rel', 0) < start_time - 0.001:
                         break
                         
                     if can_id is not None and msg.get('can_id') != can_id:
@@ -298,10 +298,23 @@ class RNCANDriver:
                     
                     if predicate:
                         try:
-                            if predicate(msg): return msg
+                            if predicate(msg):
+                                match_index = len(self._rx_history) - 1 - i
+                                break
                         except: continue
                     else:
-                        return msg
+                        match_index = len(self._rx_history) - 1 - i
+                        break
+                
+                if match_index != -1:
+                    matched_msg = self._rx_history[match_index]
+                    if consume:
+                        # 消耗性读取：从历史记录中移除该报文
+                        # 重新构建 deque 以移除特定索引 (deque 不支持直接 pop(i))
+                        new_history = list(self._rx_history)
+                        new_history.pop(match_index)
+                        self._rx_history = deque(new_history, maxlen=self._rx_history.maxlen)
+                    return matched_msg
                 
                 # 如果没找到，等待新报文
                 remaining = deadline - time.time()
