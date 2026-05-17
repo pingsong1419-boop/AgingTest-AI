@@ -179,8 +179,7 @@ class RNCANDriver:
                             self._rx_condition.notify_all()
                     else:
                         print(f"[RNCAN] CRC ERROR: calc=0x{crc_calc:04X}, rec=0x{crc_received:04X}")
-                        if self.on_message_received:
-                            self.on_message_received(msg_info)
+                        # BUG-03修复: CRC失败时msg_info未赋值，不能触发回调
 
                     # 移除已处理的帧
                     buffer = buffer[total_frame_size:]

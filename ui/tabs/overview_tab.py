@@ -202,15 +202,21 @@ class OverviewTab(QWidget):
         self.grid_layout.setSpacing(15)  # 增加卡片之间的横纵间距
         self.grid_layout.setContentsMargins(20, 20, 20, 20) # 增加周围的留白
         
+        # BUG-13修复: 从配置动态读取活跃通道数，不再硬编码
+        active_channels = 48  # 默认值
+        if self.db_manager:
+            cfg = self.db_manager.load_sys_config()
+            active_channels = int(cfg.get("active_channels", 48))
+
         # 初始化 60 个通道的监控卡片
         self.channel_widgets = []
         columns = 5  # 每行改为 5 个通道
         for i in range(60):
             ch_id = i + 1
             ch_widget = ChannelWidget(ch_id)
-            
-            # 禁用 CH-49 至 CH-60
-            if ch_id > 48:
+
+            # 超出配置通道数的工位禁用
+            if ch_id > active_channels:
                 ch_widget.setEnabled(False)
                 ch_widget.set_status("已禁用", "#555555")
                 ch_widget.setStyleSheet("background-color: #121212; border: 1px solid #222222; border-radius: 12px;")

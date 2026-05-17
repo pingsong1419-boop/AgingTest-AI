@@ -2,11 +2,9 @@ from .lingtu_66100 import Lingtu66100
 from .ngi_n3618 import NGIN3618
 from .afe_power_ru36 import AFEPowerRU36
 from .mainboard_power_ru60 import MainboardPowerRU60
-from .mainboard_power_ru60 import MainboardPowerRU60
 from .aging_board_driver import AgingBoardController
 from .ca550_driver import CA550Controller
 from .easy320_driver import Easy320Controller
-from .afe_power_driver import AFEPowerController
 from .power_board_ru12 import PowerBoardRU12
 from .control_board import ControlBoard
 
@@ -53,10 +51,7 @@ class DeviceManager:
             Lingtu66100(sim2_ip, sim2_port),
             Lingtu66100(sim3_ip, sim3_port)
         ]
-        # 尝试后台联机
-        import threading
-        for sim in self.simulators:
-            threading.Thread(target=sim.connect, daemon=True).start()
+        # BUG-11修复: 删除后台线程connect，避免与init_all_devices的串行connect产生竞态
 
         # 2. NGI 高压源
         hv_ip = cfg.get("hv_ip", "192.168.1.190")

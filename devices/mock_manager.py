@@ -1,5 +1,50 @@
 import random
-import time
+
+# BUG-12修复: 补全所有 DeviceManager 的公共属性和方法，防止 Dry Run 崩溃
+
+def _make_mock_power():
+    return type('MockPower', (), {
+        'set_voltage': lambda *a, **k: True,
+        'set_current': lambda *a, **k: True,
+        'output_control': lambda *a, **k: True,
+        'measure_voltage': lambda *a, **k: 12.0,
+        'measure_current': lambda *a, **k: 1.0,
+        'is_connected': True,
+        'connect': lambda *a: True,
+        'disconnect': lambda *a: None,
+    })()
+
+def _make_mock_sim():
+    return type('MockSim', (), {
+        'is_connected': True,
+        'set_voltage': lambda *a, **k: True,
+        'set_current_limit': lambda *a, **k: True,
+        'set_range': lambda *a, **k: True,
+        'output_control': lambda *a, **k: True,
+        'measure_voltage': lambda *a, **k: 3.7 + random.uniform(-0.01, 0.01),
+        'measure_current': lambda *a, **k: 0.0,
+        'connect': lambda *a: True,
+        'disconnect': lambda *a: None,
+    })()
+
+def _make_mock_board():
+    return type('MockBoard', (), {
+        'is_connected': True,
+        'connect': lambda *a: True,
+        'disconnect': lambda *a: None,
+        'can': type('MockCAN', (), {
+            'send_can_message': lambda *a, **k: True,
+            'send_and_wait_response': lambda *a, **k: {'data': b'\x00' * 8},
+            'wait_for_message': lambda *a, **k: {'data': b'\x00' * 8},
+            'clear_rx_history': lambda *a: None,
+        })(),
+        'relays': type('MockRelays', (), {
+            'set_relay_by_name': lambda *a, **k: True,
+            'all_off': lambda *a, **k: True,
+            'write_relay': lambda *a, **k: True,
+        })(),
+    })()
+
 
 class MockDeviceManager:
     """
@@ -8,13 +53,38 @@ class MockDeviceManager:
     """
     def __init__(self):
         self.is_virtual = True
-        self.afe_power_1 = type('MockPower', (), {'set_voltage': lambda *a, **k: True, 'output_control': lambda *a, **k: True, 'read_voltage': lambda *a, **k: 12.0, 'read_current': lambda *a, **k: 1.0, 'is_connected': True})()
-        self.mainboard_power = type('MockPower', (), {'set_voltage': lambda *a, **k: True, 'output_control': lambda *a, **k: True, 'read_voltage': lambda *a, **k: 12.0, 'read_current': lambda *a, **k: 1.0, 'is_connected': True})()
-        self.hv_source = type('MockPower', (), {'set_voltage': lambda *a, **k: True, 'output_control': lambda *a, **k: True, 'read_voltage': lambda *a, **k: 12.0, 'read_current': lambda *a, **k: 1.0, 'is_connected': True})()
-        self.aging_board = type('MockAging', (), {'set_relay_by_name': lambda *a, **k: True, 'all_off': lambda *a, **k: True})()
-        self.easy320 = type('MockEasy', (), {'write_relay': lambda *a, **k: True, 'read_relays': lambda *a, **k: [True]*32})()
-        self.ca550 = type('MockCA550', (), {'set_source_func': lambda *a, **k: True, 'set_source_data': lambda *a, **k: True, 'set_source_output': lambda *a, **k: True, 'read_measure_data': lambda *a, **k: "12.345"})()
-        
+        self.afe_power_1 = _make_mock_power()
+        self.afe_pwr_2 = _make_mock_power()
+        self.afe_pwr_3 = _make_mock_power()
+        self.dut_power = _make_mock_power()
+        self.ctrl_board_power = _make_mock_power()
+        self.hv_source = _make_mock_power()
+        self.simulators = [_make_mock_sim() for _ in range(3)]
+        self.boards = {i: _make_mock_board() for i in range(1, 61)}
+        self.easy320 = type('MockEasy', (), {
+            'write_relay': lambda *a, **k: True,
+            'read_relays': lambda *a, **k: [True] * 32,
+            'batch_control': lambda *a, **k: True,
+            'is_connected': True,
+        })()
+        self.ca550 = type('MockCA550', (), {
+            'set_source_func': lambda *a, **k: True,
+            'set_source_range': lambda *a, **k: True,
+            'set_source_data': lambda *a, **k: True,
+            'set_source_output': lambda *a, **k: True,
+            'read_measure_data': lambda *a, **k: '12.345',
+            'is_connected': True,
+            'port': 'MOCK',
+        })()
+
+    def _get_sim_and_ch(self, global_ch: int):
+        """路由到虚拟模拟器"""
+        unit_index = (global_ch - 1) // 18
+        local_ch = (global_ch - 1) % 18 + 1
+        if unit_index < len(self.simulators):
+            return self.simulators[unit_index], local_ch
+        return None, None
+
     def set_voltage(self, global_ch, voltage, logger=None):
         if logger: logger(f"[仿真] 设置通道 {global_ch} 电压为 {voltage}V")
         return True
@@ -37,13 +107,27 @@ class MockDeviceManager:
         if logger: logger(f"[仿真] 读取通道 {global_ch} 电流: {val:.3f}A")
         return val
 
-    def broadcast_output(self, state):
-        print(f"[仿真] 全局输出控制: {state}")
+    def broadcast_voltage(self, voltage, logger=None):
+        if logger: logger(f"[仿真] 广播电压: {voltage}V")
         return True
 
-    def init_all_devices(self):
-        print("[仿真] 正在初始化虚拟硬件...")
+    def broadcast_current(self, current, logger=None):
+        if logger: logger(f"[仿真] 广播电流: {current}A")
+        return True
+
+    def broadcast_range(self, range_str, logger=None):
+        return True
+
+    def broadcast_output(self, state, logger=None):
+        if logger: logger(f"[仿真] 全局输出控制: {state}")
+        return True
+
+    def init_all_devices(self, logger=None):
+        if logger: logger("[仿真] 正在初始化虚拟硬件...")
         return True
 
     def disconnect_all(self):
         print("[仿真] 正在断开虚拟硬件...")
+
+    def get_all_device_status(self):
+        return [{"name": "虚拟设备", "info": "Dry Run 模式", "status": "仿真中", "color": "#4ECCA3"}]

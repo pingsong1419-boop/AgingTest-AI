@@ -99,6 +99,9 @@ class DBManager:
 
                 sql, params, callback_event, result_container = task
                 
+                if sql is None:
+                    # BUG-09修复: 收到None哨兵信号，立即退出
+                    break
                 try:
                     cursor.execute(sql, params)
                     if "INSERT" in sql.upper():
@@ -125,10 +128,11 @@ class DBManager:
         conn.close()
 
     def close(self):
-        """停止后台线程并关闭数据库"""
+        """BUG-09修复: 先投入哨兵信号唤醒工作线程，再 join，防止大量队列时卡住"""
         self.is_running = False
+        self.queue.put((None, None, None, None))  # 哨兵信号
         if self.worker_thread.is_alive():
-            self.worker_thread.join()
+            self.worker_thread.join(timeout=5.0)
 
     def _execute_async(self, sql: str, params: tuple = (), wait: bool = False) -> Any:
         """内部通用异步执行方法"""

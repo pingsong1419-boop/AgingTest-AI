@@ -99,14 +99,15 @@ class EOLProtocol:
 
         raw = msg.get("data", b"")
         response_code = raw[3] if len(raw) >= 4 else None
-        payload = raw[4:] if len(raw) > 4 else b""
+        # BUG-16修复: 用 response_payload 命名，避免遮蔽函数形参 payload
+        response_payload = raw[4:] if len(raw) > 4 else b""
         if response_code != self.POSITIVE_RESPONSE:
-            return EOLResult(False, response_code=response_code, payload=payload, raw_data=raw, error=f"EOL否定响应: 0x{response_code:02X}" if response_code is not None else "EOL响应格式错误")
+            return EOLResult(False, response_code=response_code, payload=response_payload, raw_data=raw, error=f"EOL否定响应: 0x{response_code:02X}" if response_code is not None else "EOL响应格式错误")
 
-        value = payload.hex(" ").upper()
+        value = response_payload.hex(" ").upper()
         if decoder:
             value = decoder(raw)
-        return EOLResult(True, response_code=response_code, payload=payload, raw_data=raw, value=value)
+        return EOLResult(True, response_code=response_code, payload=response_payload, raw_data=raw, value=value)
 
     def execute(self, op_name: str, timeout: float = 1.0, logger: Callable[[str], None] = None, **kwargs) -> EOLResult:
         if op_name not in self.operations:

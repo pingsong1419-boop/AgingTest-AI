@@ -535,7 +535,8 @@ class StepDialog(QDialog):
             # 1. 还原一级分类 (Category)
             category = "设备操作"
             if "CAN" in device or "报文" in device: category = "报文交互"
-            elif "EOL" in step_type or "智界EOL" in device or "EOL" in kv: category = "三方协议"
+            # BUG-15修复: 统一用step_type和device字段判断，不再依赖kv字典的键名匹配
+            elif "智界EOL" in device or "EOL" in step_type: category = "三方协议"
             elif "等待" in device or "固定延时" in action: category = "通用交互"
             
             self.category_combo.setCurrentText(category)
@@ -893,9 +894,6 @@ class StepDialog(QDialog):
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")
-        elif idx == 4: # 继电器
-            step_type = "继电器控制"
-            params.append(f"CH:{self.r_channel.value()}")
         elif idx == 5: # CA550
             step_type = "校准仪设置"
             params.append(f"Type:{self.ca_type.currentText().split(' ')[0]}")
