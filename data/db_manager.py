@@ -71,14 +71,16 @@ class DBManager:
             )
         ''')
         
-        # 兼容性迁移：检查是否包含 duration 列，若无则 Alter Table 增加
+        # 兼容性迁移：检查是否包含 duration 列和 unit 列，若无则 Alter Table 增加
         try:
             cursor.execute("PRAGMA table_info(test_items_results)")
             columns = [col[1] for col in cursor.fetchall()]
             if "duration" not in columns:
                 cursor.execute("ALTER TABLE test_items_results ADD COLUMN duration REAL DEFAULT 0.0")
+            if "unit" not in columns:
+                cursor.execute("ALTER TABLE test_items_results ADD COLUMN unit TEXT DEFAULT 'NULL'")
         except Exception as migration_err:
-            print(f"[-] 数据库迁移报错 (duration列): {migration_err}")
+            print(f"[-] 数据库迁移报错 (兼容列迁移): {migration_err}")
         
         conn.commit()
         conn.close()
@@ -169,14 +171,14 @@ class DBManager:
         params = (test_id, step_name, voltage, current, temp, now)
         self._execute_async(sql, params, wait=False)
 
-    def log_item_result(self, test_id: int, name: str, low: float, high: float, val: float, res: str, duration: float = 0.0):
+    def log_item_result(self, test_id: int, name: str, low: float, high: float, val: float, res: str, duration: float = 0.0, unit: str = "NULL"):
         """记录某个测试项目的最终判定结果 (异步不等待)"""
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sql = '''
-            INSERT INTO test_items_results (test_id, item_name, lower_limit, upper_limit, measured_value, result, duration, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO test_items_results (test_id, item_name, lower_limit, upper_limit, measured_value, result, duration, unit, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         '''
-        params = (test_id, name, low, high, val, res, duration, now)
+        params = (test_id, name, low, high, val, res, duration, unit, now)
         self._execute_async(sql, params, wait=False)
 
     def finish_test(self, test_id: int, result: str):
@@ -210,7 +212,7 @@ class DBManager:
         end_time_str = main_info[7] or "未知结束时间"
         overall_result = main_info[8] or "RUNNING"
         
-        cursor.execute("SELECT item_name, lower_limit, upper_limit, measured_value, result, duration, timestamp FROM test_items_results WHERE test_id = ?", (test_id,))
+        cursor.execute("SELECT item_name, lower_limit, upper_limit, measured_value, result, duration, timestamp, unit FROM test_items_results WHERE test_id = ?", (test_id,))
         items = cursor.fetchall()
         conn.close()
         
@@ -257,11 +259,13 @@ class DBManager:
                 writer.writerow(["测试总判定", overall_result])
                 writer.writerow([])
                 writer.writerow(["详细判定数据"])
-                writer.writerow(["测试项名称", "下限", "上限", "测量值", "判定结果", "执行时间(秒)", "记录时间"])
+                writer.writerow(["测试项名称", "单位", "下限", "上限", "测量值", "判定结果", "执行时间(秒)", "记录时间"])
                 
                 for item in items:
+                    unit_str = item[7] if len(item) > 7 and item[7] is not None else "NULL"
                     writer.writerow([
                         item[0],
+                        unit_str,
                         item[1] if item[1] is not None else "--",
                         item[2] if item[2] is not None else "--",
                         item[3] if item[3] is not None else "--",
@@ -377,7 +381,7 @@ class DBManager:
             <div class="info-item"><span class="info-label">主机条码:</span>{master_code}</div>
 {slaves_html_items}            <div class="info-item"><span class="info-label">测试配方:</span>{recipe_name}</div>
             <div class="info-item"><span class="info-label">测试总判定:</span>
-                <span class="result-badge {'result-pass' if overall_result == 'PASS' else 'result-ng' if overall_result == 'NG' else 'result-running'}">{overall_result}</span>
+                <span class="result-badge {'result-pass' if overall_result == 'PASS' else 'result-ng' if overall_result in ('NG', 'FAIL') else 'result-running'}">{overall_result}</span>
             </div>
             <div class="info-item"><span class="info-label">测试开始时间:</span>{start_time_str}</div>
             <div class="info-item"><span class="info-label">测试结束时间:</span>{end_time_str}</div>
@@ -388,6 +392,7 @@ class DBManager:
             <thead>
                 <tr>
                     <th>测试项名称</th>
+                    <th class="text-center">单位</th>
                     <th class="text-center">下限</th>
                     <th class="text-center">上限</th>
                     <th class="text-center">测量值</th>
@@ -400,9 +405,11 @@ class DBManager:
                 
                 for item in items:
                     res_class = "result-pass" if item[4] == "PASS" else "result-ng"
+                    unit_str = item[7] if len(item) > 7 and item[7] is not None else "NULL"
                     f.write(f"""
                 <tr>
                     <td>{item[0]}</td>
+                    <td class="text-center">{unit_str}</td>
                     <td class="text-center">{item[1] if item[1] is not None else "--"}</td>
                     <td class="text-center">{item[2] if item[2] is not None else "--"}</td>
                     <td class="text-center">{item[3] if item[3] is not None else "--"}</td>

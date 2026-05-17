@@ -166,11 +166,16 @@ class ConfigTab(QWidget):
         for item_data in data.get("items", []):
             parent = QTreeWidgetItem([
                 item_data['name'],
-                item_data['mode'],
+                item_data.get('mode', '范围判定') if item_data.get('standard_type', '数值') == '数值' else '字符串比对',
                 item_data['min'],
                 item_data['max'],
                 item_data['strategy']
             ])
+            # 存储新字段元数据到 UserRole
+            parent.setData(0, Qt.UserRole, item_data.get("standard_type", "数值"))
+            parent.setData(1, Qt.UserRole, item_data.get("retry_count", "不复测"))
+            parent.setData(2, Qt.UserRole, item_data.get("unit", "NULL"))
+            
             parent.setForeground(0, QColor("#00E5FF"))
             font = QFont()
             font.setBold(True)
@@ -288,6 +293,9 @@ class ConfigTab(QWidget):
                 "min": item.text(2),
                 "max": item.text(3),
                 "strategy": item.text(4),
+                "standard_type": item.data(0, Qt.UserRole) or "数值",
+                "retry_count": item.data(1, Qt.UserRole) or "不复测",
+                "unit": item.data(2, Qt.UserRole) or "NULL",
                 "sub_steps": []
             }
             for i in range(item.childCount()):
@@ -321,6 +329,9 @@ class ConfigTab(QWidget):
             new_item = QTreeWidgetItem([
                 data['name'], data['mode'], data['min'], data['max'], data['strategy']
             ])
+            new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
+            new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
+            new_item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
             new_item.setForeground(0, QColor("#00E5FF"))
             font = QFont()
             font.setBold(True)
@@ -508,6 +519,9 @@ class ConfigTab(QWidget):
                 "min": item_node.text(2),
                 "max": item_node.text(3),
                 "strategy": item_node.text(4),
+                "standard_type": item_node.data(0, Qt.UserRole) or "数值",
+                "retry_count": item_node.data(1, Qt.UserRole) or "不复测",
+                "unit": item_node.data(2, Qt.UserRole) or "NULL",
                 "sub_steps": []
             }
             
@@ -549,13 +563,19 @@ class ConfigTab(QWidget):
         dialog = TestItemDialog(self)
         if dialog.exec():
             data = dialog.get_data()
+            mode_text = "范围判定" if data['standard_type'] == "数值" else "字符串比对"
             item = QTreeWidgetItem([
                 data['name'], 
-                "范围判定", 
+                mode_text, 
                 str(data['min']), 
                 str(data['max']), 
                 data['strategy']
             ])
+            # 存储新字段元数据
+            item.setData(0, Qt.UserRole, data['standard_type'])
+            item.setData(1, Qt.UserRole, data['retry_count'])
+            item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
+            
             item.setForeground(0, QColor("#00E5FF"))
             font = QFont()
             font.setBold(True)
@@ -617,15 +637,24 @@ class ConfigTab(QWidget):
                 'name': item.text(0),
                 'min': item.text(2),
                 'max': item.text(3),
-                'strategy': item.text(4)
+                'strategy': item.text(4),
+                'standard_type': item.data(0, Qt.UserRole) or '数值',
+                'retry_count': item.data(1, Qt.UserRole) or '不复测',
+                'unit': item.data(2, Qt.UserRole) or 'NULL'
             }
             dialog = TestItemDialog(self, data=data)
             if dialog.exec():
                 new_data = dialog.get_data()
                 item.setText(0, new_data['name'])
+                item.setText(1, "范围判定" if new_data['standard_type'] == "数值" else "字符串比对")
                 item.setText(2, str(new_data['min']))
                 item.setText(3, str(new_data['max']))
                 item.setText(4, new_data['strategy'])
+                
+                # 保存新字段元数据
+                item.setData(0, Qt.UserRole, new_data['standard_type'])
+                item.setData(1, Qt.UserRole, new_data['retry_count'])
+                item.setData(2, Qt.UserRole, new_data.get('unit', 'NULL'))
         else:
             # 这是一个『子工步』(Child)
             from ui.dialogs.step_dialog import StepDialog

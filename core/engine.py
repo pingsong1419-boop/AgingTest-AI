@@ -21,6 +21,7 @@ class SubStepType(Enum):
     READ_INSTRUMENT = "读取仪表"
     CAN_SEND = "CAN发送"
     CAN_INTERACT = "CAN交互"
+    CAN_RECEIVE = "CAN接收"
     EOL_PROTOCOL = "智界EOL协议"
     WAIT = "等待"
     BARRIER = "同步屏障"
@@ -45,6 +46,9 @@ class TestStep:
         self.sub_steps: List[SubStep] = []
         self.min_limit = None
         self.max_limit = None
+        self.standard_type = "数值"
+        self.retry_count = "不复测"
+        self.unit = "NULL"
 
     def add_sub_step(self, sub_step: SubStep):
         self.sub_steps.append(sub_step)
@@ -52,7 +56,7 @@ class TestStep:
 class ChannelWorker(QObject):
     step_started = Signal(int, str)
     progress_updated = Signal(int, float, dict)
-    step_finished = Signal(int, str, bool)
+    step_finished = Signal(int, str, bool, object)
     sub_step_finished = Signal(int, int, int, str, object)
     test_finished = Signal(int, bool)
     log_message = Signal(int, str)
@@ -72,16 +76,18 @@ class ChannelWorker(QObject):
         self.current_step_results = []
         self.test_id = -1
         self._retry_count = 0
+        self.step_retry_count = 0
         self.last_hw_log = ""
         
         # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
         self.log_history = []
         self.step_statuses = {}
         self.sub_step_statuses = {}
+        self.step_measured_values = {}
         self.current_progress = 0.0
         self.step_start_times = {}
         self.log_message.connect(lambda _, msg: self.log_history.append(msg))
-        self.step_finished.connect(lambda _, name, is_pass: self.step_statuses.__setitem__(name, is_pass))
+        self.step_finished.connect(lambda _, name, is_pass, val: (self.step_statuses.__setitem__(name, is_pass), self.step_measured_values.__setitem__(name, val)))
         self.sub_step_finished.connect(lambda _, step_idx, sub_idx, status, result: self.sub_step_statuses.__setitem__((step_idx, sub_idx), (status, result)))
         self.progress_updated.connect(lambda _, prog, __: setattr(self, "current_progress", prog))
 
@@ -116,9 +122,20 @@ class ChannelWorker(QObject):
             return
 
         if self.current_step_index >= len(self.steps):
-            self.test_finished.emit(self.channel_id, True)
+            # 判定是否有任何一个测试项是不合格的 (is_pass == False)
+            has_ng = False
+            for step_name, is_pass in self.step_statuses.items():
+                if not is_pass:
+                    has_ng = True
+                    break
+            
+            final_success = not has_ng
+            self.test_finished.emit(self.channel_id, final_success)
+            
             if self.db_manager and self.test_id != -1:
-                self.db_manager.finish_test(self.test_id, "PASS" if self.is_running else "STOPPED")
+                final_status = "FAIL" if has_ng else "PASS"
+                self.db_manager.finish_test(self.test_id, final_status if self.is_running else "STOPPED")
+                self.test_id = -1
             return
 
         step = self.steps[self.current_step_index]
@@ -249,6 +266,9 @@ class ChannelWorker(QObject):
                 self.is_waiting_for_sync = True
                 self.reached_barrier.emit(self.channel_id, sub_step)
                 self.log_message.emit(self.channel_id, "[#] 进入同步屏障，等待其他通道...")
+                # 触发状态收集和广播，防止前台显示卡死
+                self.current_step_results.append("PASS")
+                self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS", None)
                 return True, None
 
             if sub_step.type == SubStepType.SET_INSTRUMENT:
@@ -450,6 +470,19 @@ class ChannelWorker(QObject):
                     result_value = msg.get("data", b"").hex(" ").upper() if msg else "TIMEOUT"
                     hw_logger(f"CAN REQ CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} WAIT=0x{w_id:X} => {result_value}")
 
+            elif sub_step.type == SubStepType.CAN_RECEIVE:
+                board = self._get_can_board(mgr)
+                cfg = self._parse_can_params(params)
+                board.can.clear_rx_history(cfg["can_id"])
+                msg = board.can.wait_for_message(
+                    can_id=cfg["can_id"],
+                    channel_id=cfg["channel_id"],
+                    timeout=cfg["timeout"]
+                )
+                success = msg is not None
+                result_value = "PASS" if success else "FAIL"
+                hw_logger(f"CAN RX_WAIT CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} => {result_value}")
+
             elif sub_step.type == SubStepType.EOL_PROTOCOL:
                 success, result_value = self._execute_eol_protocol(mgr, params, hw_logger)
 
@@ -466,13 +499,25 @@ class ChannelWorker(QObject):
                             if rem % 1000 == 0 or rem == ms: self.log_message.emit(self.channel_id, f"      [倒计时] 剩余 {rem/1000:.0f}s...")
                             i = min(1000, rem); rem -= i; QTimer.singleShot(i, tick)
                     tick()
+                # 触发状态收集和广播，防止前台显示卡死
+                self.current_step_results.append("PASS")
+                self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS", None)
                 return True, None
 
         except Exception as e:
             self.log_message.emit(self.channel_id, f"[!] 执行异常: {str(e)}"); success = False
 
-        if success and params.get("is_judgment") and result_value is not None:
-            self.current_step_results.append(result_value)
+        # 无条件收集每一个子工步的执行结果与数据，由最终提取层进行智能精细化提取
+        if success:
+            val = result_value if result_value is not None and result_value != "" else "PASS"
+        else:
+            val = "FAIL"
+        
+        if sub_step.type == SubStepType.CAN_RECEIVE:
+            val = "PASS" if success else "FAIL"
+            
+        self.current_step_results.append(val)
+
         self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS" if success else "FAIL", result_value)
         return success, result_value
 
@@ -483,6 +528,8 @@ class ChannelWorker(QObject):
         if is_sync and not ignore_sync:
             self.is_waiting_for_sync = True
             self.log_message.emit(self.channel_id, f"      [同步] 等待所有活跃通道集齐...")
+            # 提前发射“同步等待中”的状态广播，防止前台显示待命/卡死
+            self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "同步等待", None)
             self.reached_barrier.emit(self.channel_id, sub_step)
             return
 
@@ -499,7 +546,8 @@ class ChannelWorker(QObject):
             if sub_step.fail_strategy == SubStepFailStrategy.RETRY_3 and self._retry_count < 3:
                 self._retry_count += 1
                 self.log_message.emit(self.channel_id, f"[!] 子工步执行失败，第 {self._retry_count} 次重试...")
-                QTimer.singleShot(500, lambda: self.execute_sub_step(sub_step))
+                # 重试时以 ignore_sync=True 执行，防止因重复进入同步挂起导致死锁卡死！
+                QTimer.singleShot(500, lambda: self.execute_sub_step(sub_step, ignore_sync=True))
                 return
             self._retry_count = 0
             if sub_step.fail_strategy == SubStepFailStrategy.CONTINUE: self.on_sub_step_complete()
@@ -513,33 +561,94 @@ class ChannelWorker(QObject):
     def on_step_complete(self, is_pass: bool = True):
         if not self.is_running: return
         step = self.steps[self.current_step_index]
+        
+        # 1. 区分标准类型执行判定
         if is_pass and self.current_step_results:
             for val in self.current_step_results:
-                f_val = self._parse_numeric(val)
-                if step.min_limit is not None and f_val < float(step.min_limit): is_pass = False
-                if step.max_limit is not None and f_val > float(step.max_limit): is_pass = False
+                if getattr(step, "standard_type", "数值") == "字符串":
+                    # 字符串精确相等比对 (不区分首尾空格)
+                    target = str(step.min_limit or "").strip()
+                    actual = str(val or "").strip()
+                    if target != actual:
+                        is_pass = False
+                else:
+                    # 数值范围判定
+                    f_val = self._parse_numeric(val)
+                    try:
+                        if step.min_limit is not None and f_val < float(step.min_limit): is_pass = False
+                    except: pass
+                    try:
+                        if step.max_limit is not None and f_val > float(step.max_limit): is_pass = False
+                    except: pass
+                    
+        # 2. 检查 NG 复测策略
+        import time
+        max_retries = 0
+        retry_str = getattr(step, "retry_count", "不复测")
+        if retry_str == "复测1次": max_retries = 1
+        elif retry_str == "复测3次": max_retries = 3
+        
+        if not is_pass and self.step_retry_count < max_retries:
+            self.step_retry_count += 1
+            self.log_message.emit(self.channel_id, f"[!] 测试项【{step.name}】判定为NG，触发复测机制 (当前第 {self.step_retry_count} 次复测，上限 {max_retries} 次)...")
+            self.current_sub_step_index = 0
+            self.current_step_results.clear()
+            if not hasattr(self, "step_start_times"): self.step_start_times = {}
+            self.step_start_times[step.name] = time.time()
+            # 重新执行该工步的第一个子工步
+            self.run_next_sub_step()
+            return
+            
+        # 走到这里，要么 PASS，要么已经耗尽全部复测次数。重置当前测试项的复测计数
+        self.step_retry_count = 0
                 
         # 计算用时
-        import time
         start_time = getattr(self, "step_start_times", {}).get(step.name, time.time())
         duration = round(time.time() - start_time, 2)
         
-        # 始终将测试项判定记录写入数据库，以供报告生成使用
+        # 智能提取层：优先挑选包含实际数值/物理量数据（非 PASS、非 FAIL、非 None）的结果
+        val = None
+        if self.current_step_results:
+            for r in self.current_step_results:
+                if r is not None and r != "" and r != "PASS" and r != "FAIL":
+                    val = r
+                    break
+            # 若无任何子工步实际数据返回，则使用最后一个子工步的执行结论作为测量值兜底
+            if val is None:
+                val = self.current_step_results[-1]
+
+        if getattr(step, "standard_type", "数值") == "字符串":
+            val_to_log = val
+        else:
+            # 智能识别非纯数字测量值（包含 PASS, FAIL, 字母等）
+            if isinstance(val, str) and any(c.isalpha() for c in val):
+                val_to_log = val
+            else:
+                val_to_log = self._parse_numeric(val) if val is not None else None
+
+        # 3. 始终将测试项判定记录写入数据库，以供报告生成使用
         if self.db_manager and self.test_id != -1:
-            val = self.current_step_results[0] if self.current_step_results else None
-            min_lim = float(step.min_limit) if step.min_limit is not None else None
-            max_lim = float(step.max_limit) if step.max_limit is not None else None
+            if getattr(step, "standard_type", "数值") == "字符串":
+                min_lim = step.min_limit
+                max_lim = step.max_limit
+            else:
+                try: min_lim = float(step.min_limit) if step.min_limit is not None else None
+                except: min_lim = None
+                try: max_lim = float(step.max_limit) if step.max_limit is not None else None
+                except: max_lim = None
+                
             self.db_manager.log_item_result(
                 self.test_id, 
                 step.name, 
                 min_lim, 
                 max_lim, 
-                self._parse_numeric(val) if val is not None else None, 
+                val_to_log, 
                 "PASS" if is_pass else "NG",
-                duration
+                duration,
+                unit=getattr(step, "unit", "NULL")
             )
             
-        self.step_finished.emit(self.channel_id, step.name, is_pass)
+        self.step_finished.emit(self.channel_id, step.name, is_pass, val_to_log)
         if not is_pass and step.ng_strategy == NGStrategy.STOP_ON_ANY:
             self.log_message.emit(self.channel_id, f"[!] 触发NG停止策略: {step.name}")
             if self.db_manager and self.test_id != -1:
@@ -632,6 +741,11 @@ class TestEngine(QObject):
                                     def make_release(target_w=w, success=master_success, res=master_result):
                                         def do_release():
                                             if target_w.channel_id != exec_cid:
+                                                # 为 Slave 通道高保真追加真实测试结果，彻底防止误判NG
+                                                val = "PASS" if success else "FAIL"
+                                                if res is not None and res != "":
+                                                    val = res
+                                                target_w.current_step_results.append(val)
                                                 target_w.sub_step_finished.emit(target_w.channel_id, target_w.current_step_index, target_w.current_sub_step_index, "PASS" if success else "FAIL", res)
                                             target_w.resume_from_sync()
                                             self.channel_sync_status_changed.emit(target_w.channel_id, False)
@@ -672,6 +786,9 @@ class TestEngine(QObject):
                     
         steps = []
         for item in recipe_data:
+            name = item.get('name', '')
+            if name.strip().startswith("#"):
+                continue  # 禁用项，完全不测试，不加载，不显示！
             s_str = item.get('strategy', "任何NG停止")
             strategy = NGStrategy.STOP_ON_ANY
             for s in NGStrategy:
@@ -679,11 +796,15 @@ class TestEngine(QObject):
             step = TestStep(item['name'], StepType.CUSTOM, ng_strategy=strategy)
             step.min_limit = item.get('min') if item.get('min') != "--" else None
             step.max_limit = item.get('max') if item.get('max') != "--" else None
+            step.standard_type = item.get('standard_type', "数值")
+            step.retry_count = item.get('retry_count', "不复测")
+            step.unit = item.get('unit', "NULL")
             for sub in item.get('sub_steps', []):
                 stype, t_str, p_str = SubStepType.SET_INSTRUMENT, sub.get('type', ""), str(sub.get('params', ""))
                 if "智界EOL" in t_str or "EOL协议" in t_str: stype = SubStepType.EOL_PROTOCOL
                 elif "读取" in t_str: stype = SubStepType.READ_INSTRUMENT
                 elif "CAN发送" in t_str: stype = SubStepType.CAN_SEND
+                elif "CAN接收" in t_str or "接收指定帧ID" in t_str: stype = SubStepType.CAN_RECEIVE
                 elif "CAN交互" in t_str: stype = SubStepType.EOL_PROTOCOL if "EOL:" in p_str.upper() else SubStepType.CAN_INTERACT
                 elif "等待" in t_str: stype = SubStepType.WAIT
                 elif "同步屏障" in t_str: stype = SubStepType.BARRIER

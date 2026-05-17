@@ -271,6 +271,12 @@ class MonitorDialog(QDialog):
                     item.setText(4, "PASS" if is_pass else "NG")
                     item.setForeground(4, QColor("#4ECCA3") if is_pass else QColor("#FF4C29"))
                     
+                    # 还原历史测量值到界面上！
+                    measured_val = getattr(worker, "step_measured_values", {}).get(step_name)
+                    if measured_val is not None:
+                        item.setText(3, str(measured_val))
+                        item.setForeground(3, QColor("#00E5FF"))
+                    
                 # 检查子工步状态
                 for sub_idx in range(item.childCount()):
                     sub_item = item.child(sub_idx)
@@ -351,9 +357,14 @@ class MonitorDialog(QDialog):
         self.step_tree.clear()
         self.step_items = {}
         self.sub_step_items = {}
-        for i, step in enumerate(steps_data):
+        actual_idx = 0
+        for step in steps_data:
+            name = step.get('name', '未命名')
+            if name.strip().startswith("#"):
+                continue  # 禁用项，待命监控状态下也彻底不显示！
+                
             parent = QTreeWidgetItem([
-                step.get('name', '未命名'), 
+                name, 
                 step.get('min', '--'), 
                 step.get('max', '--'), 
                 "--", 
@@ -361,13 +372,13 @@ class MonitorDialog(QDialog):
             ])
             
             # 如果之前是勾选状态，则保持
-            state = Qt.Checked if step.get('name', '未命名') in checked_names else Qt.Unchecked
+            state = Qt.Checked if name in checked_names else Qt.Unchecked
             
             parent.setCheckState(0, state)
             parent.setData(0, Qt.UserRole, step) # 直接存原始 dict
             parent.setBackground(0, QColor("#1F1F35"))
             self.step_tree.addTopLevelItem(parent)
-            self.step_items[i] = parent
+            self.step_items[actual_idx] = parent
             
             for j, sub in enumerate(step.get('sub_steps', [])):
                 child = QTreeWidgetItem([
@@ -375,7 +386,9 @@ class MonitorDialog(QDialog):
                     "--", "--", "--", "待命"
                 ])
                 parent.addChild(child)
-                self.sub_step_items[(i, j)] = child
+                self.sub_step_items[(actual_idx, j)] = child
+            
+            actual_idx += 1
         self.step_tree.expandAll()
 
     @Slot(int, str)
@@ -389,14 +402,17 @@ class MonitorDialog(QDialog):
                 item.setForeground(4, QColor("#00E5FF"))
                 self.step_tree.scrollToItem(item)
 
-    @Slot(int, str, bool)
-    def on_step_finished(self, ch_id, step_name, is_pass):
+    @Slot(int, str, bool, object)
+    def on_step_finished(self, ch_id, step_name, is_pass, measured_val):
         if ch_id != self.channel_id: return
         for i in range(self.step_tree.topLevelItemCount()):
             item = self.step_tree.topLevelItem(i)
             if step_name in item.text(0):
                 item.setText(4, "PASS" if is_pass else "NG")
                 item.setForeground(4, QColor("#4ECCA3") if is_pass else QColor("#FF4C29"))
+                if measured_val is not None:
+                    item.setText(3, str(measured_val))
+                    item.setForeground(3, QColor("#00E5FF"))
 
     @Slot(int, int, int, str, object)
     def on_sub_step_finished(self, ch_id, step_idx, sub_idx, status, result):

@@ -733,7 +733,7 @@ class StepDialog(QDialog):
                 "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 唤醒源读取"
             ])
         elif "CAN" in device_text:
-            self.action_combo.addItems(["发送指令", "交互/问答", "读取数据"])
+            self.action_combo.addItems(["发送指令", "交互/问答", "读取数据", "接收指定帧ID"])
         elif "等待" in device_text:
             self.action_combo.addItems(["固定延时"])
         elif "Easy320" in device_text:
@@ -772,6 +772,20 @@ class StepDialog(QDialog):
             self.eol_op.setVisible(False)
         elif "CAN" in device:
             self.param_stack.setCurrentIndex(1)
+            # 动态显示/隐藏不需要的输入项
+            c_layout = self.page_can.layout()
+            if c_layout:
+                fields_to_toggle = [self.c_data, self.c_wait_id, self.c_dlc]
+                if action == "接收指定帧ID":
+                    for field in fields_to_toggle:
+                        field.hide()
+                        lbl = c_layout.labelForField(field)
+                        if lbl: lbl.hide()
+                else:
+                    for field in fields_to_toggle:
+                        field.show()
+                        lbl = c_layout.labelForField(field)
+                        if lbl: lbl.show()
         elif "等待" in device:
             self.param_stack.setCurrentIndex(2)
         elif "同步屏障" in device:
@@ -854,15 +868,22 @@ class StepDialog(QDialog):
             selected = [str(i+1) for i, cb in enumerate(self.aging_relay_checks) if cb.isChecked()]
             params.append(",".join(selected))
         elif idx == 1: # CAN
-            step_type = "CAN发送" if "发送" in action else "CAN交互"
-            params.append(f"ID:{self.c_id.text().strip()}")
-            params.append(f"DATA:{self.c_data.text().strip()}")
-            if "发送" not in action:
-                params.append(f"WAIT_ID:{self.c_wait_id.text().strip()}")
+            if action == "接收指定帧ID":
+                step_type = "CAN接收"
+                params.append(f"ID:{self.c_id.text().strip()}")
+                params.append(f"TYPE:{self.c_type.currentIndex()}")
+                params.append(f"CH:{self.c_channel.value()}")
                 params.append(f"TIMEOUT:{self.c_timeout.value()}")
-            params.append(f"TYPE:{self.c_type.currentIndex()}")
-            params.append(f"DLC:{self.c_dlc.value()}")
-            params.append(f"CH:{self.c_channel.value()}")
+            else:
+                step_type = "CAN发送" if "发送" in action else "CAN交互"
+                params.append(f"ID:{self.c_id.text().strip()}")
+                params.append(f"DATA:{self.c_data.text().strip()}")
+                if "发送" not in action:
+                    params.append(f"WAIT_ID:{self.c_wait_id.text().strip()}")
+                    params.append(f"TIMEOUT:{self.c_timeout.value()}")
+                params.append(f"TYPE:{self.c_type.currentIndex()}")
+                params.append(f"DLC:{self.c_dlc.value()}")
+                params.append(f"CH:{self.c_channel.value()}")
         elif idx == 7: # 智界 EOL 协议
             step_type = "智界EOL协议"
             eol_action = action

@@ -8,6 +8,8 @@
             "min": "0.0",
             "max": "0.0",
             "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
             "sub_steps": [
                 {
                     "name": "老化功能板继电器 (Aging Board)-闭合勾选通道 (1,11)",
@@ -17,7 +19,7 @@
                     "type": "继电器控制",
                     "is_judgment": false,
                     "sync_exec": false,
-                    "fail_strategy": "失败停止"
+                    "fail_strategy": "忽略继续"
                 }
             ]
         },
@@ -27,6 +29,8 @@
             "min": "11.0",
             "max": "13.0",
             "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
             "sub_steps": [
                 {
                     "name": "智界EOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / ADC:1 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
@@ -46,6 +50,8 @@
             "min": "4.0",
             "max": "6.0",
             "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
             "sub_steps": [
                 {
                     "name": "智界EOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / ADC:34 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
