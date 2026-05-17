@@ -235,8 +235,6 @@ class ChannelWorker(QObject):
                 self.log_message.emit(self.channel_id, "[#] 进入同步屏障，等待其他通道...")
                 return True, None
 
-            elif sub_step.type == SubStepType.SET_INSTRUMENT:
-                device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
             if sub_step.type == SubStepType.SET_INSTRUMENT:
                 device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
                 action = params.get("action", "")
@@ -548,63 +546,63 @@ class TestEngine(QObject):
             self._check_and_release_barrier()
 
     def _check_and_release_barrier(self):
-        """检查同步状态，如果集齐则释放所有通道"""
+        """BUG-04修复: 按同步组分组判定，防止不同组通道互相绑定导致死锁"""
         with self._lock:
-            first_cid = list(self.sync_barrier_channels)[0] if self.sync_barrier_channels else None
-            if not first_cid: return
-            
-            group = self.sync_groups.get(first_cid, set(self.workers.keys()))
-            active_group_members = [cid for cid in group if cid in self.workers]
-            total = len(group)
-            waiting = len(self.sync_barrier_channels)
-            self.barrier_status_changed.emit(waiting, total)
-            
-            if waiting >= total > 0:
-                # 1. 确定集齐，准备执行
-                channels_to_release = list(self.sync_barrier_channels)
-                self.sync_barrier_channels.clear()
-                sub = self._current_barrier_sub_step
-                self._current_barrier_sub_step = None
-                
-                # 2. 选择执行主体
-                exec_cid = channels_to_release[0]
-                active_group_members = [cid for cid in group if cid in self.workers]
-                
-                def run_sync_op():
-                    try:
-                        master_success, master_result = True, None
-                        if sub and sub.params.get("sync_exec"):
-                            if exec_cid in self.workers:
-                                worker = self.workers[exec_cid]
-                                worker.log_message.emit(exec_cid, f"[*] 同步集齐 ({active_group_members})，开始执行共享控制...")
-                                master_success, master_result = worker._execute_sub_step_logic(sub, ignore_sync=True)
-                        
-                        # 执行完后，回到主线程分发结果给其他组员
-                        for ch_id in channels_to_release:
-                            if ch_id in self.workers:
-                                w = self.workers[ch_id]
-                                
-                                # 捕获当前闭包变量
-                                def make_release(target_w=w, success=master_success, res=master_result):
-                                    def do_release():
-                                        if target_w.channel_id != exec_cid:
-                                            target_w.sub_step_finished.emit(target_w.channel_id, target_w.current_step_index, target_w.current_sub_step_index, "PASS" if success else "FAIL", res)
-                                        target_w.resume_from_sync()
-                                        self.channel_sync_status_changed.emit(target_w.channel_id, False)
-                                    return do_release
+            if not self.sync_barrier_channels:
+                return
 
-                                # 核心修复：必须指定 w 作为 context，才能跨线程投递到 w 所在的事件循环
-                                QTimer.singleShot(0, w, make_release())
-                                
-                        QTimer.singleShot(0, self, lambda: self.barrier_status_changed.emit(0, total))
-                    except Exception as e:
-                        print(f"[TestEngine] 同步执行线程崩溃: {e}")
-                        # 兜底释放，防止死锁
-                        for ch_id in channels_to_release:
-                            if ch_id in self.workers: QTimer.singleShot(0, self.workers[ch_id].resume_from_sync)
+            # 将屏障中的通道按其同步组分组
+            groups_waiting: dict = {}
+            for cid in self.sync_barrier_channels:
+                group = self.sync_groups.get(cid)
+                group_key = frozenset(group) if group else frozenset({cid})
+                groups_waiting.setdefault(group_key, set()).add(cid)
 
-                # 异步执行，不阻塞当前线程
-                threading.Thread(target=run_sync_op, daemon=True).start()
+            for group_key, waiting_set in groups_waiting.items():
+                active_in_group = [cid for cid in group_key if cid in self.workers]
+                total = len(active_in_group)
+                waiting = len(waiting_set)
+                self.barrier_status_changed.emit(waiting, total)
+
+                if waiting >= total > 0:
+                    # 该组已集齐，准备释放
+                    channels_to_release = sorted(waiting_set)  # 排序保证确定性
+                    for cid in channels_to_release:
+                        self.sync_barrier_channels.discard(cid)
+                    exec_cid = channels_to_release[0]  # 取最小 cid 为执行主体
+                    sub = self._current_barrier_sub_step
+                    self._current_barrier_sub_step = None
+
+                    def run_sync_op(exec_cid=exec_cid, channels_to_release=channels_to_release,
+                                   sub=sub, total=total):
+                        try:
+                            master_success, master_result = True, None
+                            if sub and sub.params.get("sync_exec"):
+                                if exec_cid in self.workers:
+                                    worker = self.workers[exec_cid]
+                                    worker.log_message.emit(exec_cid, f"[*] 同步集齐 ({channels_to_release})，开始执行共享控制...")
+                                    master_success, master_result = worker._execute_sub_step_logic(sub, ignore_sync=True)
+
+                            for ch_id in channels_to_release:
+                                if ch_id in self.workers:
+                                    w = self.workers[ch_id]
+                                    def make_release(target_w=w, success=master_success, res=master_result):
+                                        def do_release():
+                                            if target_w.channel_id != exec_cid:
+                                                target_w.sub_step_finished.emit(target_w.channel_id, target_w.current_step_index, target_w.current_sub_step_index, "PASS" if success else "FAIL", res)
+                                            target_w.resume_from_sync()
+                                            self.channel_sync_status_changed.emit(target_w.channel_id, False)
+                                        return do_release
+                                    QTimer.singleShot(0, w, make_release())
+
+                            QTimer.singleShot(0, self, lambda: self.barrier_status_changed.emit(0, total))
+                        except Exception as e:
+                            print(f"[TestEngine] 同步执行线程崩溃: {e}")
+                            for ch_id in channels_to_release:
+                                if ch_id in self.workers: QTimer.singleShot(0, self.workers[ch_id].resume_from_sync)
+
+                    threading.Thread(target=run_sync_op, daemon=True).start()
+                    break  # 一次只处理一个就绪组
 
     def _execute_global_action(self, ga):
         mgr = self.device_manager
@@ -656,7 +654,7 @@ class TestEngine(QObject):
         t = QThread(); w = ChannelWorker(cid, steps, self.device_manager, self.db_manager, engine=self)
         w.set_test_info(test_id); w.moveToThread(t); w.reached_barrier.connect(self.handle_barrier_reached)
         t.started.connect(w.start); from PySide6.QtCore import Qt
-        w.test_finished.connect(lambda: self.stop_channel_test(cid), Qt.QueuedConnection)
+        w.test_finished.connect(lambda *_, _cid=cid: self.stop_channel_test(_cid), Qt.QueuedConnection)
         self.workers[cid], self.threads[cid] = w, t; t.start()
 
     def stop_channel_test(self, cid):

@@ -47,14 +47,9 @@ class Lingtu66100:
 
     def _ensure_connected(self) -> bool:
         """确保连接有效，如果断开则尝试重连"""
+        # BUG-06修复: 不再发送\n心跳，\n是SCPI终结符会污染指令流
         if self.is_connected and self.sock:
-            try:
-                # 发送一个换行符作为心跳，检测链路
-                self.sock.send(b"\n")
-                return True
-            except:
-                self.is_connected = False
-        
+            return True
         return self.connect()
 
     def _safe_send(self, cmd_bytes: bytes, retries: int = 2) -> bool:
@@ -89,35 +84,39 @@ class Lingtu66100:
 
     def set_current_limit(self, channel: int, current: float, logger=None):
         """设置电流限制: SOURce[ch]:CURRent:LIMit <value>"""
-        if not self._ensure_connected():
-            return False
-        try:
-            channels = range(1, 19) if channel == 0 else [channel]
-            for ch in channels:
-                cmd = f"SOUR{ch}:CURR {current}\n"
-                self.sock.send(cmd.encode())
-                time.sleep(0.05)
-            return True
-        except Exception as e:
-            if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
-            self.is_connected = False
-            return False
+        # BUG-02修复: 加锁，防止多线程并发时粘包
+        with self._lock:
+            if not self._ensure_connected():
+                return False
+            try:
+                channels = range(1, 19) if channel == 0 else [channel]
+                for ch in channels:
+                    cmd = f"SOUR{ch}:CURR {current}\n"
+                    self._safe_send(cmd.encode())
+                    time.sleep(0.05)
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
+                self.is_connected = False
+                return False
 
     def set_range(self, channel: int, range_str: str, logger=None) -> bool:
         """设置量程: SOURce[ch]:CURRent:RANGe <HIGH|LOW>"""
-        if not self._ensure_connected():
-            return False
-        try:
-            channels = range(1, 19) if channel == 0 else [channel]
-            for ch in channels:
-                cmd = f"SOUR{ch}:CURR:RANG {range_str}\n"
-                self.sock.send(cmd.encode())
-                time.sleep(0.05)
-            return True
-        except Exception as e:
-            if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
-            self.is_connected = False
-            return False
+        # BUG-02修复: 加锁
+        with self._lock:
+            if not self._ensure_connected():
+                return False
+            try:
+                channels = range(1, 19) if channel == 0 else [channel]
+                for ch in channels:
+                    cmd = f"SOUR{ch}:CURR:RANG {range_str}\n"
+                    self._safe_send(cmd.encode())
+                    time.sleep(0.05)
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
+                self.is_connected = False
+                return False
 
     def output_control(self, channel: int, state: bool, logger=None) -> bool:
         """控制输出开关"""
@@ -139,32 +138,36 @@ class Lingtu66100:
 
     def measure_voltage(self, channel: int, logger=None) -> float:
         """测量实时电压: MEASure[ch]:VOLTage?"""
-        if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
-            return -1.0
-        try:
-            cmd = f"MEAS{channel}:VOLT?\n"
-            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
-            self.sock.send(cmd.encode())
-            data = self.sock.recv(1024).decode().strip()
-            if logger: logger(f"[IP: {self.ip}] [RX] {data} V")
-            return float(data)
-        except Exception as e:
-            if logger: logger(f"[IP: {self.ip}] [!] 测量电压异常: {e}")
-            return -1.0
+        # BUG-07修复: 加锁，防止多线程并发时响应报文乱序
+        with self._lock:
+            if not self.is_connected:
+                if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+                return -1.0
+            try:
+                cmd = f"MEAS{channel}:VOLT?\n"
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
+                self.sock.send(cmd.encode())
+                data = self.sock.recv(1024).decode().strip()
+                if logger: logger(f"[IP: {self.ip}] [RX] {data} V")
+                return float(data)
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 测量电压异常: {e}")
+                return -1.0
 
     def measure_current(self, channel: int, logger=None) -> float:
         """测量实时电流: MEASure[ch]:CURRent?"""
-        if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
-            return -1.0
-        try:
-            cmd = f"MEAS{channel}:CURR?\n"
-            if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
-            self.sock.send(cmd.encode())
-            data = self.sock.recv(1024).decode().strip()
-            if logger: logger(f"[IP: {self.ip}] [RX] {data} A")
-            return float(data)
-        except Exception as e:
-            if logger: logger(f"[IP: {self.ip}] [!] 测量电流异常: {e}")
-            return -1.0
+        # BUG-07修复: 加锁
+        with self._lock:
+            if not self.is_connected:
+                if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+                return -1.0
+            try:
+                cmd = f"MEAS{channel}:CURR?\n"
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
+                self.sock.send(cmd.encode())
+                data = self.sock.recv(1024).decode().strip()
+                if logger: logger(f"[IP: {self.ip}] [RX] {data} A")
+                return float(data)
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 测量电流异常: {e}")
+                return -1.0
