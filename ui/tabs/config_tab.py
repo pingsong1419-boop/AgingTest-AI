@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
                                QLabel, QPushButton, QTreeWidget, QTreeWidgetItem, 
-                               QComboBox, QMessageBox, QAbstractItemView, QMenu)
+                               QComboBox, QMessageBox, QAbstractItemView, QMenu,
+                               QTextBrowser, QGroupBox)
 from PySide6.QtGui import QColor, QFont, QAction, QKeySequence, QShortcut
 from PySide6.QtCore import Qt, Signal
 from typing import List
@@ -69,13 +70,92 @@ class ConfigTab(QWidget):
         self.step_tree.setDragEnabled(True)
         self.step_tree.setAcceptDrops(True)
         self.step_tree.setDragDropMode(QAbstractItemView.InternalMove)
-        self.step_tree.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.step_tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
         
         # 启用右键菜单
         self.step_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.step_tree.customContextMenuRequested.connect(self.on_context_menu)
         
         right_panel.addWidget(self.step_tree)
+        
+        # --- 子工步与测试项参数实时预览面板 ---
+        self.preview_panel = QGroupBox("参数实时预览 (点击选中项即可预览)")
+        self.preview_panel.setStyleSheet("""
+            QGroupBox {
+                border: 2px solid #2D3748;
+                border-radius: 8px;
+                margin-top: 5px;
+                font-weight: bold;
+                color: #FFD700;
+                background-color: #1A202C;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
+        preview_layout = QVBoxLayout(self.preview_panel)
+        preview_layout.setContentsMargins(10, 20, 10, 10)
+        
+        header_layout = QHBoxLayout()
+        self.lbl_preview_action = QLabel("参数预览: --")
+        self.lbl_preview_action.setStyleSheet("color: #00E5FF; font-weight: bold; font-size: 12px;")
+        
+        btn_close_preview = QPushButton("✕ 关闭预览 (Esc)")
+        btn_close_preview.setFixedWidth(110)
+        btn_close_preview.setStyleSheet("""
+            QPushButton {
+                background-color: #4A5568;
+                color: white;
+                border-radius: 4px;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 2px 6px;
+            }
+            QPushButton:hover {
+                background-color: #E53E3E;
+            }
+        """)
+        btn_close_preview.clicked.connect(self.close_preview_panel)
+        
+        header_layout.addWidget(self.lbl_preview_action)
+        header_layout.addStretch()
+        header_layout.addWidget(btn_close_preview)
+        preview_layout.addLayout(header_layout)
+        
+        self.preview_browser = QTextBrowser()
+        self.preview_browser.setStyleSheet("background-color: #10141D; border: 1px solid #2D3748; border-radius: 4px;")
+        self.preview_browser.setMinimumHeight(100)
+        self.preview_browser.setMaximumHeight(180)
+        preview_layout.addWidget(self.preview_browser)
+        
+        self.preview_panel.setVisible(False)
+        right_panel.addWidget(self.preview_panel)
+        
+        # 批量操作功能按钮条
+        batch_layout = QHBoxLayout()
+        batch_label = QLabel("批量操作:")
+        batch_label.setStyleSheet("color: #FFD700; font-weight: bold;")
+        batch_layout.addWidget(batch_label)
+        
+        self.btn_batch_skip = QPushButton("批量屏蔽/取消 (Space)")
+        self.btn_batch_skip.clicked.connect(self.batch_toggle_skip)
+        self.btn_batch_skip.setStyleSheet("background-color: #4A5568; color: white;")
+        
+        self.btn_batch_copy = QPushButton("批量复制 (Ctrl+C)")
+        self.btn_batch_copy.clicked.connect(self.copy_node)
+        self.btn_batch_copy.setStyleSheet("background-color: #2D3748; color: white;")
+        
+        self.btn_batch_paste = QPushButton("批量粘贴 (Ctrl+V)")
+        self.btn_batch_paste.clicked.connect(self.paste_node)
+        self.btn_batch_paste.setStyleSheet("background-color: #1A202C; color: white;")
+        
+        batch_layout.addWidget(self.btn_batch_skip)
+        batch_layout.addWidget(self.btn_batch_copy)
+        batch_layout.addWidget(self.btn_batch_paste)
+        batch_layout.addStretch()
+        self.edit_layout.addLayout(batch_layout)
         
         btn_layout = QHBoxLayout()
         btn_add_item = QPushButton("添加测试项")
@@ -114,11 +194,277 @@ class ConfigTab(QWidget):
         
         # 绑定双击编辑
         self.step_tree.itemDoubleClicked.connect(lambda: self.edit_node())
-
+        
+        # 绑定选择变化实时预览
+        self.step_tree.itemSelectionChanged.connect(self.update_param_preview)
+        
         # 绑定快捷键
         QShortcut(QKeySequence("Ctrl+C"), self.step_tree, self.copy_node)
         QShortcut(QKeySequence("Ctrl+V"), self.step_tree, self.paste_node)
         QShortcut(QKeySequence("Delete"), self.step_tree, self.delete_node)
+        QShortcut(QKeySequence("Space"), self.step_tree, self.batch_toggle_skip)
+        QShortcut(QKeySequence("Esc"), self.step_tree, self.close_preview_panel)
+        QShortcut(QKeySequence("P"), self.step_tree, self.toggle_preview_panel)
+
+    def close_preview_panel(self):
+        """快速关闭预览面板并清空选中"""
+        self.preview_panel.setVisible(False)
+        self.step_tree.clearSelection()
+
+    def toggle_preview_panel(self):
+        """切换预览面板的显示与隐藏"""
+        self.preview_panel.setVisible(not self.preview_panel.isVisible())
+
+    def update_param_preview(self):
+        """当选择发生变化时，自动更新子工步/测试项参数预览"""
+        selected = self.step_tree.selectedItems()
+        if not selected:
+            return
+            
+        item = selected[0]
+        # 判断是否为子工步 (有父节点代表是子工步)
+        if item.parent() is not None:
+            action = item.text(1)
+            params = item.text(2)
+            device = item.data(0, Qt.UserRole)
+            
+            # 显示预览面板
+            self.preview_panel.setVisible(True)
+            self.lbl_preview_action.setText(f"动作: {action} ({device or '未知设备'})")
+            
+            # 渲染 HTML (增加对 device 的传递以实现精确设备翻译)
+            html = self.parse_params_to_html(action, device, params)
+            self.preview_browser.setHtml(html)
+        else:
+            # 如果是主工步，显示主工步基本配置参数限制 (多列并排，完美填满宽度)
+            name = item.text(0)
+            mode = item.text(1)
+            min_val = item.text(2)
+            max_val = item.text(3)
+            strategy = item.text(4)
+            standard_type = item.data(0, Qt.UserRole) or "数值"
+            retry_count = item.data(1, Qt.UserRole) or "不复测"
+            unit = item.data(2, Qt.UserRole) or "NULL"
+            
+            self.preview_panel.setVisible(True)
+            self.lbl_preview_action.setText(f"测试项: {name}")
+            
+            html = f"""
+            <style>
+                table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
+                td {{ border: 1px solid #2D3748; padding: 6px; font-size: 12px; color: #E2E8F0; }}
+                .label {{ font-weight: bold; color: #FFD700; background-color: #2D3748; width: 15%; text-align: right; padding-right: 10px; }}
+                .value {{ background-color: #10141D; width: 18%; text-align: left; padding-left: 10px; }}
+            </style>
+            <table>
+                <tr>
+                    <td class='label'>标准类型</td><td class='value'>{standard_type}</td>
+                    <td class='label'>判定模式</td><td class='value'>{mode}</td>
+                    <td class='label'>下限/目标</td><td class='value'>{min_val}</td>
+                </tr>
+                <tr>
+                    <td class='label'>上限/截止</td><td class='value'>{max_val}</td>
+                    <td class='label'>物理单位</td><td class='value'>{unit}</td>
+                    <td class='label'>复测次数</td><td class='value'>{retry_count}</td>
+                </tr>
+                <tr>
+                    <td class='label'>NG 策略</td><td class='value'>{strategy}</td>
+                    <td class='label' style='background: transparent; border: none;'></td><td class='value' style='background: transparent; border: none;'></td>
+                    <td class='label' style='background: transparent; border: none;'></td><td class='value' style='background: transparent; border: none;'></td>
+                </tr>
+            </table>
+            """
+            self.preview_browser.setHtml(html)
+
+    def translate_and_format_params(self, action, device, params_str):
+        """将指令底层的 KEY:VALUE 翻译为同设置页面完全一致的友好中文配置项"""
+        kv = {}
+        for part in str(params_str).replace("；", "/").replace("，", "/").split("/"):
+            part = part.strip()
+            if not part: continue
+            if ":" in part:
+                k, v = part.split(":", 1)
+                kv[k.strip().upper()] = v.strip()
+            else:
+                kv[part.strip().upper()] = part.strip()
+                
+        friendly_kv = {}
+        
+        # 1. 智界 EOL 协议的精细翻译
+        if "EOL" in str(device) or "EOL" in str(action):
+            op = kv.get("EOL", action or "")
+            
+            # 公共协议底层参数
+            if "TIMEOUT" in kv: friendly_kv["超时(ms)"] = kv["TIMEOUT"]
+            if "CH" in kv: friendly_kv["通讯通道"] = f"通道 {kv['CH']}"
+            if "TX_ID" in kv: friendly_kv["发送ID"] = kv["TX_ID"]
+            if "RX_ID" in kv: friendly_kv["接收ID"] = kv["RX_ID"]
+            if "ARGS" in kv: friendly_kv["额外参数"] = kv["ARGS"]
+            
+            p1 = kv.get("PARAM1", kv.get("ADC", kv.get("STATE", kv.get("INDEX", kv.get("PWM", kv.get("NTC", kv.get("HALL", kv.get("OP", kv.get("GPIO", "")))))))))
+            p2 = kv.get("PARAM2", kv.get("MODE", kv.get("LEVEL", kv.get("VAL", kv.get("STATE_VAL", kv.get("INDEX", ""))))))
+            
+            p1_label = "参数1"
+            p2_label = "参数2"
+            
+            if "0x04" in op:
+                p1_label = "GPIO通道"
+                p2_label = "动作类型"
+                if p2 == "READ": p2 = "读取电平"
+                elif p2 == "WRITE_HIGH": p2 = "写入高电平"
+                elif p2 == "WRITE_LOW": p2 = "写入低电平"
+            elif "0x06" in op:
+                p1_label = "ADC选择"
+                p2_label = "读取模式"
+                if p2 == "VALUE": p2 = "转换值"
+                elif p2 == "RAW": p2 = "原始值"
+            elif "0x05" in op:
+                p1_label = "PWM通道"
+                p2_label = "读取内容"
+                if p2 == "DUTY": p2 = "占空比"
+                elif p2 == "FREQ": p2 = "频率"
+            elif "0x03" in op:
+                p1_label = "操作内容"
+                p2_label = "控制值"
+                if p1 == "READ": p1 = "读取绝缘阻抗"
+                elif p1 == "WRITE": p1 = "设置控制状态"
+                if p2 == "0": p2 = "0 P/N均断开"
+                elif p2 == "1": p2 = "1 P闭合N断开"
+                elif p2 == "2": p2 = "2 P断开N闭合"
+            elif "0x07" in op:
+                p1_label = "操作类别"
+                p2_label = "子索引/状态"
+                if p1 == "CELL_VOLT": p1 = "单体电压"
+                elif p1 == "HV_VOLT": p1 = "总压/采样"
+                elif p1 == "NODE_COUNT": p1 = "设置节点数"
+                elif p1 == "BALANCE": p1 = "均衡控制"
+            elif "0x10" in op:
+                p1_label = "NTC索引"
+                p2_label = "温感类型"
+                if p2 == "CELL_NTC": p2 = "1 CELL_NTC"
+                elif p2 == "PCB_NTC": p2 = "2 PCB_NTC"
+                elif p2 == "SHUNT": p2 = "3 SHUNT"
+                elif p2 == "NTCF": p2 = "4 NTCF"
+                elif p2 == "FPCB_NTC": p2 = "5 FPCB_NTC"
+            elif "0x08" in op:
+                p1_label = "模式参数"
+                p2_label = "索引"
+                if p1 == "0x01": p1 = "0x01 占空比"
+                elif p1 == "0x02": p1 = "0x02 频率"
+                elif p1 == "0x03": p1 = "0x03 阻抗"
+                elif p1 == "0x04": p1 = "0x04 脉宽"
+                if p2 == "0": p2 = "sig1"
+                elif p2 == "1": p2 = "sig3"
+            elif "0x0A" in op:
+                p1_label = "操作"
+                if p1 == "READ": p1 = "读取数据"
+                elif p1 == "WRITE": p1 = "写入数据"
+                elif p1 == "SET_ADDR": p1 = "设置地址"
+            elif "0x09" in op:
+                p1_label = "RTC功能"
+                if p1 == "READ": p1 = "读取时间"
+                elif p1 == "SET_TIME": p1 = "设置时间"
+                elif p1 == "SET_WAKEUP": p1 = "设置唤醒"
+            elif "0xFF" in op:
+                p1_label = "读取项"
+                p2_label = "通道选择"
+                if p1 == "0x06": p1 = "读取第一唤醒源"
+                elif p1 == "0x0E": p1 = "读取压力传感器"
+                elif p1 == "0x11": p1 = "读取高边负载回采电压"
+                if p2: p2 = f"通道 {p2}"
+            elif "0x0B" in op:
+                p1_label = "霍尔通道"
+                if p1 == "0x01": p1 = "通道1"
+                elif p1 == "0x03": p1 = "通道2"
+                
+            if p1: friendly_kv[p1_label] = p1
+            if p2: friendly_kv[p2_label] = p2
+            
+        # 2. CAN 交互的精细翻译
+        elif "CAN" in str(device) or "报文" in str(action):
+            if "ID" in kv: friendly_kv["帧ID"] = kv["ID"]
+            if "DATA" in kv: friendly_kv["发送数据"] = kv["DATA"]
+            if "WAIT_ID" in kv: friendly_kv["等待接收ID"] = kv["WAIT_ID"]
+            if "TIMEOUT" in kv: friendly_kv["超时(ms)"] = kv["TIMEOUT"]
+            if "DLC" in kv: friendly_kv["数据长度(DLC)"] = kv["DLC"]
+            if "CH" in kv: friendly_kv["物理通道"] = f"通道 {kv['CH']}"
+            if "TYPE" in kv:
+                t = kv["TYPE"]
+                if t == "0": friendly_kv["帧类型"] = "标准帧 (CAN 2.0A)"
+                elif t == "1": friendly_kv["帧类型"] = "扩展帧 (CAN 2.0B)"
+                elif t == "2": friendly_kv["帧类型"] = "CANFD 标准帧"
+                elif t == "3": friendly_kv["帧类型"] = "CANFD 扩展帧"
+                else: friendly_kv["帧类型"] = t
+
+        # 3. CA550 的翻译
+        elif "CA550" in str(device):
+            if "VAL" in kv: friendly_kv["输出设定值"] = kv["VAL"]
+            if "RANGE" in kv: friendly_kv["量程选择"] = kv["RANGE"]
+            if "OUTPUT" in kv: friendly_kv["输出状态"] = kv["OUTPUT"]
+            
+        # 4. 通用等待
+        elif "等待" in str(device) or "延时" in str(action):
+            friendly_kv["延时时长"] = params_str
+            
+        # 5. 继电器控制
+        elif "继电器" in str(action) or "Easy320" in str(device) or "Aging Board" in str(device):
+            friendly_kv["选择的继电器通道"] = params_str
+            
+        # 6. 直流源、高压源、AFE、模拟电池等通用设备
+        else:
+            import re
+            v_match = re.search(r'([\d.]+)V', params_str)
+            if v_match: friendly_kv["设定电压"] = f"{v_match.group(1)} V"
+            
+            a_match = re.search(r'([\d.]+)A', params_str)
+            if a_match: friendly_kv["设定电流"] = f"{a_match.group(1)} A"
+            
+            ma_match = re.search(r'([\d.]+)mA', params_str)
+            if ma_match: friendly_kv["设定电流"] = f"{ma_match.group(1)} mA"
+            
+            if "开启" in params_str or "ON" in params_str: friendly_kv["通道输出"] = "开启 (ON)"
+            elif "关闭" in params_str or "OFF" in params_str: friendly_kv["通道输出"] = "关闭 (OFF)"
+            
+            if not friendly_kv:
+                for k, v in kv.items():
+                    friendly_kv[k] = v
+                    
+        return friendly_kv
+
+    def parse_params_to_html(self, action_type, device, params_str):
+        # 1. 翻译获取对用户极其友好的 Chinese 属性映射表
+        friendly_kv = self.translate_and_format_params(action_type, device, params_str)
+        
+        # 2. 产生极富视觉品质的玻璃拟态表格 (多列合并网格，极大程度榨干横向宽度，消除右侧空白)
+        html = """
+        <style>
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+            td { border: 1px solid #2D3748; padding: 6px; font-size: 12px; color: #E2E8F0; }
+            .label { font-weight: bold; color: #00E5FF; background-color: #2D3748; width: 15%; text-align: right; padding-right: 10px; }
+            .value { background-color: #10141D; width: 18%; text-align: left; padding-left: 10px; }
+        </style>
+        <table>
+        """
+        
+        # 将参数列表转换为 3 组一行的网格显示
+        items = list(friendly_kv.items())
+        rows = [items[i:i + 3] for i in range(0, len(items), 3)]
+        
+        for row in rows:
+            html += "<tr>"
+            for k, v in row:
+                html += f"<td class='label'>{k}</td><td class='value'>{v}</td>"
+            # 如果最后一行不够 3 个，用空单元格补齐以维持表格边框对称
+            if len(row) < 3:
+                for _ in range(3 - len(row)):
+                    html += "<td class='label' style='background: transparent; border: none;'></td><td class='value' style='background: transparent; border: none;'></td>"
+            html += "</tr>"
+            
+        if not items:
+            html += "<tr><td colspan='6' style='color: #A0AEC0; text-align: center;'>无详细配置参数</td></tr>"
+            
+        html += "</table>"
+        return html
 
     def set_editor_enabled(self, enabled):
         """控制右侧编辑面板的启用状态"""
@@ -216,36 +562,57 @@ class ConfigTab(QWidget):
         item = self.step_tree.itemAt(pos)
         if not item: return
         
+        selected = self.step_tree.selectedItems()
+        sel_count = len(selected)
+        
         menu = QMenu()
-        copy_act = QAction("复制", self)
-        copy_act.triggered.connect(self.copy_node)
         
-        paste_act = QAction("粘贴", self)
-        paste_act.setEnabled(self.clipboard_data is not None)
-        paste_act.triggered.connect(self.paste_node)
-        
-        dup_act = QAction("克隆", self)
-        dup_act.triggered.connect(self.duplicate_node)
-
+        if sel_count > 1:
+            copy_act = QAction("批量复制 (Ctrl+C)", self)
+            copy_act.triggered.connect(self.copy_node)
+            
+            paste_act = QAction("批量粘贴 (Ctrl+V)", self)
+            paste_act.setEnabled(self.clipboard_data is not None)
+            paste_act.triggered.connect(self.paste_node)
+            
+            dup_act = QAction("批量克隆", self)
+            dup_act.triggered.connect(self.duplicate_node)
+            
+            del_act = QAction("批量删除 (Delete)", self)
+            del_act.triggered.connect(self.delete_node)
+            
+            skip_action = QAction("批量屏蔽/取消 (Space)", self)
+            skip_action.triggered.connect(self.batch_toggle_skip)
+        else:
+            copy_act = QAction("复制 (Ctrl+C)", self)
+            copy_act.triggered.connect(self.copy_node)
+            
+            paste_act = QAction("粘贴 (Ctrl+V)", self)
+            paste_act.setEnabled(self.clipboard_data is not None)
+            paste_act.triggered.connect(self.paste_node)
+            
+            dup_act = QAction("克隆", self)
+            dup_act.triggered.connect(self.duplicate_node)
+            
+            del_act = QAction("删除 (Delete)", self)
+            del_act.triggered.connect(self.delete_node)
+            
+            is_skipped = item.text(0).strip().startswith("#") or "└─ #" in item.text(0)
+            skip_action = QAction("取消屏蔽 (Space)" if is_skipped else "屏蔽该项 (添加#) (Space)", self)
+            skip_action.triggered.connect(lambda: self.toggle_skip(item))
+            
         bulk_act = QAction("批量修改参数...", self)
         bulk_act.triggered.connect(self.bulk_edit_nodes)
-        
-        del_act = QAction("删除", self)
-        del_act.triggered.connect(self.delete_node)
         
         menu.addAction(copy_act)
         menu.addAction(paste_act)
         menu.addSeparator()
-
-        # 屏蔽/取消屏蔽操作 (保留并集成到右键菜单)
-        is_skipped = item.text(0).strip().startswith("#") or "└─ #" in item.text(0)
-        skip_action = QAction("取消屏蔽" if is_skipped else "屏蔽该项 (添加#)", self)
-        skip_action.triggered.connect(lambda: self.toggle_skip(item))
         menu.addAction(skip_action)
 
-        prefix_action = QAction("添加自定义前缀", self)
-        prefix_action.triggered.connect(lambda: self.add_prefix(item))
-        menu.addAction(prefix_action)
+        if sel_count <= 1:
+            prefix_action = QAction("添加自定义前缀", self)
+            prefix_action.triggered.connect(lambda: self.add_prefix(item))
+            menu.addAction(prefix_action)
 
         menu.addSeparator()
         menu.addAction(dup_act)
@@ -253,7 +620,7 @@ class ConfigTab(QWidget):
         menu.addSeparator()
         menu.addAction(del_act)
         menu.exec_(self.step_tree.viewport().mapToGlobal(pos))
-
+        
     def toggle_skip(self, item):
         """切换屏蔽状态：在名称前添加或移除 #"""
         text = item.text(0)
@@ -269,6 +636,40 @@ class ConfigTab(QWidget):
             else:
                 item.setText(0, "#" + text)
             item.setForeground(0, QColor("#808080")) # 屏蔽后显示为灰色
+
+    def batch_toggle_skip(self):
+        """批量屏蔽/取消屏蔽选中的测试项或工步"""
+        selected = self.step_tree.selectedItems()
+        if not selected:
+            QMessageBox.warning(self, "提醒", "请先选择一个或多个测试项/子工步。")
+            return
+            
+        # 判断是否至少有一个未屏蔽的，如果有，则全部屏蔽；否则全部取消屏蔽
+        has_unskipped = False
+        for item in selected:
+            text = item.text(0)
+            is_skipped = text.strip().startswith("#") or "└─ #" in text
+            if not is_skipped:
+                has_unskipped = True
+                break
+                
+        for item in selected:
+            text = item.text(0)
+            is_skipped = text.strip().startswith("#") or "└─ #" in text
+            if has_unskipped:
+                # 全部进行屏蔽
+                if not is_skipped:
+                    if "└─ " in text:
+                        parts = text.split("└─ ")
+                        item.setText(0, f"{parts[0]}└─ #{parts[1]}")
+                    else:
+                        item.setText(0, "#" + text)
+                    item.setForeground(0, QColor("#808080"))
+            else:
+                # 全部取消屏蔽
+                if is_skipped:
+                    item.setText(0, text.replace("#", ""))
+                    item.setForeground(0, QColor("#FFFFFF") if item.parent() else QColor("#00E5FF"))
 
     def add_prefix(self, item):
         """为工步名称添加自定义前缀"""
@@ -314,72 +715,104 @@ class ConfigTab(QWidget):
             }
 
     def copy_node(self):
-        item = self.step_tree.currentItem()
-        if item:
-            self.clipboard_data = self._get_node_data(item)
+        self.batch_copy_nodes()
 
     def paste_node(self):
-        if not self.clipboard_data: return
-        
-        current = self.step_tree.currentItem()
-        data = self.clipboard_data
-        
-        if data["type"] == "item":
-            # 粘贴为顶层测试项
-            new_item = QTreeWidgetItem([
-                data['name'], data['mode'], data['min'], data['max'], data['strategy']
-            ])
-            new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
-            new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
-            new_item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
-            new_item.setForeground(0, QColor("#00E5FF"))
-            font = QFont()
-            font.setBold(True)
-            new_item.setFont(0, font)
-            
-            for sub in data.get("sub_steps", []):
-                child = QTreeWidgetItem([
-                    f"  └─ {sub['name']}", sub['action'], sub['params'],
-                    "参与判定" if sub.get("is_judgment") else "--",
-                    sub.get("fail_strategy", "失败停止")
-                ])
-                child.setData(0, Qt.UserRole, sub.get("device"))
-                child.setData(1, Qt.UserRole, sub.get("stype"))
-                child.setData(2, Qt.UserRole, sub.get("is_judgment"))
-                if sub.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
-                new_item.addChild(child)
-            
-            if current:
-                idx = self.step_tree.indexOfTopLevelItem(current if not current.parent() else current.parent())
-                self.step_tree.insertTopLevelItem(idx + 1, new_item)
-            else:
-                self.step_tree.addTopLevelItem(new_item)
-                
-        elif data["type"] == "step":
-            # 粘贴为子工步
-            parent = current if (current and not current.parent()) else (current.parent() if current else None)
-            if not parent: return
-            
-            child = QTreeWidgetItem([
-                f"  └─ {data['name']}", data['action'], data['params'],
-                "参与判定" if data.get("is_judgment") else "--",
-                data.get("fail_strategy", "失败停止")
-            ])
-            child.setData(0, Qt.UserRole, data.get("device"))
-            child.setData(1, Qt.UserRole, data.get("stype"))
-            child.setData(2, Qt.UserRole, data.get("is_judgment"))
-            if data.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
-            
-            if current and current.parent():
-                idx = parent.indexOfChild(current)
-                parent.insertChild(idx + 1, child)
-            else:
-                parent.addChild(child)
-            parent.setExpanded(True)
+        self.batch_paste_nodes()
 
     def duplicate_node(self):
         self.copy_node()
         self.paste_node()
+
+    def batch_copy_nodes(self):
+        """批量复制选中的节点"""
+        selected = self.step_tree.selectedItems()
+        if not selected:
+            QMessageBox.warning(self, "提醒", "请先选择要复制的节点。")
+            return
+            
+        # 序列化选中的所有节点
+        copied_nodes = []
+        for item in selected:
+            node_data = self._get_node_data(item)
+            copied_nodes.append(node_data)
+            
+        self.clipboard_data = {
+            "type": "batch",
+            "nodes": copied_nodes
+        }
+
+    def batch_paste_nodes(self):
+        """批量粘贴节点"""
+        if not self.clipboard_data:
+            QMessageBox.warning(self, "提醒", "剪贴板为空。")
+            return
+            
+        current = self.step_tree.currentItem()
+        
+        # 将 clipboard_data 统一规范为列表
+        if isinstance(self.clipboard_data, dict) and self.clipboard_data.get("type") == "batch":
+            nodes_to_paste = self.clipboard_data.get("nodes", [])
+        else:
+            nodes_to_paste = [self.clipboard_data]
+            
+        if not nodes_to_paste: return
+        
+        for data in nodes_to_paste:
+            if data["type"] == "item":
+                # 粘贴为顶层测试项
+                new_item = QTreeWidgetItem([
+                    data['name'], data['mode'], data['min'], data['max'], data['strategy']
+                ])
+                new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
+                new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
+                new_item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
+                new_item.setForeground(0, QColor("#00E5FF"))
+                font = QFont()
+                font.setBold(True)
+                new_item.setFont(0, font)
+                
+                for sub in data.get("sub_steps", []):
+                    child = QTreeWidgetItem([
+                        f"  └─ {sub['name']}", sub['action'], sub['params'],
+                        "参与判定" if sub.get("is_judgment") else "--",
+                        sub.get("fail_strategy", "失败停止")
+                    ])
+                    child.setData(0, Qt.UserRole, sub.get("device"))
+                    child.setData(1, Qt.UserRole, sub.get("stype"))
+                    child.setData(2, Qt.UserRole, sub.get("is_judgment"))
+                    if sub.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
+                    new_item.addChild(child)
+                
+                if current:
+                    idx = self.step_tree.indexOfTopLevelItem(current if not current.parent() else current.parent())
+                    self.step_tree.insertTopLevelItem(idx + 1, new_item)
+                    current = new_item
+                else:
+                    self.step_tree.addTopLevelItem(new_item)
+                    
+            elif data["type"] == "step":
+                # 粘贴为子工步
+                parent = current if (current and not current.parent()) else (current.parent() if current else None)
+                if not parent: continue
+                
+                child = QTreeWidgetItem([
+                    f"  └─ {data['name']}", data['action'], data['params'],
+                    "参与判定" if data.get("is_judgment") else "--",
+                    data.get("fail_strategy", "失败停止")
+                ])
+                child.setData(0, Qt.UserRole, data.get("device"))
+                child.setData(1, Qt.UserRole, data.get("stype"))
+                child.setData(2, Qt.UserRole, data.get("is_judgment"))
+                if data.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
+                
+                if current and current.parent():
+                    idx = parent.indexOfChild(current)
+                    parent.insertChild(idx + 1, child)
+                    current = child
+                else:
+                    parent.addChild(child)
+                parent.setExpanded(True)
 
     def bulk_edit_nodes(self):
         # 1. 提取当前树中出现的所有设备名
@@ -690,13 +1123,24 @@ class ConfigTab(QWidget):
                     item.setForeground(0, QColor("#FFFFFF"))
 
     def delete_node(self):
-        item = self.step_tree.currentItem()
-        if item:
-            parent = item.parent()
-            if parent:
-                parent.removeChild(item)
-            else:
-                index = self.step_tree.indexOfTopLevelItem(item)
+        selected = self.step_tree.selectedItems()
+        if not selected: return
+        
+        reply = QMessageBox.question(self, "确认删除", f"确定要删除选中的 {len(selected)} 个节点吗？", 
+                                     QMessageBox.Yes | QMessageBox.No)
+        if reply != QMessageBox.Yes: return
+        
+        children = [item for item in selected if item.parent() is not None]
+        parents = [item for item in selected if item.parent() is None]
+        
+        for item in children:
+            p = item.parent()
+            if p:
+                p.removeChild(item)
+                
+        for item in parents:
+            index = self.step_tree.indexOfTopLevelItem(item)
+            if index >= 0:
                 self.step_tree.takeTopLevelItem(index)
 
     def add_new_recipe(self):

@@ -312,7 +312,7 @@ class StepDialog(QDialog):
             "0x07 CSC控制读取", "0x07 CSC控制写入",
             "0x08 CRASH读取", "0x09 RTC控制读取", "0x09 RTC控制写入",
             "0x10 NTC读取", "0x0A EEPROM控制读取", "0x0A EEPROM控制写入",
-            "0x0B 霍尔电流读取", "0xFF 唤醒源读取"
+            "0x0B 霍尔电流读取", "0xFF 扩展指令"
         ])
         self.eol_op.setVisible(False)
         self.eol_args = QLineEdit("")
@@ -515,7 +515,17 @@ class StepDialog(QDialog):
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "RTC功能:", [("读取时间", "READ"), ("设置时间", "SET_TIME"), ("设置唤醒", "SET_WAKEUP")])
             self.eol_args.setPlaceholderText("DATA:YYYYMMDDHHMMSS")
         elif "0xFF" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取项:", [("唤醒源", "0x06"), ("压力传感器", "0x0E"), ("高边负载电压", "0x11")])
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取项:", [
+                ("读取第一唤醒源", "0x06"), 
+                ("读取压力传感器", "0x0E"), 
+                ("读取高边负载回采电压", "0x11")
+            ])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "通道:", [
+                ("通道0", "0"), ("通道1", "1"), ("通道2", "2"), ("通道3", "3"),
+                ("通道4", "4"), ("通道5", "5"), ("通道6", "6"), ("通道7", "7"),
+                ("通道8", "8"), ("通道9", "9"), ("通道10", "10"), ("通道11", "11"),
+                ("通道12", "12"), ("通道13", "13"), ("通道14", "14"), ("通道15", "15")
+            ])
         elif "0x0B" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "霍尔通道:", [("通道1", "0x01"), ("通道2", "0x03")])
 
@@ -751,7 +761,7 @@ class StepDialog(QDialog):
             self.action_combo.addItems([
                 "0x03 绝缘控制读取", "0x04 GPIO控制读取", "0x05 PWM读取", "0x06 ADC读取",
                 "0x07 CSC控制读取", "0x08 CRASH读取", "0x09 RTC控制读取", "0x10 NTC读取",
-                "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 唤醒源读取"
+                "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 扩展指令"
             ])
         elif "CAN" in device_text:
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据", "接收指定帧ID"])

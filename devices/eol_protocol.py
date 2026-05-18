@@ -115,6 +115,10 @@ class EOLProtocol:
         return EOLResult(True, response_code=response_code, payload=response_payload, raw_data=raw, value=value)
 
     def execute(self, op_name: str, timeout: float = 1.0, logger: Callable[[str], None] = None, **kwargs) -> EOLResult:
+        # 兼容老配方中原先的 "0xFF 唤醒源读取" 名称
+        if op_name == "0xFF 唤醒源读取":
+            op_name = "0xFF 扩展指令"
+            
         if op_name not in self.operations:
             return EOLResult(False, error=f"不支持的EOL操作: {op_name}")
         
@@ -190,6 +194,33 @@ class EOLProtocol:
                     payload = bytes([crash_index])
                 except Exception as ex:
                     logger(f"[WARNING] CRASH 0x08 自动打包解析异常: {ex}") if logger else print(f"[WARNING] CRASH 0x08 自动打包解析异常: {ex}")
+
+            # 唤醒源读取特殊处理 (0xFF)
+            elif "0xFF" in op_name:
+                try:
+                    # 1. 读取项参数配置在第 3 字节 (operation)
+                    read_item = kwargs.get("PARAM1", kwargs.get("OP", "0x06"))
+                    read_item_str = str(read_item).strip()
+                    
+                    if "第一唤醒源" in read_item_str or "0x06" in read_item_str or read_item_str == "6":
+                        op_code = 0x06
+                    elif "压力传感器" in read_item_str or "0x0E" in read_item_str or "0x0e" in read_item_str or read_item_str == "14":
+                        op_code = 0x0E
+                    elif "高边负载回采电压" in read_item_str or "0x11" in read_item_str or read_item_str == "17":
+                        op_code = 0x11
+                    else:
+                        try: op_code = int(read_item_str, 0)
+                        except: op_code = 0x06
+                        
+                    # 2. 通道参数配置在第 5 字节 (payload[0])
+                    # 只有读取高边负载回采电压 (0x11) 时，通道参数才生效，其他读取时通道值默认为 0
+                    if op_code == 0x11:
+                        ch_val = self._int_arg(kwargs, "PARAM2", "CH", "CHANNEL", "INDEX")
+                    else:
+                        ch_val = 0
+                    payload = bytes([ch_val])
+                except Exception as ex:
+                    logger(f"[WARNING] 0xFF 扩展指令自动打包解析异常: {ex}") if logger else print(f"[WARNING] 0xFF 扩展指令自动打包解析异常: {ex}")
 
             # --- 终极加固：一段时间内最大值采样滤波机制 (完美解决互锁信号等 PWM 占空比波动问题) ---
             # 提取最大值采样参数 (支持 MAX_DURATION:1.5 格式，单位：秒)
@@ -313,8 +344,8 @@ class EOLProtocol:
             # --- 0x0B 霍尔电流 ---
             "0x0B 霍尔电流读取": {"device_id": 0x0B, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "HALL", "CHANNEL")]), "decoder": self._decode_current},
             
-            # --- 0xFF 唤醒源 ---
-            "0xFF 唤醒源读取": {"device_id": 0xFF, "operation": 0x06, "decoder": self._decode_byte4},
+            # --- 0xFF 扩展指令 ---
+            "0xFF 扩展指令": {"device_id": 0xFF, "operation": 0x06, "decoder": self._decode_wakeup},
         }
 
     def _int_arg(self, kwargs, *names, length: Optional[int] = None) -> int:
@@ -355,6 +386,28 @@ class EOLProtocol:
 
     def _decode_byte4(self, raw: bytes):
         return raw[4] if len(raw) >= 5 else None
+
+    def _decode_wakeup(self, raw: bytes):
+        if len(raw) < 5:
+            return None
+        op_code = raw[2] if len(raw) >= 3 else 0x06
+        
+        if op_code == 0x06:
+            # 读取第一唤醒源: 有效数据是第5字节，精度1
+            return raw[4]
+        elif op_code == 0x0E:
+            # 读取压力传感器: 有效数据是第5,6,7,8字节，高位在前，精度1
+            if len(raw) < 8:
+                return None
+            return int.from_bytes(raw[4:8], "big")
+        elif op_code == 0x11:
+            # 读取高边负载回采电压: 有效数据是第5,6字节，高位在前，精度0.001
+            if len(raw) < 6:
+                return None
+            val = int.from_bytes(raw[4:6], "big")
+            return round(val * 0.001, 3)
+            
+        return raw[4]
 
     def _decode_index_value(self, raw: bytes):
         return raw[5] if len(raw) >= 6 else None
