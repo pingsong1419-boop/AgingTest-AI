@@ -72,8 +72,9 @@ class MainboardPowerRU60:
                 val = int(round(voltage * 100))
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Register 149: {val}")
                 result = self.client.write_register(149, val, device_id=self.unit_id)
-                if logger: logger(f"[IP: {self.ip}] [RX] {'Error' if result.isError() else 'Success'}")
-                return not result.isError()
+                success = result is not None and not result.isError()
+                if logger: logger(f"[IP: {self.ip}] [RX] {'Success' if success else 'Error'}")
+                return success
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 设置电压异常: {e}")
                 return False
@@ -88,8 +89,9 @@ class MainboardPowerRU60:
                 val = int(round(current * 100))
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Register 150: {val}")
                 result = self.client.write_register(150, val, device_id=self.unit_id)
-                if logger: logger(f"[IP: {self.ip}] [RX] {'Error' if result.isError() else 'Success'}")
-                return not result.isError()
+                success = result is not None and not result.isError()
+                if logger: logger(f"[IP: {self.ip}] [RX] {'Success' if success else 'Error'}")
+                return success
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
                 return False
@@ -103,8 +105,9 @@ class MainboardPowerRU60:
             try:
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Coil 133: {state}")
                 result = self.client.write_coil(133, state, device_id=self.unit_id)
-                if logger: logger(f"[IP: {self.ip}] [RX] {'Error' if result.isError() else 'Success'}")
-                return not result.isError()
+                success = result is not None and not result.isError()
+                if logger: logger(f"[IP: {self.ip}] [RX] {'Success' if success else 'Error'}")
+                return success
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
                 return False

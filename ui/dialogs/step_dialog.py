@@ -497,6 +497,13 @@ class StepDialog(QDialog):
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "子索引/状态:", self._index_items(256, "Index "))
         elif "0x10" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "NTC索引:", self._index_items(64, "NTC "))
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "温感类型:", [
+                ("1 CELL_NTC", "CELL_NTC"),
+                ("2 PCB_NTC", "PCB_NTC"),
+                ("3 SHUNT", "SHUNT"),
+                ("4 NTCF", "NTCF"),
+                ("5 FPCB_NTC", "FPCB_NTC")
+            ])
             self.eol_args.setPlaceholderText("无需额外参数")
         elif "0x08" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取内容:", [("占空比", "0x01"), ("频率", "0x02"), ("阻抗", "0x03"), ("脉宽", "0x04")])
@@ -660,15 +667,29 @@ class StepDialog(QDialog):
                     if "CH" in kv: self.eol_channel.setValue(int(float(kv["CH"])))
                     if "TX_ID" in kv: self.eol_tx_id.setText(kv["TX_ID"])
                     if "RX_ID" in kv: self.eol_rx_id.setText(kv["RX_ID"])
+                    if "ARGS" in kv: self.eol_args.setText(kv["ARGS"])
                     
-                    mappings = [("0x06", ["ADC", "MODE"]), ("0x03", ["STATE"]), ("0x04", ["INDEX", "LEVEL"]), 
-                                ("0x05", ["PWM"]), ("0x10", ["NTC"]), ("0x0B", ["HALL"])]
-                    for code, keys in mappings:
-                        if code in str(kv.get("EOL", "")):
-                            for k in keys:
-                                if k in kv:
-                                    combo = self.eol_param1 if k in ["ADC", "STATE", "INDEX", "PWM", "NTC", "HALL"] else self.eol_param2
-                                    self._set_combo_by_value(combo, kv[k])
+                    # 1. 优先尝试直接用全新通用 PARAM1 和 PARAM2 还原参数，毫无卡死可能！
+                    if "PARAM1" in kv:
+                        self._set_combo_by_value(self.eol_param1, kv["PARAM1"])
+                    if "PARAM2" in kv:
+                        self._set_combo_by_value(self.eol_param2, kv["PARAM2"])
+                        
+                    # 2. 兼容映射还原（包括 ADC, MODE, STATE, INDEX, LEVEL, PWM, NTC, HALL, OP, VAL 等历史字段）
+                    p1_keys = ["ADC", "STATE", "INDEX", "PWM", "NTC", "HALL", "OP", "GPIO"]
+                    p2_keys = ["MODE", "LEVEL", "VAL", "STATE_VAL", "INDEX"]
+                    
+                    for k in p1_keys:
+                        if k in kv and not kv.get("PARAM1"):
+                            self._set_combo_by_value(self.eol_param1, kv[k])
+                            break
+                    for k in p2_keys:
+                        # 排除 OP/INDEX 混用（在 0x07、0x08 等操作中参数 2 被存为 INDEX，此时需排除做参数 1 的情况）
+                        if k == "INDEX" and any(x in str(kv.get("EOL", "")) for x in ["0x04", "0x06"]):
+                            continue
+                        if k in kv and not kv.get("PARAM2"):
+                            self._set_combo_by_value(self.eol_param2, kv[k])
+                            break
             except: pass
         
         except Exception as e:
@@ -889,23 +910,38 @@ class StepDialog(QDialog):
             eol_action = action
             params.append(f"EOL:{eol_action}")
             
-            # --- 核心业务参数匹配 (硬编码映射，解决 Label 匹配不可靠问题) ---
-            if "0x06" in eol_action:
-                params.append(f"ADC:{self._combo_value(self.eol_param1)}")
-                params.append(f"MODE:{self._combo_value(self.eol_param2)}")
-            elif "0x03" in eol_action:
-                params.append(f"STATE:{self._combo_value(self.eol_param1)}")
-            elif "0x04" in eol_action:
-                params.append(f"INDEX:{self._combo_value(self.eol_param1)}")
-                params.append(f"LEVEL:{self._combo_value(self.eol_param2)}")
-            elif "0x05" in eol_action:
-                params.append(f"PWM:{self._combo_value(self.eol_param1)}")
-            elif "0x10" in eol_action:
-                params.append(f"NTC:{self._combo_value(self.eol_param1)}")
-            elif "0x0B" in eol_action:
-                params.append(f"HALL:{self._combo_value(self.eol_param1)}")
+            # --- 终极加固通用参数保存：完美覆盖 0x03~0xFF 所有智界 EOL 协议 ---
+            p1_val = self._combo_value(self.eol_param1)
+            p2_val = self._combo_value(self.eol_param2)
+            args_val = self.eol_args.text().strip()
             
-            # 通用参数
+            if p1_val: params.append(f"PARAM1:{p1_val}")
+            if p2_val: params.append(f"PARAM2:{p2_val}")
+            if args_val: params.append(f"ARGS:{args_val}")
+            
+            # 兼容老版本历史配方的字段格式，额外写入特定键名，确保老引擎读取无误
+            if "0x06" in eol_action:
+                params.append(f"ADC:{p1_val}")
+                params.append(f"MODE:{p2_val}")
+            elif "0x03" in eol_action:
+                params.append(f"STATE:{p1_val}")
+                params.append(f"VAL:{p2_val}")
+            elif "0x04" in eol_action:
+                params.append(f"INDEX:{p1_val}")
+                params.append(f"LEVEL:{p2_val}")
+            elif "0x05" in eol_action:
+                params.append(f"PWM:{p1_val}")
+                params.append(f"MODE:{p2_val}")
+            elif "0x10" in eol_action:
+                params.append(f"NTC:{p1_val}")
+                params.append(f"NTC_TYPE:{p2_val}")
+            elif "0x0B" in eol_action:
+                params.append(f"HALL:{p1_val}")
+            elif "0x07" in eol_action or "0x08" in eol_action or "0xFF" in eol_action:
+                params.append(f"OP:{p1_val}")
+                params.append(f"INDEX:{p2_val}")
+            
+            # 通用配置参数
             params.append(f"TIMEOUT:{self.eol_timeout.value()}")
             params.append(f"CH:{self.eol_channel.value()}")
             params.append(f"TYPE:{self.eol_can_type.currentIndex()}")

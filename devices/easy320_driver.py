@@ -86,7 +86,7 @@ class Easy320Controller:
                 
                 # 备选尝试寄存器写入 (FC06)
                 result = self.client.write_register(address=address, value=1 if state else 0, device_id=self.slave_id)
-                return not result.isError()
+                return result is not None and not result.isError()
             except Exception as e:
                 logger.error(f"继电器控制异常: {e}")
                 return False

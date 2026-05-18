@@ -138,13 +138,28 @@ class ChannelWorker(QObject):
                 self.test_id = -1
             return
 
-        step = self.steps[self.current_step_index]
-        if step.name.strip().startswith("#"):
-            # self.log_message.emit(self.channel_id, f"[*] 测试项被屏蔽，跳过执行: {step.name}")
+        # 极速闪电跳过循环 (Lightning Skip Loop)：遇到带 "#" 的被屏蔽项，一瞬间登记并广播跳过，0ms 极速奔向下一个勾选项！
+        while self.current_step_index < len(self.steps):
+            step = self.steps[self.current_step_index]
+            if not step.name.strip().startswith("#"):
+                break
+            
+            # 瞬间在 0ms 内完成当前项及其所有子步骤的状态登记与跳过广播！
+            self.step_started.emit(self.channel_id, step.name)
+            self.step_statuses[step.name] = True
+            self.step_finished.emit(self.channel_id, step.name, True, "跳过")
+            
+            for sub_idx, sub in enumerate(step.sub_steps):
+                self.sub_step_finished.emit(self.channel_id, self.current_step_index, sub_idx, "跳过", None)
+            
             self.current_step_index += 1
+
+        # 若已完成全部测试项，直接进入 run_next_step 的正常收尾落库结算分支！
+        if self.current_step_index >= len(self.steps):
             self.run_next_step()
             return
             
+        step = self.steps[self.current_step_index]
         self.step_started.emit(self.channel_id, step.name)
         import time
         self.step_start_times[step.name] = time.time()
@@ -562,9 +577,16 @@ class ChannelWorker(QObject):
         if not self.is_running: return
         step = self.steps[self.current_step_index]
         
-        # 1. 区分标准类型执行判定
+        # 1. 区分标准类型执行判定：只有被勾选了“结果输出并参与最终判定(is_judgment)”的子步骤结果才送入质检合格区间判定！
         if is_pass and self.current_step_results:
-            for val in self.current_step_results:
+            for idx, val in enumerate(self.current_step_results):
+                # 安全获取对应的子步骤
+                if idx < len(step.sub_steps):
+                    sub = step.sub_steps[idx]
+                    # 如果子工步没有在配方中勾选参与最终判定，则跳过其范围检查，避免任何辅助动作结果干扰合格判定
+                    if not bool(sub.params.get("is_judgment", False)):
+                        continue
+
                 if getattr(step, "standard_type", "数值") == "字符串":
                     # 字符串精确相等比对 (不区分首尾空格)
                     target = str(step.min_limit or "").strip()
@@ -572,7 +594,9 @@ class ChannelWorker(QObject):
                     if target != actual:
                         is_pass = False
                 else:
-                    # 数值范围判定
+                    # 数值范围判定：跳过单纯的 PASS/FAIL 辅助控制结论，防止其被解析为 0.0 引发 NG 误判
+                    if val in ("PASS", "FAIL"):
+                        continue
                     f_val = self._parse_numeric(val)
                     try:
                         if step.min_limit is not None and f_val < float(step.min_limit): is_pass = False
@@ -606,16 +630,41 @@ class ChannelWorker(QObject):
         start_time = getattr(self, "step_start_times", {}).get(step.name, time.time())
         duration = round(time.time() - start_time, 2)
         
-        # 智能提取层：优先挑选包含实际数值/物理量数据（非 PASS、非 FAIL、非 None）的结果
+        # 智能提取层：优先提取在配方中被勾选了“结果输出并参与判定(is_judgment)”的有效物理量结果
         val = None
         if self.current_step_results:
-            for r in self.current_step_results:
-                if r is not None and r != "" and r != "PASS" and r != "FAIL":
-                    val = r
-                    break
-            # 若无任何子工步实际数据返回，则使用最后一个子工步的执行结论作为测量值兜底
+            # 1. 契约优先挑选：寻找被勾选参与判定且结果不为 None 且不为 PASS/FAIL 的真正物理值
+            for idx, r in enumerate(self.current_step_results):
+                if idx < len(step.sub_steps):
+                    sub = step.sub_steps[idx]
+                    if bool(sub.params.get("is_judgment", False)):
+                        if r is not None and r != "" and r != "PASS" and r != "FAIL":
+                            val = r
+                            break
+            
+            # 2. 契约次优挑选：如果勾选了参与判定的子步骤回传的是 PASS/FAIL 控制结论
             if val is None:
-                val = self.current_step_results[-1]
+                for idx, r in enumerate(self.current_step_results):
+                    if idx < len(step.sub_steps):
+                        sub = step.sub_steps[idx]
+                        if bool(sub.params.get("is_judgment", False)):
+                            if r is not None and r != "":
+                                val = r
+                                break
+
+            # 3. 常规降级提取：若全步骤无勾选参与判定的有效数据，则按历史降级提取物理量
+            if val is None:
+                for r in self.current_step_results:
+                    if r is not None and r != "" and r != "PASS" and r != "FAIL":
+                        val = r
+                        break
+            
+            # 4. 终极控制兜底：若无任何子工步实际数据返回，则使用最后一个非 None 的执行结论作为测量值兜底
+            if val is None:
+                for r in reversed(self.current_step_results):
+                    if r is not None:
+                        val = r
+                        break
 
         if getattr(step, "standard_type", "数值") == "字符串":
             val_to_log = val
@@ -787,8 +836,6 @@ class TestEngine(QObject):
         steps = []
         for item in recipe_data:
             name = item.get('name', '')
-            if name.strip().startswith("#"):
-                continue  # 禁用项，完全不测试，不加载，不显示！
             s_str = item.get('strategy', "任何NG停止")
             strategy = NGStrategy.STOP_ON_ANY
             for s in NGStrategy:

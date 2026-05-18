@@ -89,7 +89,7 @@ class AFEPowerController:
                 val = int(round(voltage * 10))
                 # 使用 device_id 替代 slave 以兼容本项目环境
                 result = self.client.write_register(address=149, value=val, device_id=self.slave_id)
-                return not result.isError()
+                return result is not None and not result.isError()
             except Exception as e:
                 logger.error(f"电压设置异常: {e}")
                 return False
@@ -104,7 +104,7 @@ class AFEPowerController:
             try:
                 val = int(round(current * 100))
                 result = self.client.write_register(address=150, value=val, device_id=self.slave_id)
-                return not result.isError()
+                return result is not None and not result.isError()
             except Exception as e:
                 logger.error(f"电流设置异常: {e}")
                 return False
@@ -118,7 +118,7 @@ class AFEPowerController:
             if not self.is_connected: return False
             try:
                 result = self.client.write_coil(address=133, value=state, device_id=self.slave_id)
-                return not result.isError()
+                return result is not None and not result.isError()
             except Exception as e:
                 logger.error(f"输出控制异常: {e}")
                 return False

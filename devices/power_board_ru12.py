@@ -68,8 +68,9 @@ class PowerBoardRU12:
             try:
                 val = int(round(voltage * 100))
                 result = self.client.write_register(149, val, device_id=self.unit_id)
-                if logger: logger(f"[PowerBoard] 设置电压: {voltage}V, 结果: {not result.isError()}")
-                return not result.isError()
+                success = result is not None and not result.isError()
+                if logger: logger(f"[PowerBoard] 设置电压: {voltage}V, 结果: {success}")
+                return success
             except Exception as e:
                 if logger: logger(f"[PowerBoard] 设置电压异常: {e}")
                 return False
@@ -81,8 +82,9 @@ class PowerBoardRU12:
             try:
                 val = int(round(current * 100))
                 result = self.client.write_register(150, val, device_id=self.unit_id)
-                if logger: logger(f"[PowerBoard] 设置电流: {current}A, 结果: {not result.isError()}")
-                return not result.isError()
+                success = result is not None and not result.isError()
+                if logger: logger(f"[PowerBoard] 设置电流: {current}A, 结果: {success}")
+                return success
             except Exception as e:
                 if logger: logger(f"[PowerBoard] 设置电流异常: {e}")
                 return False
@@ -93,8 +95,9 @@ class PowerBoardRU12:
             if not self.is_connected: return False
             try:
                 result = self.client.write_coil(133, state, device_id=self.unit_id)
-                if logger: logger(f"[PowerBoard] 输出控制: {'ON' if state else 'OFF'}, 结果: {not result.isError()}")
-                return not result.isError()
+                success = result is not None and not result.isError()
+                if logger: logger(f"[PowerBoard] 输出控制: {'ON' if state else 'OFF'}, 结果: {success}")
+                return success
             except Exception as e:
                 if logger: logger(f"[PowerBoard] 输出控制异常: {e}")
                 return False

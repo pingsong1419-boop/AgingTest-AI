@@ -119,6 +119,11 @@ class MonitorDialog(QDialog):
         self.btn_stop.setStyleSheet("background-color: #E94560; color: white; padding: 10px; border-radius: 5px; font-weight: bold;")
         btn_layout.addWidget(self.btn_stop)
         
+        self.btn_clear_log = QPushButton("清空日志")
+        self.btn_clear_log.clicked.connect(self.clear_logs)
+        self.btn_clear_log.setStyleSheet("background-color: #3E3E5C; color: #00E5FF; padding: 10px; border-radius: 5px; font-weight: bold;")
+        btn_layout.addWidget(self.btn_clear_log)
+        
         btn_layout.addStretch()
         
         btn_close = QPushButton("关闭窗口")
@@ -209,6 +214,16 @@ class MonitorDialog(QDialog):
         """清空树中所有测试项的勾选状态"""
         for i in range(self.step_tree.topLevelItemCount()):
             self.step_tree.topLevelItem(i).setCheckState(0, Qt.Unchecked)
+
+    def clear_logs(self):
+        """清空日志框并同时清空 Worker 历史日志缓存，实现彻底清空"""
+        self.log_text.clear()
+        if hasattr(self, '_current_worker') and self._current_worker:
+            try:
+                self._current_worker.log_history.clear()
+            except:
+                pass
+        self.log_text.append("<font color='#00E5FF'>--- 实时执行日志已被操作员清空 ---</font>")
 
     def _get_checked_step_names(self):
         """获取当前已勾选的工步名称列表"""
@@ -326,8 +341,7 @@ class MonitorDialog(QDialog):
                 "sub_steps": sub_data_list
             }
             
-            # 如果之前是勾选状态，则保持
-            state = Qt.Checked if step.name in checked_names else Qt.Unchecked
+            is_shielded = step.name.strip().startswith("#")
             
             parent = QTreeWidgetItem([
                 step.name, 
@@ -336,9 +350,16 @@ class MonitorDialog(QDialog):
                 "--", 
                 "等待执行"
             ])
+            
+            if is_shielded:
+                state = Qt.Unchecked
+                parent.setForeground(0, QColor("#888888"))
+            else:
+                state = Qt.Checked if step.name in checked_names else Qt.Unchecked
+                
             parent.setCheckState(0, state)
             parent.setData(0, Qt.UserRole, step_data)
-            parent.setBackground(0, QColor("#1F1F35"))
+            parent.setBackground(0, QColor("#1F1F35") if not is_shielded else QColor("#161625"))
             self.step_tree.addTopLevelItem(parent)
             self.step_items[i] = parent
             
@@ -360,9 +381,9 @@ class MonitorDialog(QDialog):
         actual_idx = 0
         for step in steps_data:
             name = step.get('name', '未命名')
-            if name.strip().startswith("#"):
-                continue  # 禁用项，待命监控状态下也彻底不显示！
-                
+            # 我们不再直接剔除 "#" 禁用的步骤，而是完整保留并加载展示！
+            is_shielded = name.strip().startswith("#")
+            
             parent = QTreeWidgetItem([
                 name, 
                 step.get('min', '--'), 
@@ -371,12 +392,16 @@ class MonitorDialog(QDialog):
                 "待命"
             ])
             
-            # 如果之前是勾选状态，则保持
-            state = Qt.Checked if name in checked_names else Qt.Unchecked
+            # 如果是带 # 开头的被屏蔽项，或者是之前没有勾选的项，则保持不打勾状态
+            if is_shielded:
+                state = Qt.Unchecked
+                parent.setForeground(0, QColor("#888888"))  # 亮灰色表示被屏蔽跳过
+            else:
+                state = Qt.Checked if name in checked_names else Qt.Unchecked
             
             parent.setCheckState(0, state)
             parent.setData(0, Qt.UserRole, step) # 直接存原始 dict
-            parent.setBackground(0, QColor("#1F1F35"))
+            parent.setBackground(0, QColor("#1F1F35") if not is_shielded else QColor("#161625"))
             self.step_tree.addTopLevelItem(parent)
             self.step_items[actual_idx] = parent
             
@@ -407,12 +432,19 @@ class MonitorDialog(QDialog):
         if ch_id != self.channel_id: return
         for i in range(self.step_tree.topLevelItemCount()):
             item = self.step_tree.topLevelItem(i)
-            if step_name in item.text(0):
-                item.setText(4, "PASS" if is_pass else "NG")
-                item.setForeground(4, QColor("#4ECCA3") if is_pass else QColor("#FF4C29"))
-                if measured_val is not None:
-                    item.setText(3, str(measured_val))
-                    item.setForeground(3, QColor("#00E5FF"))
+            # 支持模糊匹配和带 # 的匹配
+            if step_name in item.text(0) or item.text(0) in step_name:
+                if measured_val == "跳过":
+                    item.setText(4, "跳过")
+                    item.setForeground(4, QColor("#888888"))
+                    item.setText(3, "--")
+                    item.setForeground(3, QColor("#888888"))
+                else:
+                    item.setText(4, "PASS" if is_pass else "NG")
+                    item.setForeground(4, QColor("#4ECCA3") if is_pass else QColor("#FF4C29"))
+                    if measured_val is not None:
+                        item.setText(3, str(measured_val))
+                        item.setForeground(3, QColor("#00E5FF"))
 
     @Slot(int, int, int, str, object)
     def on_sub_step_finished(self, ch_id, step_idx, sub_idx, status, result):
@@ -420,10 +452,15 @@ class MonitorDialog(QDialog):
         item = self.sub_step_items.get((step_idx, sub_idx))
         if item:
             item.setText(4, status)
-            if result is not None:
-                item.setText(3, str(result))
-                item.setForeground(3, QColor("#00E5FF"))
-            item.setForeground(4, QColor("#4ECCA3") if status == "PASS" else QColor("#FF4C29"))
+            if status == "跳过":
+                item.setForeground(4, QColor("#888888"))
+                item.setText(3, "--")
+                item.setForeground(3, QColor("#888888"))
+            else:
+                if result is not None:
+                    item.setText(3, str(result))
+                    item.setForeground(3, QColor("#00E5FF"))
+                item.setForeground(4, QColor("#4ECCA3") if status == "PASS" else QColor("#FF4C29"))
 
     @Slot(int, str)
     def on_log_message(self, ch_id, message):

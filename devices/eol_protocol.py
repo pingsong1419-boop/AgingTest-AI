@@ -98,15 +98,20 @@ class EOLProtocol:
             return EOLResult(False, error="EOL响应超时")
 
         raw = msg.get("data", b"")
+        # 记录接收报文日志
+        local_log(f"CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw.hex(' ').upper()}")
         response_code = raw[3] if len(raw) >= 4 else None
         # BUG-16修复: 用 response_payload 命名，避免遮蔽函数形参 payload
         response_payload = raw[4:] if len(raw) > 4 else b""
         if response_code != self.POSITIVE_RESPONSE:
             return EOLResult(False, response_code=response_code, payload=response_payload, raw_data=raw, error=f"EOL否定响应: 0x{response_code:02X}" if response_code is not None else "EOL响应格式错误")
 
-        value = response_payload.hex(" ").upper()
+        # 如果定义了专门的物理量解码器，使用解码器解析数据；
+        # 否则，作为一个纯控制或写入指令，成功时默认返回 "PASS"，绝不输出杂乱的十六进制（防止干扰正常测试项的质检判定）
         if decoder:
             value = decoder(raw)
+        else:
+            value = "PASS"
         return EOLResult(True, response_code=response_code, payload=response_payload, raw_data=raw, value=value)
 
     def execute(self, op_name: str, timeout: float = 1.0, logger: Callable[[str], None] = None, **kwargs) -> EOLResult:
@@ -129,7 +134,116 @@ class EOLProtocol:
                 # ADC: 0x01 raw, 0x02 value
                 mode_str = str(kwargs.get("读取模式", kwargs.get("MODE", ""))).upper()
                 op_code = 0x01 if "RAW" in mode_str or "原始" in mode_str else 0x02
+            
+            # GPIO 控制读取与写入特殊处理 (0x04)
+            elif "0x04" in op_name:
+                try:
+                    gpio_index = self._int_arg(kwargs, "GPIO", "INDEX", "PARAM1")
+                    action_val = str(kwargs.get("PARAM2", kwargs.get("LEVEL", kwargs.get("VALUE", "")))).upper()
+                    
+                    if "WRITE_HIGH" in action_val or "写高" in action_val or "0x05" in action_val:
+                        op_code = 0x05
+                        payload = bytes([gpio_index, 0x01])
+                    elif "WRITE_LOW" in action_val or "写低" in action_val:
+                        op_code = 0x05
+                        payload = bytes([gpio_index, 0x00])
+                    else:
+                        # 默认读取模式
+                        op_code = 0x01
+                        payload = bytes([gpio_index])
+                except Exception as ex:
+                    # 容错降级
+                    logger(f"[WARNING] GPIO 0x04 自动打包解析异常: {ex}") if logger else print(f"[WARNING] GPIO 0x04 自动打包解析异常: {ex}")
+            
+            # NTC 温度读取特殊处理 (0x10)
+            elif "0x10" in op_name:
+                try:
+                    # 1. 提取温感类型 (CELL_NTC -> 0x01, PCB_NTC -> 0x02, SHUNT -> 0x03, NTCF -> 0x04, FPCB_NTC -> 0x05)
+                    type_val = str(kwargs.get("NTC_TYPE", kwargs.get("PARAM2", kwargs.get("TYPE", "CELL_NTC")))).upper()
+                    type_map = {
+                        "CELL_NTC": 0x01, "CELL": 0x01, "单体": 0x01, "0X01": 0x01, "1": 0x01,
+                        "PCB_NTC": 0x02, "PCB": 0x02, "板载": 0x02, "0X02": 0x02, "2": 0x02,
+                        "SHUNT": 0x03, "分流器": 0x03, "0X03": 0x03, "3": 0x03,
+                        "NTCF": 0x04, "0X04": 0x04, "4": 0x04,
+                        "FPCB_NTC": 0x05, "FPCB": 0x05, "0X05": 0x05, "5": 0x05
+                    }
+                    if type_val in type_map:
+                        op_code = type_map[type_val]
+                    else:
+                        try: op_code = int(type_val, 0)
+                        except: op_code = 0x01  # 默认降级为 CELL_NTC
+                    
+                    # 2. 提取温感索引并打包至 payload 的第二个字节 (CAN 帧的第 6 字节)
+                    ntc_index = self._int_arg(kwargs, "NTC", "INDEX", "PARAM1")
+                    payload = bytes([0x00, ntc_index])
+                except Exception as ex:
+                    # 异常降级
+                    logger(f"[WARNING] NTC 0x10 自动打包解析异常: {ex}") if logger else print(f"[WARNING] NTC 0x10 自动打包解析异常: {ex}")
 
+            # --- 终极加固：一段时间内最大值采样滤波机制 (完美解决互锁信号等 PWM 占空比波动问题) ---
+            # 提取最大值采样参数 (支持 MAX_DURATION:1.5 格式，单位：秒)
+            max_duration = None
+            if "MAX_DURATION" in kwargs:
+                try: max_duration = float(kwargs.pop("MAX_DURATION"))
+                except: pass
+            elif "ARGS" in kwargs:
+                # 兼容在 ARGS 框里填写的 MAX_DURATION:1.5 格式
+                args_str = str(kwargs.get("ARGS", ""))
+                import re
+                dur_match = re.search(r'MAX_DURATION:([\d.]+)', args_str, re.IGNORECASE)
+                if dur_match:
+                    try: max_duration = float(dur_match.group(1))
+                    except: pass
+
+            if max_duration is not None and max_duration > 0:
+                import time
+                interval = 0.05 # 采样间隔默认 50ms 
+                if "INTERVAL" in kwargs:
+                    try: interval = float(kwargs.pop("INTERVAL"))
+                    except: pass
+                
+                log_fn = logger if logger else print
+                log_fn(f"[!] 启动最大值滤波采样：时长 {max_duration}s，间隔 {interval}s...")
+                
+                start_time = time.time()
+                collected_values = []
+                last_result = None
+                
+                while time.time() - start_time < max_duration:
+                    res = self.transact(
+                        device_id=spec.get("device_id"),
+                        operation=op_code,
+                        payload=payload,
+                        timeout=timeout,
+                        decoder=spec.get("decoder"),
+                        request_id=tx_id,
+                        response_id=rx_id,
+                        can_type=can_type,
+                        dlc=dlc,
+                        logger=logger
+                    )
+                    last_result = res
+                    if res.success:
+                        # 尝试将结果解析为浮点数
+                        try:
+                            f_val = float(res.value)
+                            collected_values.append(f_val)
+                        except: pass
+                    
+                    time.sleep(interval)
+                
+                if collected_values:
+                    max_val = max(collected_values)
+                    log_fn(f"[!] 最大值滤波采样完成。共成功采样 {len(collected_values)} 次，提取最大值: {max_val}")
+                    # 将最大值覆盖写回最终的 EOLResult 实体
+                    last_result.success = True
+                    last_result.value = max_val
+                    return last_result
+                else:
+                    log_fn(f"[WARNING] 最大值滤波采样期间未采集到任何有效物理数值，以最后一次返回作为兜底。")
+                    return last_result if last_result else EOLResult(False, error="采样期间全数失败")
+
+            # --- 常规单次读取逻辑 ---
             return self.transact(
                 device_id=spec.get("device_id"),
                 operation=op_code,
@@ -164,11 +278,11 @@ class EOLProtocol:
             "0x05 PWM读取": {"device_id": 0x05, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "PWM", "CHANNEL", "INDEX")]), "decoder": self._decode_byte4},
             
             # --- 0x06 ADC ---
-            "0x06_read_adc_value": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: self._decode_index_u16(raw) * 0.001},
-            "0x06 ADC读取": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: self._decode_index_u16(raw) * 0.001},
+            "0x06_read_adc_value": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: round(self._decode_index_u16(raw) * 0.001, 3)},
+            "0x06 ADC读取": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: round(self._decode_index_u16(raw) * 0.001, 3)},
             
             # --- 0x07 CSC ---
-            "0x07 CSC控制读取": {"device_id": 0x07, "operation": 0x0E, "payload": lambda kw: self._int_arg(kw, "CELL", "INDEX", "TYPE").to_bytes(2, "big"), "decoder": lambda raw: self._decode_data_u32(raw) * 0.001},
+            "0x07 CSC控制读取": {"device_id": 0x07, "operation": 0x0E, "payload": lambda kw: self._int_arg(kw, "CELL", "INDEX", "TYPE").to_bytes(2, "big"), "decoder": lambda raw: round(self._decode_data_u32(raw) * 0.001, 3)},
             "0x07 CSC控制写入": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "STATE", "TYPE")])},
             
             # --- 0x08 CRASH ---
@@ -179,7 +293,7 @@ class EOLProtocol:
             "0x09 RTC控制写入": {"device_id": 0x09, "operation": 0x07, "payload": lambda kw: self._bytes_arg(kw, "DATA", length=4)},
             
             # --- 0x10 NTC ---
-            "0x10 NTC读取": {"device_id": 0x10, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
+            "0x10 NTC读取": {"device_id": 0x10, "operation": 0x01, "payload": lambda kw: bytes([0x00, self._int_arg(kw, "INDEX", "NTC")]), "decoder": self._decode_temp},
             
             # --- 0x0A EEPROM ---
             "0x0A EEPROM控制读取": {"device_id": 0x0A, "operation": 0x03, "decoder": self._decode_payload_hex},
@@ -226,38 +340,43 @@ class EOLProtocol:
         return data
 
     def _decode_payload_hex(self, raw: bytes):
-        return raw[4:8].hex(" ").upper() if len(raw) > 4 else ""
+        return raw[4:8].hex(" ").upper() if len(raw) >= 8 else None
 
     def _decode_byte4(self, raw: bytes):
-        return raw[4] if len(raw) > 4 else None
+        return raw[4] if len(raw) >= 5 else None
 
     def _decode_index_value(self, raw: bytes):
-        return raw[5] if len(raw) > 5 else None
+        return raw[5] if len(raw) >= 6 else None
 
     def _decode_index_u16(self, raw: bytes):
         """解析返回报文中的 U16 数据 (通常在 Byte 5, 6)"""
         if len(raw) < 7:
-            return 0
+            return None
         # 高位在前，低位在后 (Big Endian)
         val = (raw[5] << 8) | raw[6]
         return val
 
     def _decode_data_u32(self, raw: bytes):
+        if len(raw) < 8:
+            return None
         data = raw[4:8]
-        return int.from_bytes(data.ljust(4, b"\x00"), "big")
+        return int.from_bytes(data, "big")
 
     def _decode_insulation(self, raw: bytes):
         if len(raw) < 8:
-            return 0.0
+            return None
         value = (raw[4] << 16) | (raw[5] << 8) | raw[6]
         sign = -1 if raw[7] == 1 else 1
-        return sign * value * 0.001
+        return round(sign * value * 0.001, 3)
 
     def _decode_temp(self, raw: bytes):
-        if len(raw) < 6:
+        if len(raw) < 8:
             return None
-        return raw[5] - 50
+        val = int.from_bytes(raw[4:8], "big")
+        return val - 50
 
     def _decode_current(self, raw: bytes):
         value = self._decode_data_u32(raw)
-        return value * 0.001 - 800
+        if value is None:
+            return None
+        return round(value * 0.001 - 800, 3)
