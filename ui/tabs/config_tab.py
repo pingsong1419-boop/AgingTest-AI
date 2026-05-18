@@ -586,8 +586,7 @@ class ConfigTab(QWidget):
             paste_act.setEnabled(self.clipboard_data is not None)
             paste_act.triggered.connect(self.paste_node)
             
-            dup_act = QAction("批量克隆", self)
-            dup_act.triggered.connect(self.duplicate_node)
+            dup_act = None # 批量克隆已不需要，删除
             
             del_act = QAction("批量删除 (Delete)", self)
             del_act.triggered.connect(self.delete_node)
@@ -626,7 +625,8 @@ class ConfigTab(QWidget):
             menu.addAction(prefix_action)
 
         menu.addSeparator()
-        menu.addAction(dup_act)
+        if dup_act:
+            menu.addAction(dup_act)
         menu.addAction(bulk_act)
         menu.addSeparator()
         menu.addAction(del_act)
@@ -826,43 +826,63 @@ class ConfigTab(QWidget):
                 parent.setExpanded(True)
 
     def bulk_edit_nodes(self):
-        # 1. 提取当前树中出现的所有设备名
-        devices = set()
-        for i in range(self.step_tree.topLevelItemCount()):
-            item = self.step_tree.topLevelItem(i)
-            for j in range(item.childCount()):
-                d = item.child(j).data(0, Qt.UserRole)
-                if d: devices.add(d)
-        
+        # 1. 查找选中的顶级测试项
+        selected_nodes = []
+        for item in self.step_tree.selectedItems():
+            # 如果选中的是顶级节点 (没有 parent)
+            if not item.parent():
+                selected_nodes.append(item)
+            # 如果选中了子节点，我们也可以找到它的顶级父节点
+            elif item.parent() and item.parent() not in selected_nodes:
+                selected_nodes.append(item.parent())
+                
+        # 如果选取的列表为空，则默认对所有顶级测试项进行批量修改
+        if not selected_nodes:
+            for i in range(self.step_tree.topLevelItemCount()):
+                selected_nodes.append(self.step_tree.topLevelItem(i))
+                
+        if not selected_nodes:
+            QMessageBox.warning(self, "提醒", "当前配方中没有可修改的测试项。")
+            return
+            
         from ui.dialogs.bulk_edit_dialog import BulkEditDialog
-        dialog = BulkEditDialog(sorted(list(devices)), self)
+        dialog = BulkEditDialog(self)
         if dialog.exec():
             cfg = dialog.get_config()
             count = 0
             
-            # 2. 遍历树进行修改
-            for i in range(self.step_tree.topLevelItemCount()):
-                item = self.step_tree.topLevelItem(i)
-                for j in range(item.childCount()):
-                    sub = item.child(j)
-                    dev = sub.data(0, Qt.UserRole) or ""
-                    act = sub.text(1)
+            for idx, item in enumerate(selected_nodes):
+                # 统一修改测试项名称
+                if cfg["change_name"]:
+                    prefix = cfg["name_prefix"]
+                    if cfg["name_inc"]:
+                        new_name = f"{prefix}_{idx+1:02d}"
+                    else:
+                        new_name = prefix
+                    item.setText(0, new_name)
                     
-                    # 匹配过滤条件
-                    match_dev = (cfg["device_filter"] == "-- 全部设备 --") or (dev == cfg["device_filter"])
-                    match_act = (not cfg["action_filter"]) or (cfg["action_filter"] in act)
+                # 统一修改判定范围/期望值
+                if cfg["change_range"]:
+                    item.setText(1, "范围判定" if cfg['standard_type'] == "数值" else "字符串比对")
+                    item.setText(2, cfg['min'] if cfg['min'] else "--")
+                    item.setText(3, cfg['max'] if cfg['max'] else "--")
+                    item.setData(0, Qt.UserRole, cfg['standard_type'])
                     
-                    if match_dev and match_act:
-                        if cfg["mode"] == 0: # 查找并替换
-                            new_params = sub.text(2).replace(cfg["find_text"], cfg["replace_text"])
-                            sub.setText(2, new_params)
-                        elif cfg["mode"] == 1: # 统一设置
-                            sub.setText(2, cfg["replace_text"])
-                        elif cfg["mode"] == 2: # 修改策略
-                            sub.setText(4, cfg["strategy"])
-                        count += 1
-            
-            QMessageBox.information(self, "完成", f"批量修改完成，共影响 {count} 个工步。")
+                # 统一修改单位
+                if cfg["change_unit"]:
+                    item.setData(2, Qt.UserRole, cfg['unit'] if cfg['unit'] else "NULL")
+                    
+                # 统一修改 NG 复测选择
+                if cfg["change_retry"]:
+                    item.setData(1, Qt.UserRole, cfg['retry_count'])
+                    
+                # 统一修改 NG 停止策略
+                if cfg["change_strategy"]:
+                    item.setText(4, cfg['strategy'])
+                    
+                count += 1
+                
+            QMessageBox.information(self, "完成", f"批量修改完成，共影响 {count} 个测试项。子工步保持不动。")
 
     def dry_run(self):
         """仿真运行：使用 Mock 设备管理器运行当前编辑的配方"""
