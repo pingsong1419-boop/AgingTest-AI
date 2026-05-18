@@ -195,6 +195,51 @@ class EOLProtocol:
                 except Exception as ex:
                     logger(f"[WARNING] CRASH 0x08 自动打包解析异常: {ex}") if logger else print(f"[WARNING] CRASH 0x08 自动打包解析异常: {ex}")
 
+            # CSC 控制读取特殊处理 (0x07)
+            elif "0x07" in op_name:
+                try:
+                    # 1. 提取操作类别，作为第 3 字节 (operation)
+                    op_type = str(kwargs.get("PARAM1", kwargs.get("OP", "单体电压读取"))).strip()
+                    
+                    if "设置节点数目" in op_type or "0x01" in op_type or op_type == "1":
+                        op_code = 0x01
+                        node_cnt = self._int_arg(kwargs, "PARAM3", "COUNT", "NODE_COUNT", "VALUE")
+                        payload = bytes([node_cnt])
+                    elif "高压读取" in op_type or "0x02" in op_type or op_type == "2":
+                        op_code = 0x02
+                        hv_idx_str = str(kwargs.get("PARAM2", kwargs.get("INDEX", "0x00"))).strip()
+                        if "0x02" in hv_idx_str or "HV1" in hv_idx_str or hv_idx_str == "2":
+                            hv_idx = 0x02
+                        elif "0x03" in hv_idx_str or "HV2" in hv_idx_str or hv_idx_str == "3":
+                            hv_idx = 0x03
+                        elif "0x04" in hv_idx_str or "HV3" in hv_idx_str or hv_idx_str == "4":
+                            hv_idx = 0x04
+                        elif "0x0B" in hv_idx_str or "0X0B" in hv_idx_str or "Link1" in hv_idx_str or hv_idx_str == "11":
+                            hv_idx = 0x0B
+                        elif "0x0C" in hv_idx_str or "0X0C" in hv_idx_str or "Link2" in hv_idx_str or hv_idx_str == "12":
+                            hv_idx = 0x0C
+                        else:
+                            try: hv_idx = int(hv_idx_str, 0)
+                            except: hv_idx = 0x00
+                        payload = bytes([hv_idx])
+                    elif "单体电压读取" in op_type or "0x0E" in op_type or "0x0e" in op_type or op_type == "14":
+                        op_code = 0x0E
+                        cell_idx = self._int_arg(kwargs, "PARAM4", "INDEX", "CELL")
+                        payload = cell_idx.to_bytes(2, "big")
+                    elif "Stack电压读取" in op_type or "0x0F" in op_type or "0x0f" in op_type or op_type == "15":
+                        op_code = 0x0F
+                        stack_idx = self._int_arg(kwargs, "PARAM4", "INDEX", "CELL")
+                        payload = stack_idx.to_bytes(2, "big")
+                    elif "快充阻抗读取" in op_type or "0x10" in op_type or op_type == "16":
+                        op_code = 0x10
+                        payload = bytes([0x00])
+                    else:
+                        try: op_code = int(op_type, 0)
+                        except: op_code = 0x0E
+                        payload = bytes([0x00])
+                except Exception as ex:
+                    logger(f"[WARNING] CSC 0x07 自动打包解析异常: {ex}") if logger else print(f"[WARNING] CSC 0x07 自动打包解析异常: {ex}")
+
             # 唤醒源读取特殊处理 (0xFF)
             elif "0xFF" in op_name:
                 try:
@@ -324,7 +369,7 @@ class EOLProtocol:
             "0x06 ADC读取": {"device_id": 0x06, "operation": 0x02, "payload": lambda kw: bytes([self._int_arg(kw, "ADC")]), "decoder": lambda raw: round(self._decode_index_u16(raw) * 0.001, 3)},
             
             # --- 0x07 CSC ---
-            "0x07 CSC控制读取": {"device_id": 0x07, "operation": 0x0E, "payload": lambda kw: self._int_arg(kw, "CELL", "INDEX", "TYPE").to_bytes(2, "big"), "decoder": lambda raw: round(self._decode_data_u32(raw) * 0.001, 3)},
+            "0x07 CSC控制读取": {"device_id": 0x07, "operation": 0x0E, "decoder": self._decode_csc},
             "0x07 CSC控制写入": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "STATE", "TYPE")])},
             
             # --- 0x08 CRASH ---
@@ -408,6 +453,28 @@ class EOLProtocol:
             return round(val * 0.001, 3)
             
         return raw[4]
+
+    def _decode_csc(self, raw: bytes):
+        if len(raw) < 5:
+            return None
+        op_code = raw[2] if len(raw) >= 3 else 0x0E
+        
+        if op_code == 0x01:
+            # 设置节点数目: 精度1
+            return raw[4]
+        elif op_code == 0x02:
+            # 高压读取: 精度0.001
+            val = self._decode_data_u32(raw)
+            return round(val * 0.001, 3) if val is not None else None
+        elif op_code in (0x0E, 0x0F):
+            # 单体电压读取 / Stack电压读取: 精度0.001
+            val = self._decode_data_u32(raw)
+            return round(val * 0.001, 3) if val is not None else None
+        elif op_code == 0x10:
+            # 快充阻抗读取: 4字节数据由高到低，精度1
+            return self._decode_data_u32(raw)
+            
+        return self._decode_data_u32(raw)
 
     def _decode_index_value(self, raw: bytes):
         return raw[5] if len(raw) >= 6 else None

@@ -90,15 +90,16 @@ class CA550Controller:
             if not response:
                 return ""
             
-            # 处理 Echo (回显剥离)
-            if cmd.endswith("?"):
-                prefix = cmd.replace("?", "")
-                if response.startswith(prefix):
-                    if prefix == "OD":
-                        return response
-                    return response[len(prefix):].strip()
+            # 更加通用和健壮的回显与头部剥离逻辑
+            cleaned_cmd = cmd.replace("?", "").strip()
+            if response.startswith(cleaned_cmd):
+                response = response[len(cleaned_cmd):].strip()
+                if response.startswith("OD"):
+                    response = response[2:].strip()
+            elif response.startswith("OD"):
+                response = response[2:].strip()
             
-            return response
+            return response.strip()
         except Exception as e:
             logger.error(f"CA550 通讯错误: {e}")
             return f"ERROR: {e}"
@@ -119,7 +120,15 @@ class CA550Controller:
     def set_measure_range(self, range_code: int): return self._send_command(f"MR{range_code}")
     def set_measure_state(self, state: int): return self._send_command(f"MO{state}")
     def set_wiring(self, mode: int): return self._send_command(f"WC{mode}")
-    def read_measure_data(self): return self._send_command("OD?")
+    def read_measure_data(self, mode: str = "source") -> str:
+        """
+        mode:
+          - "source": 回读设定电压 (SD?)
+          - "measure": 回读测量值 (OD0?)
+        """
+        if mode == "measure" or mode == "measurement":
+            return self._send_command("OD0?")
+        return self._send_command("SD?")
     def set_source_func(self, func_code: int): return self._send_command(f"SF{func_code}")
     def set_source_range(self, range_code: int): return self._send_command(f"SR{range_code}")
     def set_source_data(self, value: float): return self._send_command(f"SD{value:.4f}")

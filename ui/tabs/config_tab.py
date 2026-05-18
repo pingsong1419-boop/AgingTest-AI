@@ -333,11 +333,22 @@ class ConfigTab(QWidget):
                 elif p2 == "2": p2 = "2 P断开N闭合"
             elif "0x07" in op:
                 p1_label = "操作类别"
-                p2_label = "子索引/状态"
-                if p1 == "CELL_VOLT": p1 = "单体电压"
-                elif p1 == "HV_VOLT": p1 = "总压/采样"
-                elif p1 == "NODE_COUNT": p1 = "设置节点数"
-                elif p1 == "BALANCE": p1 = "均衡控制"
+                p2_label = "高压索引"
+                if p1 in ("0x01", "1", "NODE_COUNT", "设置节点数"): p1 = "设置节点数目"
+                elif p1 in ("0x02", "2", "HV_VOLT", "总压/采样"): p1 = "高压读取"
+                elif p1 in ("0x0E", "0x0e", "14", "CELL_VOLT", "单体电压"): p1 = "单体电压读取"
+                elif p1 in ("0x0F", "0x0f", "15"): p1 = "Stack电压读取"
+                elif p1 in ("0x10", "16"): p1 = "快充阻抗读取"
+                
+                if p2 == "0x00": p2 = "0x00 代表默认"
+                elif p2 == "0x02": p2 = "0x02代表HV1"
+                elif p2 == "0x03": p2 = "0x03代表HV2"
+                elif p2 == "0x04": p2 = "0x04代表HV3"
+                elif p2 in ("0x0B", "0x0b"): p2 = "0x0B代表Link1"
+                elif p2 in ("0x0C", "0x0c"): p2 = "0x0C代表Link2"
+                
+                if "PARAM3" in kv: friendly_kv["节点数目"] = kv["PARAM3"]
+                if "PARAM4" in kv: friendly_kv["索引"] = kv["PARAM4"]
             elif "0x10" in op:
                 p1_label = "NTC索引"
                 p2_label = "温感类型"

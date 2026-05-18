@@ -23,7 +23,7 @@ class RNCANDriver:
         self.port = port
         self.sock: Optional[socket.socket] = None
         self.is_connected = False
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         
         self.msg_queue = queue.Queue(maxsize=10000)
         self.on_message_received: Optional[Callable] = None # 可选的回调

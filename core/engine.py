@@ -374,13 +374,28 @@ class ChannelWorker(QObject):
                 elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device or "hv source" in device:
                         act = params.get("action", "")
-                        target_v = self._parse_numeric(p_str) if "V" in p_str or action == "" else None
-                        success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper() or "开启" in act, channel=target_ch, logger=hw_logger)
-                        if success and target_v is not None: success = verify_and_wait(mgr.hv_source, target_v)
-                        elif "清除保护" in act: success = mgr.hv_source.clear_errors(logger=hw_logger)
-                        elif target_v is not None: 
-                            success = mgr.hv_source.set_voltage(target_v, channel=target_ch, logger=hw_logger)
-                            if success: success = verify_and_wait(mgr.hv_source, target_v)
+                        if "清除保护" in act:
+                            if hasattr(mgr.hv_source, "clear_errors"):
+                                success = mgr.hv_source.clear_errors(logger=hw_logger)
+                            else:
+                                success = True
+                        else:
+                            if any(x in p_str.upper() for x in ["V", "ON", "OFF"]) or "开启" in p_str or "关闭" in p_str:
+                                if "V" in p_str.upper():
+                                    v_val = self._parse_numeric(p_str.upper().split("V")[0])
+                                    success = mgr.hv_source.set_voltage(v_val, logger=hw_logger)
+                                    if success: success = verify_and_wait(mgr.hv_source, v_val)
+                                if "开启" in p_str or "ON" in p_str.upper():
+                                    success = success and mgr.hv_source.output_control(True, logger=hw_logger)
+                                if "关闭" in p_str or "OFF" in p_str.upper():
+                                    success = success and mgr.hv_source.output_control(False, logger=hw_logger)
+                            else:
+                                if "输出控制" in act:
+                                    success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper(), logger=hw_logger)
+                                else:
+                                    v_val = self._parse_numeric(p_str)
+                                    success = mgr.hv_source.set_voltage(v_val, logger=hw_logger)
+                                    if success: success = verify_and_wait(mgr.hv_source, v_val)
                     else:
                         target_dev = mgr.afe_pwr_2 if "2#" in device else mgr.afe_pwr_3 if "3#" in device else mgr.afe_power_1 if "afe" in device else mgr.dut_power if "main" in device else mgr.ctrl_board_power
                         if target_dev:
@@ -441,6 +456,22 @@ class ChannelWorker(QObject):
             elif sub_step.type == SubStepType.READ_INSTRUMENT:
                 device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
                 target_ch = int(re.search(r"CH:(\d+)", p_str).group(1)) if "CH:" in p_str else None
+                is_volt = "电压" in p_str or "volt" in p_str or "V" in p_str.upper()
+                
+                # 确定友好名称
+                if "1#" in device and "sim" in device: f_name = "1#电池模拟器"
+                elif "2#" in device and "sim" in device: f_name = "2#电池模拟器"
+                elif "3#" in device and "sim" in device: f_name = "3#电池模拟器"
+                elif "sim" in device: f_name = "电池模拟器"
+                elif "2#" in device: f_name = "2# AFE电源"
+                elif "3#" in device: f_name = "3# AFE电源"
+                elif "afe" in device: f_name = "AFE电源"
+                elif "main" in device or "dut" in device: f_name = "主板电源"
+                elif "hv" in device or "ngi" in device: f_name = "NGI高压源"
+                elif "control" in device: f_name = "控制板电源"
+                elif "ca550" in device: f_name = "CA550校准仪"
+                else: f_name = device.upper()
+
                 if "simulator" in device or "电池模拟器" in device:
                     ch = target_ch if target_ch is not None else self.channel_id
                     target_sim = None
@@ -449,11 +480,11 @@ class ChannelWorker(QObject):
                     elif "3#" in device: target_sim = mgr.simulators[2]
                     if target_sim:
                         physical_ch = (ch - 1) % 18 + 1
-                        result_value = target_sim.measure_voltage(physical_ch) if "电压" in p_str else target_sim.measure_current(physical_ch)
+                        result_value = target_sim.measure_voltage(physical_ch) if is_volt else target_sim.measure_current(physical_ch)
                     else:
-                        result_value = mgr.measure_voltage(ch) if "电压" in p_str else mgr.measure_current(ch)
+                        result_value = mgr.measure_voltage(ch) if is_volt else mgr.measure_current(ch)
                     success = result_value >= 0
-                elif any(x in device for x in ["afe", "main", "hv_source", "control power", "控制板"]):
+                elif any(x in device for x in ["afe", "main", "hv_source", "hv source", "control power", "控制板"]):
                     if "2#" in device: dev = mgr.afe_pwr_2
                     elif "3#" in device: dev = mgr.afe_pwr_3
                     elif "afe" in device: dev = mgr.afe_power_1
@@ -461,11 +492,18 @@ class ChannelWorker(QObject):
                     elif "hv_source" in device or "hv source" in device: dev = mgr.hv_source
                     else: dev = mgr.ctrl_board_power
                     if dev:
-                        result_value = dev.measure_voltage() if "电压" in p_str else dev.measure_current()
-                        success = result_value is not None
+                        result_value = dev.measure_voltage() if is_volt else dev.measure_current()
+                        success = result_value is not None and result_value >= -999.0
                 elif "ca550" in device:
-                    result_value = self._parse_numeric(mgr.ca550.read_measure_data())
-                    success = True
+                    mode = "measure" if "测量" in p_str or "measure" in p_str.lower() else "source"
+                    result_value = self._parse_numeric(mgr.ca550.read_measure_data(mode))
+                    success = result_value is not None
+                
+                if success and result_value is not None:
+                    unit = "V" if is_volt else "mA" if "ca550" in device else "A"
+                    hw_logger(f"[回读成功] {f_name} => {result_value:.3f} {unit}")
+                else:
+                    hw_logger(f"[回读失败] {f_name} => 读取异常")
 
             elif sub_step.type == SubStepType.CAN_SEND:
                 board = self._get_can_board(mgr)

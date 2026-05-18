@@ -300,6 +300,21 @@ class StepDialog(QDialog):
         self.eol_param1_label = QLabel("ADC选择:")
         self.eol_param1 = QComboBox()
         
+        # 新增 参数3 和 参数4，用于 0x07 CSC控制读取 的节点数目和索引配置
+        self.eol_param3_label = QLabel("节点数目:")
+        self.eol_param3 = QSpinBox()
+        self.eol_param3.setRange(0, 12)
+        self.eol_param3.setValue(0)
+        self.eol_param3_label.setVisible(False)
+        self.eol_param3.setVisible(False)
+        
+        self.eol_param4_label = QLabel("电芯/Stack索引:")
+        self.eol_param4 = QSpinBox()
+        self.eol_param4.setRange(0, 65535)
+        self.eol_param4.setValue(0)
+        self.eol_param4_label.setVisible(False)
+        self.eol_param4.setVisible(False)
+        
         self.eol_timeout = QSpinBox()
         self.eol_timeout.setRange(1, 600000); self.eol_timeout.setValue(1000); self.eol_timeout.setSuffix(" ms")
 
@@ -326,6 +341,8 @@ class StepDialog(QDialog):
         eol_form.addRow("DLC:", self.eol_dlc)
         eol_form.addRow(self.eol_param2_label, self.eol_param2)
         eol_form.addRow(self.eol_param1_label, self.eol_param1)
+        eol_form.addRow(self.eol_param3_label, self.eol_param3)
+        eol_form.addRow(self.eol_param4_label, self.eol_param4)
         eol_form.addRow("超时时间:", self.eol_timeout)
         
         # 兼容旧代码的占位符
@@ -479,6 +496,14 @@ class StepDialog(QDialog):
         self._set_param_combo(self.eol_param1, self.eol_param1_label, "参数1:", [])
         self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
         self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
+        
+        # 默认隐藏参数3和参数4
+        if hasattr(self, "eol_param3"):
+            self.eol_param3.setVisible(False)
+            self.eol_param3_label.setVisible(False)
+        if hasattr(self, "eol_param4"):
+            self.eol_param4.setVisible(False)
+            self.eol_param4_label.setVisible(False)
 
         if "0x04" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "GPIO通道:", self._gpio_items())
@@ -493,8 +518,27 @@ class StepDialog(QDialog):
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作内容:", [("读取绝缘阻抗", "READ"), ("设置控制状态", "WRITE")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "控制值:", [("0 P/N均断开", "0"), ("1 P闭合N断开", "1"), ("2 P断开N闭合", "2")])
         elif "0x07" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [("单体电压", "CELL_VOLT"), ("总压/采样", "HV_VOLT"), ("设置节点数", "NODE_COUNT"), ("均衡控制", "BALANCE")])
-            self._set_param_combo(self.eol_param2, self.eol_param2_label, "子索引/状态:", self._index_items(256, "Index "))
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [
+                ("设置节点数目", "0x01"),
+                ("高压读取", "0x02"),
+                ("单体电压读取", "0x0E"),
+                ("Stack电压读取", "0x0F"),
+                ("快充阻抗读取", "0x10")
+            ])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "高压索引:", [
+                ("0x00 代表默认", "0x00"),
+                ("0x02代表HV1", "0x02"),
+                ("0x03代表HV2", "0x03"),
+                ("0x04代表HV3", "0x04"),
+                ("0x0B代表Link1", "0x0B"),
+                ("0x0C代表Link2", "0x0C")
+            ])
+            if hasattr(self, "eol_param3"):
+                self.eol_param3_label.setVisible(True)
+                self.eol_param3.setVisible(True)
+            if hasattr(self, "eol_param4"):
+                self.eol_param4_label.setVisible(True)
+                self.eol_param4.setVisible(True)
         elif "0x10" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "NTC索引:", self._index_items(64, "NTC "))
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "温感类型:", [
@@ -684,6 +728,10 @@ class StepDialog(QDialog):
                         self._set_combo_by_value(self.eol_param1, kv["PARAM1"])
                     if "PARAM2" in kv:
                         self._set_combo_by_value(self.eol_param2, kv["PARAM2"])
+                    if "PARAM3" in kv:
+                        self.eol_param3.setValue(int(float(kv["PARAM3"])))
+                    if "PARAM4" in kv:
+                        self.eol_param4.setValue(int(float(kv["PARAM4"])))
                         
                     # 2. 兼容映射还原（包括 ADC, MODE, STATE, INDEX, LEVEL, PWM, NTC, HALL, OP, VAL 等历史字段）
                     p1_keys = ["ADC", "STATE", "INDEX", "PWM", "NTC", "HALL", "OP", "GPIO"]
@@ -927,6 +975,9 @@ class StepDialog(QDialog):
             
             if p1_val: params.append(f"PARAM1:{p1_val}")
             if p2_val: params.append(f"PARAM2:{p2_val}")
+            if "0x07" in eol_action:
+                params.append(f"PARAM3:{self.eol_param3.value()}")
+                params.append(f"PARAM4:{self.eol_param4.value()}")
             if args_val: params.append(f"ARGS:{args_val}")
             
             # 兼容老版本历史配方的字段格式，额外写入特定键名，确保老引擎读取无误
