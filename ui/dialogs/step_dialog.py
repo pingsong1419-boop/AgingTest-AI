@@ -506,8 +506,8 @@ class StepDialog(QDialog):
             ])
             self.eol_args.setPlaceholderText("无需额外参数")
         elif "0x08" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取内容:", [("占空比", "0x01"), ("频率", "0x02"), ("阻抗", "0x03"), ("脉宽", "0x04")])
-            self._set_param_combo(self.eol_param2, self.eol_param2_label, "通道索引:", [("sig1", "0"), ("sig3", "1")])
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "模式参数:", [("0x01 占空比", "0x01"), ("0x02 频率", "0x02"), ("0x03 阻抗", "0x03"), ("0x04 脉宽", "0x04")])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "索引:", [("sig1", "0"), ("sig3", "1")])
         elif "0x0A" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作:", [("读取数据", "READ"), ("写入数据", "WRITE"), ("设置地址", "SET_ADDR")])
             self.eol_args.setPlaceholderText("ADDRESS:0x00, DATA:00000000")

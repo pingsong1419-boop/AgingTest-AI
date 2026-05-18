@@ -179,6 +179,17 @@ class EOLProtocol:
                 except Exception as ex:
                     # 异常降级
                     logger(f"[WARNING] NTC 0x10 自动打包解析异常: {ex}") if logger else print(f"[WARNING] NTC 0x10 自动打包解析异常: {ex}")
+            
+            # CRASH 读取特殊处理 (0x08)
+            elif "0x08" in op_name:
+                try:
+                    # 1. 模式参数配置在第 3 字节 (operation)
+                    op_code = self._int_arg(kwargs, "PARAM1", "OP", "MODE")
+                    # 2. 索引参数配置在第 5 字节 (payload[0])
+                    crash_index = self._int_arg(kwargs, "PARAM2", "INDEX")
+                    payload = bytes([crash_index])
+                except Exception as ex:
+                    logger(f"[WARNING] CRASH 0x08 自动打包解析异常: {ex}") if logger else print(f"[WARNING] CRASH 0x08 自动打包解析异常: {ex}")
 
             # --- 终极加固：一段时间内最大值采样滤波机制 (完美解决互锁信号等 PWM 占空比波动问题) ---
             # 提取最大值采样参数 (支持 MAX_DURATION:1.5 格式，单位：秒)
@@ -286,7 +297,7 @@ class EOLProtocol:
             "0x07 CSC控制写入": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "STATE", "TYPE")])},
             
             # --- 0x08 CRASH ---
-            "0x08 CRASH读取": {"device_id": 0x08, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "TYPE")]), "decoder": self._decode_data_u32},
+            "0x08 CRASH读取": {"device_id": 0x08, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "PARAM2", "INDEX", "TYPE")]), "decoder": self._decode_data_u32},
             
             # --- 0x09 RTC ---
             "0x09 RTC控制读取": {"device_id": 0x09, "operation": 0x04, "decoder": self._decode_payload_hex},
