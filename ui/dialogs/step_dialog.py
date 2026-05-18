@@ -824,10 +824,8 @@ class StepDialog(QDialog):
         else: # 电源类
             if "Simulator" in device_text:
                 self.action_combo.addItems(["快捷批量配置", "回读数据"])
-            elif any(x in device_text for x in ["HV Source", "Control Power", "Main Power", "控制板", "主机板", "高压源"]):
-                self.action_combo.addItems(["设置参数", "回读数据"])
             else:
-                self.action_combo.addItems(["设置参数", "回读数据", "全部通道开启", "全部通道关闭"])
+                self.action_combo.addItems(["设置参数", "回读数据"])
         
         if not self.is_loading:
             category = self.category_combo.currentText()
