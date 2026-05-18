@@ -422,7 +422,9 @@ class MonitorDialog(QDialog):
         self.lbl_status.setText("状态: 运行中")
         for i in range(self.step_tree.topLevelItemCount()):
             item = self.step_tree.topLevelItem(i)
-            if step_name in item.text(0):
+            name_clean = item.text(0).lstrip("#").strip()
+            step_name_clean = step_name.lstrip("#").strip()
+            if name_clean == step_name_clean:
                 item.setText(4, "执行中...")
                 item.setForeground(4, QColor("#00E5FF"))
                 self.step_tree.scrollToItem(item)
@@ -432,8 +434,9 @@ class MonitorDialog(QDialog):
         if ch_id != self.channel_id: return
         for i in range(self.step_tree.topLevelItemCount()):
             item = self.step_tree.topLevelItem(i)
-            # 支持模糊匹配和带 # 的匹配
-            if step_name in item.text(0) or item.text(0) in step_name:
+            name_clean = item.text(0).lstrip("#").strip()
+            step_name_clean = step_name.lstrip("#").strip()
+            if name_clean == step_name_clean:
                 if measured_val == "跳过":
                     item.setText(4, "跳过")
                     item.setForeground(4, QColor("#888888"))
