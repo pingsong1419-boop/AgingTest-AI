@@ -493,8 +493,22 @@ class OverviewTab(QWidget):
         count = len(selected_cids)
         
         for ch_id in selected_cids:
+            # 过滤并深度拷贝没禁用的测试项及其子工步（禁用的项不用加载进来）
+            raw_items = recipe_data.get("items", [])
+            filtered_items = []
+            for item in raw_items:
+                if item.get("name", "").strip().startswith("#"):
+                    continue
+                new_item = item.copy()
+                if "sub_steps" in new_item:
+                    new_item["sub_steps"] = [
+                        sub.copy() for sub in new_item["sub_steps"]
+                        if not sub.get("name", "").strip().startswith("#")
+                    ]
+                filtered_items.append(new_item)
+                
             # 缓存配方数据
-            self.channel_recipes[ch_id] = recipe_data.get("items", [])
+            self.channel_recipes[ch_id] = filtered_items
             # 记录该通道所属的同步组（即本次下发的所有通道）
             self.sync_groups[ch_id] = selected_cids
             

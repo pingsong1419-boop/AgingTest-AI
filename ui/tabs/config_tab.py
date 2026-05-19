@@ -533,7 +533,10 @@ class ConfigTab(QWidget):
             parent.setData(1, Qt.UserRole, item_data.get("retry_count", "不复测"))
             parent.setData(2, Qt.UserRole, item_data.get("unit", "NULL"))
             
-            parent.setForeground(0, QColor("#00E5FF"))
+            if item_data['name'].strip().startswith("#"):
+                parent.setForeground(0, QColor("#808080"))
+            else:
+                parent.setForeground(0, QColor("#00E5FF"))
             font = QFont()
             font.setBold(True)
             parent.setFont(0, font)
@@ -553,8 +556,12 @@ class ConfigTab(QWidget):
                 child.setData(2, Qt.UserRole, sub_data.get("is_judgment"))
                 child.setData(3, Qt.UserRole, sub_data.get("sync_exec", False))
                 
-                if sub_data.get("is_judgment"):
+                if sub_data['name'].strip().startswith("#"):
+                    child.setForeground(0, QColor("#808080"))
+                elif sub_data.get("is_judgment"):
                     child.setForeground(0, QColor("#FFD700")) # 亮金色
+                else:
+                    child.setForeground(0, QColor("#FFFFFF"))
                 
                 parent.addChild(child)
         self.step_tree.expandAll()
@@ -722,6 +729,7 @@ class ConfigTab(QWidget):
                 "device": item.data(0, Qt.UserRole),
                 "stype": item.data(1, Qt.UserRole),
                 "is_judgment": item.data(2, Qt.UserRole),
+                "sync_exec": item.data(3, Qt.UserRole),
                 "fail_strategy": item.text(4)
             }
 
@@ -778,7 +786,13 @@ class ConfigTab(QWidget):
                 new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
                 new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
                 new_item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
-                new_item.setForeground(0, QColor("#00E5FF"))
+                
+                # 保留屏蔽或正常的高保真色彩
+                if data['name'].strip().startswith("#"):
+                    new_item.setForeground(0, QColor("#808080"))
+                else:
+                    new_item.setForeground(0, QColor("#00E5FF"))
+                    
                 font = QFont()
                 font.setBold(True)
                 new_item.setFont(0, font)
@@ -792,7 +806,15 @@ class ConfigTab(QWidget):
                     child.setData(0, Qt.UserRole, sub.get("device"))
                     child.setData(1, Qt.UserRole, sub.get("stype"))
                     child.setData(2, Qt.UserRole, sub.get("is_judgment"))
-                    if sub.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
+                    child.setData(3, Qt.UserRole, sub.get("sync_exec", False))
+                    
+                    if sub['name'].strip().startswith("#"):
+                        child.setForeground(0, QColor("#808080"))
+                    elif sub.get("is_judgment"):
+                        child.setForeground(0, QColor("#FFD700"))
+                    else:
+                        child.setForeground(0, QColor("#FFFFFF"))
+                        
                     new_item.addChild(child)
                 
                 if current:
@@ -815,7 +837,14 @@ class ConfigTab(QWidget):
                 child.setData(0, Qt.UserRole, data.get("device"))
                 child.setData(1, Qt.UserRole, data.get("stype"))
                 child.setData(2, Qt.UserRole, data.get("is_judgment"))
-                if data.get("is_judgment"): child.setForeground(0, QColor("#FFD700"))
+                child.setData(3, Qt.UserRole, data.get("sync_exec", False))
+                
+                if data['name'].strip().startswith("#"):
+                    child.setForeground(0, QColor("#808080"))
+                elif data.get("is_judgment"):
+                    child.setForeground(0, QColor("#FFD700"))
+                else:
+                    child.setForeground(0, QColor("#FFFFFF"))
                 
                 if current and current.parent():
                     idx = parent.indexOfChild(current)

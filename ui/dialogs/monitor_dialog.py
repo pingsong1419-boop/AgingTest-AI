@@ -150,13 +150,9 @@ class MonitorDialog(QDialog):
             
             if item.checkState(0) == Qt.Checked:
                 has_selection = True
-                # 确保不带屏蔽符
-                if new_step_data['name'].startswith("#"):
-                    new_step_data['name'] = new_step_data['name'].lstrip("#")
+                new_step_data['skip_runtime'] = False
             else:
-                # 添加屏蔽符，引擎在执行时会检测并跳过
-                if not new_step_data['name'].startswith("#"):
-                    new_step_data['name'] = "#" + new_step_data['name']
+                new_step_data['skip_runtime'] = True
             
             full_data.append(new_step_data)
         
@@ -171,7 +167,7 @@ class MonitorDialog(QDialog):
         if self.parent() and hasattr(self.parent(), "get_sync_group_for_channel"):
             sync_group = self.parent().get_sync_group_for_channel(self.channel_id)
             
-        # 下发全量数据，引擎会自动跳过带 # 的项目
+        # 下发全量数据，引擎会自动根据 skip_runtime 跳过项目
         self.engine.start_channel_test(self.channel_id, full_data, sync_group=sync_group)
         self._connect_signals() # 重新绑定信号以获取最新 worker
 
@@ -184,10 +180,9 @@ class MonitorDialog(QDialog):
             item = self.step_tree.topLevelItem(i)
             step_data = item.data(0, Qt.UserRole)
             if step_data:
-                # 克隆数据并清除可能存在的屏蔽符
+                # 克隆数据并清除屏蔽标记
                 new_step_data = step_data.copy()
-                if new_step_data['name'].startswith("#"):
-                    new_step_data['name'] = new_step_data['name'].lstrip("#")
+                new_step_data['skip_runtime'] = False
                 all_data.append(new_step_data)
         
         if not all_data:
@@ -331,21 +326,13 @@ class MonitorDialog(QDialog):
 
     def load_steps(self, steps):
         """加载 TestStep 对象列表 (转换为 dict 存储以便重跑)"""
-        # 如果是首次加载，初始化从配方配置中原本就禁用的项目集合
-        if not self.originally_disabled_names and steps:
-            for step in steps:
-                if step.name.strip().startswith("#"):
-                    self.originally_disabled_names.add(step.name.lstrip("#").strip())
-
         checked_names = self._get_checked_step_names()
         self.step_tree.clear()
         self.step_items = {}
         self.sub_step_items = {}
         for i, step in enumerate(steps):
-            clean_name = step.name.lstrip("#").strip()
-            # 只有配方配置时就禁用的测试项，才彻底不在通道详细监控中显示
-            if clean_name in self.originally_disabled_names:
-                continue
+            if step.name.strip().startswith("#"):
+                continue  # 彻底不加载配方配置中原本就禁用的项
                 
             # 将对象还原为 dict 格式以便后续 run_selected_test 使用
             sub_data_list = []
@@ -360,10 +347,11 @@ class MonitorDialog(QDialog):
                 "min": step.min_limit if step.min_limit else "--",
                 "max": step.max_limit if step.max_limit else "--",
                 "strategy": step.ng_strategy.value,
-                "sub_steps": sub_data_list
+                "sub_steps": sub_data_list,
+                "skip_runtime": getattr(step, 'skip_runtime', False)
             }
             
-            is_shielded_runtime = step.name.strip().startswith("#")
+            is_shielded_runtime = step.name.strip().startswith("#") or getattr(step, 'skip_runtime', False)
             
             parent = QTreeWidgetItem([
                 step.name, 
@@ -404,25 +392,16 @@ class MonitorDialog(QDialog):
 
     def load_steps_from_data(self, steps_data):
         """加载原始 JSON 数据列表"""
-        # 如果是首次加载，初始化从配方配置中原本就禁用的项目集合
-        if not self.originally_disabled_names and steps_data:
-            for step in steps_data:
-                name = step.get('name', '未命名')
-                if name.strip().startswith("#"):
-                    self.originally_disabled_names.add(name.lstrip("#").strip())
-
         checked_names = self._get_checked_step_names()
         self.step_tree.clear()
         self.step_items = {}
         self.sub_step_items = {}
         for i, step in enumerate(steps_data):
             name = step.get('name', '未命名')
-            clean_name = name.lstrip("#").strip()
-            # 只有配方配置时就禁用的测试项，才彻底不在通道详细监控中显示
-            if clean_name in self.originally_disabled_names:
-                continue
-            
-            is_shielded_runtime = name.strip().startswith("#")
+            if name.strip().startswith("#"):
+                continue  # 彻底不加载配方配置中原本就禁用的项
+                
+            is_shielded_runtime = name.strip().startswith("#") or step.get('skip_runtime', False)
             
             parent = QTreeWidgetItem([
                 name, 

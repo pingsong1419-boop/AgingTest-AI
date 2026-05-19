@@ -78,7 +78,7 @@ class StepDialog(QDialog):
         
         # 一级分类
         self.category_combo = QComboBox()
-        self.category_combo.addItems(["设备操作", "报文交互", "三方协议", "通用交互"])
+        self.category_combo.addItems(["设备操作", "报文交互", "三方协议", "通用交互", "特殊执行"])
         top_layout.addRow("一级分类:", self.category_combo)
         
         # 二级分类 (仅在设备操作下有效)
@@ -504,7 +504,7 @@ class StepDialog(QDialog):
         if hasattr(self, "eol_param4"):
             self.eol_param4.setVisible(False)
             self.eol_param4_label.setVisible(False)
-
+ 
         if "0x04" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "GPIO通道:", self._gpio_items())
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取/写入:", [("读取电平", "READ"), ("写入高电平", "WRITE_HIGH"), ("写入低电平", "WRITE_LOW")])
@@ -514,7 +514,7 @@ class StepDialog(QDialog):
         elif "0x05" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM通道:", self._index_items(16, "PWM "))
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取内容:", [("占空比", "DUTY"), ("频率", "FREQ")])
-        elif "0x03" in op:
+        elif "0x03" in op or "绝缘测试" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作内容:", [("读取绝缘阻抗", "READ"), ("设置控制状态", "WRITE")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "控制值:", [("0 P/N均断开", "0"), ("1 P闭合N断开", "1"), ("2 P断开N闭合", "2")])
         elif "0x07" in op:
@@ -552,6 +552,10 @@ class StepDialog(QDialog):
         elif "0x08" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "模式参数:", [("0x01 占空比", "0x01"), ("0x02 频率", "0x02"), ("0x03 阻抗", "0x03"), ("0x04 脉宽", "0x04")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "索引:", [("sig1", "0"), ("sig3", "1")])
+        elif "EEPROM测试" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "块大小 (字节):", [("32 字节", "32"), ("16 字节", "16"), ("64 字节", "64"), ("8 字节", "8")])
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "地址ADDRESS:", [("1 (0x01)", "1"), ("0 (0x00)", "0"), ("4 (0x04)", "4"), ("8 (0x08)", "8")])
+            self.eol_args.setPlaceholderText("无需额外参数")
         elif "0x0A" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作:", [("读取数据", "READ"), ("写入数据", "WRITE"), ("设置地址", "SET_ADDR")])
             self.eol_args.setPlaceholderText("ADDRESS:0x00, DATA:00000000")
@@ -597,7 +601,11 @@ class StepDialog(QDialog):
             category = "设备操作"
             if "CAN" in device or "报文" in device: category = "报文交互"
             # BUG-15修复: 统一用step_type和device字段判断，不再依赖kv字典的键名匹配
-            elif "智界EOL" in device or "EOL" in step_type: category = "三方协议"
+            elif "智界EOL" in device or "EOL" in step_type:
+                if action in ["EEPROM测试", "绝缘测试"]:
+                    category = "特殊执行"
+                else:
+                    category = "三方协议"
             elif "等待" in device or "固定延时" in action: category = "通用交互"
             
             self.category_combo.setCurrentText(category)
@@ -771,6 +779,8 @@ class StepDialog(QDialog):
             self.device_combo.addItems(["智界EOL协议"])
         elif category == "通用交互":
             self.device_combo.addItems(["等待 (Wait)"])
+        elif category == "特殊执行":
+            self.device_combo.addItems(["智界EOL协议"])
         
         if not self.is_loading:
             if category == "设备操作":
@@ -806,11 +816,15 @@ class StepDialog(QDialog):
         if not device_text: return
         
         if "智界EOL" in device_text:
-            self.action_combo.addItems([
-                "0x03 绝缘控制读取", "0x04 GPIO控制读取", "0x05 PWM读取", "0x06 ADC读取",
-                "0x07 CSC控制读取", "0x08 CRASH读取", "0x09 RTC控制读取", "0x10 NTC读取",
-                "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 扩展指令"
-            ])
+            category = self.category_combo.currentText()
+            if category == "特殊执行":
+                self.action_combo.addItems(["EEPROM测试", "绝缘测试"])
+            else:
+                self.action_combo.addItems([
+                    "0x03 绝缘控制读取", "0x04 GPIO控制读取", "0x05 PWM读取", "0x06 ADC读取",
+                    "0x07 CSC控制读取", "0x08 CRASH读取", "0x09 RTC控制读取", "0x10 NTC读取",
+                    "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 扩展指令"
+                ])
         elif "CAN" in device_text:
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据", "接收指定帧ID"])
         elif "等待" in device_text:

@@ -49,6 +49,7 @@ class TestStep:
         self.standard_type = "数值"
         self.retry_count = "不复测"
         self.unit = "NULL"
+        self.skip_runtime = False
 
     def add_sub_step(self, sub_step: SubStep):
         self.sub_steps.append(sub_step)
@@ -141,7 +142,7 @@ class ChannelWorker(QObject):
         # 极速闪电跳过循环 (Lightning Skip Loop)：遇到带 "#" 的被屏蔽项，一瞬间登记并广播跳过，0ms 极速奔向下一个勾选项！
         while self.current_step_index < len(self.steps):
             step = self.steps[self.current_step_index]
-            if not step.name.strip().startswith("#"):
+            if not step.name.strip().startswith("#") and not getattr(step, 'skip_runtime', False):
                 break
             
             # 瞬间在 0ms 内完成当前项及其所有子步骤的状态登记与跳过广播！
@@ -879,6 +880,7 @@ class TestEngine(QObject):
             for s in NGStrategy:
                 if s.value == s_str: strategy = s; break
             step = TestStep(item['name'], StepType.CUSTOM, ng_strategy=strategy)
+            step.skip_runtime = item.get('skip_runtime', False)
             step.min_limit = item.get('min') if item.get('min') != "--" else None
             step.max_limit = item.get('max') if item.get('max') != "--" else None
             step.standard_type = item.get('standard_type', "数值")
