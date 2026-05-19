@@ -718,18 +718,18 @@
             ]
         },
         {
-            "name": "#智界协议发送",
+            "name": "#3.5H协议发送",
             "mode": "范围判定",
             "min": "0.0",
             "max": "0.0",
             "strategy": "任何NG停止",
             "sub_steps": [
                 {
-                    "name": "智界EOL协议-执行EOL操作 (EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1)",
+                    "name": "3.5HEOL协议-执行EOL操作 (EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1)",
                     "action": "执行EOL操作",
                     "params": "EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1",
-                    "device": "智界EOL协议",
-                    "type": "智界EOL协议",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
                     "is_judgment": false,
                     "sync_exec": false,
                     "fail_strategy": "失败停止"

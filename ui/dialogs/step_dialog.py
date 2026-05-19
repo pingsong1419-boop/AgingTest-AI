@@ -278,7 +278,7 @@ class StepDialog(QDialog):
         sim_batch_layout.addRow("作用通道:", self.sim_batch_channels)
         self.param_stack.addWidget(self.page_sim_batch) # 6
 
-        # --- 页面 7: 智界 EOL 协议 ---
+        # --- 页面 7: 3.5H EOL 协议 ---
         self.page_eol = QWidget()
         eol_form = QFormLayout(self.page_eol)
         
@@ -318,6 +318,43 @@ class StepDialog(QDialog):
         self.eol_timeout = QSpinBox()
         self.eol_timeout.setRange(1, 600000); self.eol_timeout.setValue(1000); self.eol_timeout.setSuffix(" ms")
 
+        # 新增的绝缘测试专用参数输入框
+        self.eol_hv1_label = QLabel("HV1电压:")
+        self.eol_hv1 = QDoubleSpinBox()
+        self.eol_hv1.setRange(0, 1000)
+        self.eol_hv1.setValue(650.0)
+        self.eol_hv1.setSuffix(" V")
+        
+        self.eol_r0_label = QLabel("R0阻值:")
+        self.eol_r0 = QDoubleSpinBox()
+        self.eol_r0.setRange(0, 10000)
+        self.eol_r0.setValue(10.0)
+        self.eol_r0.setSuffix(" kΩ")
+        
+        self.eol_r1_label = QLabel("R1阻值:")
+        self.eol_r1 = QDoubleSpinBox()
+        self.eol_r1.setRange(0, 100000)
+        self.eol_r1.setValue(1000.0)
+        self.eol_r1.setSuffix(" kΩ")
+        
+        self.eol_r2_label = QLabel("R2阻值:")
+        self.eol_r2 = QDoubleSpinBox()
+        self.eol_r2.setRange(0, 100000)
+        self.eol_r2.setValue(1000.0)
+        self.eol_r2.setSuffix(" kΩ")
+        
+        self.eol_r3_label = QLabel("R3阻值:")
+        self.eol_r3 = QDoubleSpinBox()
+        self.eol_r3.setRange(0, 100000)
+        self.eol_r3.setValue(5000.0)
+        self.eol_r3.setSuffix(" kΩ")
+        
+        self.eol_r4_label = QLabel("R4阻值:")
+        self.eol_r4 = QDoubleSpinBox()
+        self.eol_r4.setRange(0, 100000)
+        self.eol_r4.setValue(5000.0)
+        self.eol_r4.setSuffix(" kΩ")
+
         # 隐藏参数 (仅用于后台逻辑，需填充选项以支持数据匹配)
         self.eol_op = QComboBox()
         self.eol_op.addItems([
@@ -327,7 +364,8 @@ class StepDialog(QDialog):
             "0x07 CSC控制读取", "0x07 CSC控制写入",
             "0x08 CRASH读取", "0x09 RTC控制读取", "0x09 RTC控制写入",
             "0x10 NTC读取", "0x0A EEPROM控制读取", "0x0A EEPROM控制写入",
-            "0x0B 霍尔电流读取", "0xFF 扩展指令"
+            "0x0B 霍尔电流读取", "0xFF 扩展指令",
+            "EEPROM测试", "绝缘测试"
         ])
         self.eol_op.setVisible(False)
         self.eol_args = QLineEdit("")
@@ -344,6 +382,12 @@ class StepDialog(QDialog):
         eol_form.addRow(self.eol_param3_label, self.eol_param3)
         eol_form.addRow(self.eol_param4_label, self.eol_param4)
         eol_form.addRow("超时时间:", self.eol_timeout)
+        eol_form.addRow(self.eol_hv1_label, self.eol_hv1)
+        eol_form.addRow(self.eol_r0_label, self.eol_r0)
+        eol_form.addRow(self.eol_r1_label, self.eol_r1)
+        eol_form.addRow(self.eol_r2_label, self.eol_r2)
+        eol_form.addRow(self.eol_r3_label, self.eol_r3)
+        eol_form.addRow(self.eol_r4_label, self.eol_r4)
         
         # 兼容旧代码的占位符
         eol_form.addRow("", self.eol_op) 
@@ -380,6 +424,16 @@ class StepDialog(QDialog):
         ag_layout.addWidget(QLabel("选择老化板操作通道 (22路):"))
         ag_layout.addWidget(ag_scroll)
         self.param_stack.addWidget(self.page_aging_relay) # 8
+
+        # --- 页面 9: 变量操作 ---
+        self.page_variable = QWidget()
+        var_form = QFormLayout(self.page_variable)
+        self.var_name = QComboBox()
+        self.var_name.setEditable(True)
+        self.var_name.addItems(["正极绝缘", "负极绝缘"])
+        var_form.addRow("变量名称:", self.var_name)
+        self.param_stack.addWidget(self.page_variable) # 9
+
 
         # 3. 策略与判定设置
         policy_frame = QFrame()
@@ -504,6 +558,21 @@ class StepDialog(QDialog):
         if hasattr(self, "eol_param4"):
             self.eol_param4.setVisible(False)
             self.eol_param4_label.setVisible(False)
+
+        # 默认隐藏绝缘测试专用参数
+        if hasattr(self, "eol_hv1"):
+            self.eol_hv1.setVisible(False)
+            self.eol_hv1_label.setVisible(False)
+            self.eol_r0.setVisible(False)
+            self.eol_r0_label.setVisible(False)
+            self.eol_r1.setVisible(False)
+            self.eol_r1_label.setVisible(False)
+            self.eol_r2.setVisible(False)
+            self.eol_r2_label.setVisible(False)
+            self.eol_r3.setVisible(False)
+            self.eol_r3_label.setVisible(False)
+            self.eol_r4.setVisible(False)
+            self.eol_r4_label.setVisible(False)
  
         if "0x04" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "GPIO通道:", self._gpio_items())
@@ -514,9 +583,29 @@ class StepDialog(QDialog):
         elif "0x05" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM通道:", self._index_items(16, "PWM "))
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取内容:", [("占空比", "DUTY"), ("频率", "FREQ")])
-        elif "0x03" in op or "绝缘测试" in op:
+        elif "0x03" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作内容:", [("读取绝缘阻抗", "READ"), ("设置控制状态", "WRITE")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "控制值:", [("0 P/N均断开", "0"), ("1 P闭合N断开", "1"), ("2 P断开N闭合", "2")])
+        elif "绝缘测试" in op:
+            # 隐藏操作内容和控制值
+            self.eol_param1.setVisible(False)
+            self.eol_param1_label.setVisible(False)
+            self.eol_param2.setVisible(False)
+            self.eol_param2_label.setVisible(False)
+            # 显示 6 个绝缘参数输入框
+            if hasattr(self, "eol_hv1"):
+                self.eol_hv1.setVisible(True)
+                self.eol_hv1_label.setVisible(True)
+                self.eol_r0.setVisible(True)
+                self.eol_r0_label.setVisible(True)
+                self.eol_r1.setVisible(True)
+                self.eol_r1_label.setVisible(True)
+                self.eol_r2.setVisible(True)
+                self.eol_r2_label.setVisible(True)
+                self.eol_r3.setVisible(True)
+                self.eol_r3_label.setVisible(True)
+                self.eol_r4.setVisible(True)
+                self.eol_r4_label.setVisible(True)
         elif "0x07" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [
                 ("设置节点数目", "0x01"),
@@ -601,12 +690,12 @@ class StepDialog(QDialog):
             category = "设备操作"
             if "CAN" in device or "报文" in device: category = "报文交互"
             # BUG-15修复: 统一用step_type和device字段判断，不再依赖kv字典的键名匹配
-            elif "智界EOL" in device or "EOL" in step_type:
+            elif "3.5HEOL" in device or "EOL" in step_type:
                 if action in ["EEPROM测试", "绝缘测试"]:
                     category = "特殊执行"
                 else:
                     category = "三方协议"
-            elif "等待" in device or "固定延时" in action: category = "通用交互"
+            elif "等待" in device or "固定延时" in action or "变量操作" in device or "读取变量" in step_type: category = "通用交互"
             
             self.category_combo.setCurrentText(category)
             self.on_category_changed()
@@ -699,6 +788,11 @@ class StepDialog(QDialog):
                             self.ca_type.setCurrentIndex(i); break
             except: pass
 
+            # --- 变量操作 (Page 9) ---
+            try:
+                if "VAR" in kv: self.var_name.setCurrentText(kv["VAR"])
+            except: pass
+
             # --- 延时参数 (Page 2) ---
             try:
                 ms_match = re.search(r'(\d+)ms', params_str)
@@ -720,7 +814,7 @@ class StepDialog(QDialog):
                         except: pass
             except: pass
 
-            # --- 智界 EOL 协议 (Page 7) ---
+            # --- 3.5H EOL 协议 (Page 7) ---
             try:
                 if "EOL" in step_type or "EOL" in kv:
                     self.eol_op.setCurrentText(kv.get("EOL", action))
@@ -731,15 +825,23 @@ class StepDialog(QDialog):
                     if "RX_ID" in kv: self.eol_rx_id.setText(kv["RX_ID"])
                     if "ARGS" in kv: self.eol_args.setText(kv["ARGS"])
                     
-                    # 1. 优先尝试直接用全新通用 PARAM1 和 PARAM2 还原参数，毫无卡死可能！
-                    if "PARAM1" in kv:
-                        self._set_combo_by_value(self.eol_param1, kv["PARAM1"])
-                    if "PARAM2" in kv:
-                        self._set_combo_by_value(self.eol_param2, kv["PARAM2"])
-                    if "PARAM3" in kv:
-                        self.eol_param3.setValue(int(float(kv["PARAM3"])))
-                    if "PARAM4" in kv:
-                        self.eol_param4.setValue(int(float(kv["PARAM4"])))
+                    if "绝缘测试" in kv.get("EOL", action):
+                        if "HV1" in kv: self.eol_hv1.setValue(float(kv["HV1"]))
+                        if "R0" in kv: self.eol_r0.setValue(float(kv["R0"]))
+                        if "R1" in kv: self.eol_r1.setValue(float(kv["R1"]))
+                        if "R2" in kv: self.eol_r2.setValue(float(kv["R2"]))
+                        if "R3" in kv: self.eol_r3.setValue(float(kv["R3"]))
+                        if "R4" in kv: self.eol_r4.setValue(float(kv["R4"]))
+                    else:
+                        # 1. 优先尝试直接用全新通用 PARAM1 和 PARAM2 还原参数，毫无卡死可能！
+                        if "PARAM1" in kv:
+                            self._set_combo_by_value(self.eol_param1, kv["PARAM1"])
+                        if "PARAM2" in kv:
+                            self._set_combo_by_value(self.eol_param2, kv["PARAM2"])
+                        if "PARAM3" in kv:
+                            self.eol_param3.setValue(int(float(kv["PARAM3"])))
+                        if "PARAM4" in kv:
+                            self.eol_param4.setValue(int(float(kv["PARAM4"])))
                         
                     # 2. 兼容映射还原（包括 ADC, MODE, STATE, INDEX, LEVEL, PWM, NTC, HALL, OP, VAL 等历史字段）
                     p1_keys = ["ADC", "STATE", "INDEX", "PWM", "NTC", "HALL", "OP", "GPIO"]
@@ -776,11 +878,11 @@ class StepDialog(QDialog):
         elif category == "报文交互":
             self.device_combo.addItems(["CAN 交互"])
         elif category == "三方协议":
-            self.device_combo.addItems(["智界EOL协议"])
+            self.device_combo.addItems(["3.5HEOL协议"])
         elif category == "通用交互":
-            self.device_combo.addItems(["等待 (Wait)"])
+            self.device_combo.addItems(["等待 (Wait)", "变量操作 (Variable)"])
         elif category == "特殊执行":
-            self.device_combo.addItems(["智界EOL协议"])
+            self.device_combo.addItems(["3.5HEOL协议"])
         
         if not self.is_loading:
             if category == "设备操作":
@@ -815,7 +917,7 @@ class StepDialog(QDialog):
         device_text = self.device_combo.currentText()
         if not device_text: return
         
-        if "智界EOL" in device_text:
+        if "3.5HEOL" in device_text:
             category = self.category_combo.currentText()
             if category == "特殊执行":
                 self.action_combo.addItems(["EEPROM测试", "绝缘测试"])
@@ -829,6 +931,8 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["发送指令", "交互/问答", "读取数据", "接收指定帧ID"])
         elif "等待" in device_text:
             self.action_combo.addItems(["固定延时"])
+        elif "变量操作" in device_text:
+            self.action_combo.addItems(["读取变量"])
         elif "Easy320" in device_text:
             self.action_combo.addItems(["闭合勾选通道", "断开勾选通道", "全部断开"])
         elif "老化" in device_text:
@@ -855,7 +959,7 @@ class StepDialog(QDialog):
         device = self.device_combo.currentText()
         action = self.action_combo.currentText()
         
-        if "智界EOL" in device:
+        if "3.5HEOL" in device:
             self.param_stack.setCurrentIndex(7)
             # 同步 action 到内部 eol_op 逻辑，并保持其隐藏
             self.eol_op.setCurrentText(action)
@@ -879,6 +983,8 @@ class StepDialog(QDialog):
                         if lbl: lbl.show()
         elif "等待" in device:
             self.param_stack.setCurrentIndex(2)
+        elif "变量操作" in device:
+            self.param_stack.setCurrentIndex(9)
         elif "同步屏障" in device:
             self.param_stack.setCurrentIndex(-1)
         elif "老化" in device:
@@ -975,44 +1081,52 @@ class StepDialog(QDialog):
                 params.append(f"TYPE:{self.c_type.currentIndex()}")
                 params.append(f"DLC:{self.c_dlc.value()}")
                 params.append(f"CH:{self.c_channel.value()}")
-        elif idx == 7: # 智界 EOL 协议
-            step_type = "智界EOL协议"
+        elif idx == 7: # 3.5H EOL 协议
+            step_type = "3.5HEOL协议"
             eol_action = action
             params.append(f"EOL:{eol_action}")
             
-            # --- 终极加固通用参数保存：完美覆盖 0x03~0xFF 所有智界 EOL 协议 ---
-            p1_val = self._combo_value(self.eol_param1)
-            p2_val = self._combo_value(self.eol_param2)
-            args_val = self.eol_args.text().strip()
-            
-            if p1_val: params.append(f"PARAM1:{p1_val}")
-            if p2_val: params.append(f"PARAM2:{p2_val}")
-            if "0x07" in eol_action:
-                params.append(f"PARAM3:{self.eol_param3.value()}")
-                params.append(f"PARAM4:{self.eol_param4.value()}")
-            if args_val: params.append(f"ARGS:{args_val}")
-            
-            # 兼容老版本历史配方的字段格式，额外写入特定键名，确保老引擎读取无误
-            if "0x06" in eol_action:
-                params.append(f"ADC:{p1_val}")
-                params.append(f"MODE:{p2_val}")
-            elif "0x03" in eol_action:
-                params.append(f"STATE:{p1_val}")
-                params.append(f"VAL:{p2_val}")
-            elif "0x04" in eol_action:
-                params.append(f"INDEX:{p1_val}")
-                params.append(f"LEVEL:{p2_val}")
-            elif "0x05" in eol_action:
-                params.append(f"PWM:{p1_val}")
-                params.append(f"MODE:{p2_val}")
-            elif "0x10" in eol_action:
-                params.append(f"NTC:{p1_val}")
-                params.append(f"NTC_TYPE:{p2_val}")
-            elif "0x0B" in eol_action:
-                params.append(f"HALL:{p1_val}")
-            elif "0x07" in eol_action or "0x08" in eol_action or "0xFF" in eol_action:
-                params.append(f"OP:{p1_val}")
-                params.append(f"INDEX:{p2_val}")
+            if "绝缘测试" in eol_action:
+                params.append(f"HV1:{self.eol_hv1.value()}")
+                params.append(f"R0:{self.eol_r0.value()}")
+                params.append(f"R1:{self.eol_r1.value()}")
+                params.append(f"R2:{self.eol_r2.value()}")
+                params.append(f"R3:{self.eol_r3.value()}")
+                params.append(f"R4:{self.eol_r4.value()}")
+            else:
+                # --- 终极加固通用参数保存：完美覆盖 0x03~0xFF 所有3.5H EOL 协议 ---
+                p1_val = self._combo_value(self.eol_param1)
+                p2_val = self._combo_value(self.eol_param2)
+                args_val = self.eol_args.text().strip()
+                
+                if p1_val: params.append(f"PARAM1:{p1_val}")
+                if p2_val: params.append(f"PARAM2:{p2_val}")
+                if "0x07" in eol_action:
+                    params.append(f"PARAM3:{self.eol_param3.value()}")
+                    params.append(f"PARAM4:{self.eol_param4.value()}")
+                if args_val: params.append(f"ARGS:{args_val}")
+                
+                # 兼容老版本历史配方的字段格式，额外写入特定键名，确保老引擎读取无误
+                if "0x06" in eol_action:
+                    params.append(f"ADC:{p1_val}")
+                    params.append(f"MODE:{p2_val}")
+                elif "0x03" in eol_action:
+                    params.append(f"STATE:{p1_val}")
+                    params.append(f"VAL:{p2_val}")
+                elif "0x04" in eol_action:
+                    params.append(f"INDEX:{p1_val}")
+                    params.append(f"LEVEL:{p2_val}")
+                elif "0x05" in eol_action:
+                    params.append(f"PWM:{p1_val}")
+                    params.append(f"MODE:{p2_val}")
+                elif "0x10" in eol_action:
+                    params.append(f"NTC:{p1_val}")
+                    params.append(f"NTC_TYPE:{p2_val}")
+                elif "0x0B" in eol_action:
+                    params.append(f"HALL:{p1_val}")
+                elif "0x07" in eol_action or "0x08" in eol_action or "0xFF" in eol_action:
+                    params.append(f"OP:{p1_val}")
+                    params.append(f"INDEX:{p2_val}")
             
             # 通用配置参数
             params.append(f"TIMEOUT:{self.eol_timeout.value()}")
@@ -1021,6 +1135,9 @@ class StepDialog(QDialog):
             params.append(f"DLC:{self.eol_dlc.value()}")
             params.append(f"TX_ID:{self.eol_tx_id.text().strip()}")
             params.append(f"RX_ID:{self.eol_rx_id.text().strip()}")
+        elif idx == 9: # 变量操作
+            step_type = "读取变量"
+            params.append(f"VAR:{self.var_name.currentText().strip()}")
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")

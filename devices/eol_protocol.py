@@ -121,7 +121,7 @@ class EOLProtocol:
         elif op_name == "EEPROM测试":
             try:
                 if logger:
-                    logger(f"[*] 启动特殊执行下智界 EOL EEPROM 自动化回路校验测试...")
+                    logger(f"[*] 启动特殊执行下3.5H EOL EEPROM 自动化回路校验测试...")
 
                 # A. 提取 TX_ID, RX_ID 并进行安全转换
                 def _get_id(val, default):
@@ -143,42 +143,50 @@ class EOLProtocol:
                 # ==================== 步骤 1 ====================
                 # 发送 10 0A 01 00 01 00 00 00 报文，判断是否收到肯定响应 40
                 tx_step1 = bytes([self.REQUEST_PREFIX, 0x0A, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00])
-                if logger:
-                    logger(f"[EEPROM STEP 1] CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step1.hex(' ').upper()}")
+                
+                retry_count = 10
+                step1_success = False
+                for attempt in range(1, retry_count + 1):
+                    if logger:
+                        if attempt > 1:
+                            logger(f"[EEPROM STEP 1] 未收到肯定响应，正在进行第 {attempt - 1}/{retry_count - 1} 次重发 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step1.hex(' ').upper()}")
+                        else:
+                            logger(f"[EEPROM STEP 1] CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step1.hex(' ').upper()}")
 
-                if hasattr(self.can_driver, 'clear_rx_history'):
-                    self.can_driver.clear_rx_history(resp_id)
+                    if hasattr(self.can_driver, 'clear_rx_history'):
+                        self.can_driver.clear_rx_history(resp_id)
 
-                send_time = time.time()
-                if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_step1):
-                    return EOLResult(False, error="步骤1 CAN发送失败", value="测试失败")
+                    send_time = time.time()
+                    if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_step1):
+                        time.sleep(0.05)
+                        continue
 
-                # 等待并验证肯定响应
-                msg = self.can_driver.wait_for_message(
-                    can_id=resp_id,
-                    channel_id=None,
-                    predicate=lambda m: (
-                        len(m.get("data", b"")) >= 4
-                        and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
-                        and m.get("data", b"")[1] == 0x0A
-                        and m.get("data", b"")[2] == 0x01
-                    ),
-                    timeout=timeout,
-                    since_time=send_time,
-                    consume=True
-                )
-                if not msg:
-                    if logger: logger("[EEPROM STEP 1] 错误: 未收到步骤1的响应")
-                    return EOLResult(False, error="步骤1响应超时", value="测试失败")
+                    msg = self.can_driver.wait_for_message(
+                        can_id=resp_id,
+                        channel_id=None,
+                        predicate=lambda m: (
+                            len(m.get("data", b"")) >= 4
+                            and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
+                            and m.get("data", b"")[1] == 0x0A
+                            and m.get("data", b"")[2] == 0x01
+                            and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
+                        ),
+                        timeout=timeout,
+                        since_time=send_time,
+                        consume=True
+                    )
+                    if msg:
+                        raw_step1 = msg.get("data", b"")
+                        if logger:
+                            logger(f"[EEPROM STEP 1] CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_step1.hex(' ').upper()}")
+                        step1_success = True
+                        break
+                    else:
+                        time.sleep(0.05)
 
-                raw_step1 = msg.get("data", b"")
-                if logger:
-                    logger(f"[EEPROM STEP 1] CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_step1.hex(' ').upper()}")
-
-                response_code_1 = raw_step1[3] if len(raw_step1) >= 4 else None
-                if response_code_1 != self.POSITIVE_RESPONSE:
-                    if logger: logger(f"[EEPROM STEP 1] 错误: 步骤1响应非肯定响应 (0x{response_code_1:02X})")
-                    return EOLResult(False, error=f"步骤1否定响应: 0x{response_code_1:02X}", value="测试失败")
+                if not step1_success:
+                    if logger: logger("[EEPROM STEP 1] 错误: 未收到步骤1肯定响应 (已重试10次)")
+                    return EOLResult(False, error="步骤1响应超时(已重试10次)", value="测试失败")
 
                 # ==================== 步骤 2 ====================
                 # 等待 200ms
@@ -195,123 +203,164 @@ class EOLProtocol:
                 # 顺序间隔 50ms 发送，并确认肯定响应 11 0A 05 40
                 for i in range(1, 9):
                     tx_step2 = bytes([self.REQUEST_PREFIX, 0x0A, 0x05, i]) + generated_data[i]
+                    
+                    retry_count = 10
+                    step2_success = False
+                    for attempt in range(1, retry_count + 1):
+                        if logger:
+                            if attempt > 1:
+                                logger(f"[EEPROM STEP 2] 第 {i} 组未收到肯定响应，正在进行第 {attempt - 1}/{retry_count - 1} 次重发 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step2.hex(' ').upper()}")
+                            else:
+                                logger(f"[EEPROM STEP 2] 发送第 {i} 组 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step2.hex(' ').upper()}")
+
+                        if hasattr(self.can_driver, 'clear_rx_history'):
+                            self.can_driver.clear_rx_history(resp_id)
+
+                        send_time = time.time()
+                        if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_step2):
+                            time.sleep(0.05)
+                            continue
+
+                        msg_step2 = self.can_driver.wait_for_message(
+                            can_id=resp_id,
+                            channel_id=None,
+                            predicate=lambda m: (
+                                len(m.get("data", b"")) >= 4
+                                and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
+                                and m.get("data", b"")[1] == 0x0A
+                                and m.get("data", b"")[2] == 0x05
+                                and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
+                            ),
+                            timeout=timeout,
+                            since_time=send_time,
+                            consume=True
+                        )
+                        if msg_step2:
+                            raw_step2 = msg_step2.get("data", b"")
+                            if logger:
+                                logger(f"[EEPROM STEP 2] 收到第 {i} 组肯定响应 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_step2.hex(' ').upper()}")
+                            step2_success = True
+                            break
+                        else:
+                            time.sleep(0.05)
+
+                    if not step2_success:
+                        if logger: logger(f"[EEPROM STEP 2] 错误: 未收到第 {i} 组的肯定响应 (已重试10次)")
+                        return EOLResult(False, error=f"步骤2 第{i}组确认超时(已重试10次)", value="测试失败")
+
+                    # 顺序间隔 80ms (防 Windows 计时器精度抖动，确保严格大于 50ms)
+                    time.sleep(0.08)
+
+                # ==================== 步骤 3 ====================
+                # 在发送读取指令之前，先发送 10 0A 01 00 01 00 00 00 设置指令，并确认肯定响应 11 0A 01 40
+                tx_pre_step3 = bytes([self.REQUEST_PREFIX, 0x0A, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00])
+                
+                retry_count = 10
+                pre3_success = False
+                for attempt in range(1, retry_count + 1):
                     if logger:
-                        logger(f"[EEPROM STEP 2] 发送第 {i} 组 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step2.hex(' ').upper()}")
+                        if attempt > 1:
+                            logger(f"[EEPROM STEP 3 PRE] 未收到肯定响应，正在进行第 {attempt - 1}/{retry_count - 1} 次重发 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_pre_step3.hex(' ').upper()}")
+                        else:
+                            logger(f"[EEPROM STEP 3 PRE] 发送读取前置设置 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_pre_step3.hex(' ').upper()}")
 
                     if hasattr(self.can_driver, 'clear_rx_history'):
                         self.can_driver.clear_rx_history(resp_id)
 
-                    send_time = time.time()
-                    if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_step2):
-                        return EOLResult(False, error=f"步骤2 第{i}组 CAN发送失败", value="测试失败")
+                    send_time_pre = time.time()
+                    if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_pre_step3):
+                        time.sleep(0.05)
+                        continue
 
-                    msg_step2 = self.can_driver.wait_for_message(
+                    msg_pre3 = self.can_driver.wait_for_message(
                         can_id=resp_id,
                         channel_id=None,
                         predicate=lambda m: (
                             len(m.get("data", b"")) >= 4
                             and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
                             and m.get("data", b"")[1] == 0x0A
-                            and m.get("data", b"")[2] == 0x05
+                            and m.get("data", b"")[2] == 0x01
                             and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
                         ),
                         timeout=timeout,
-                        since_time=send_time,
+                        since_time=send_time_pre,
                         consume=True
                     )
-                    if not msg_step2:
-                        if logger: logger(f"[EEPROM STEP 2] 错误: 未收到第 {i} 组的肯定响应")
-                        return EOLResult(False, error=f"步骤2 第{i}组确认超时", value="测试失败")
+                    if msg_pre3:
+                        raw_pre3 = msg_pre3.get("data", b"")
+                        if logger:
+                            logger(f"[EEPROM STEP 3 PRE] 收到步骤3前置设置肯定响应 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_pre3.hex(' ').upper()}")
+                        pre3_success = True
+                        break
+                    else:
+                        time.sleep(0.05)
 
-                    raw_step2 = msg_step2.get("data", b"")
-                    if logger:
-                        logger(f"[EEPROM STEP 2] 收到第 {i} 组肯定响应 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_step2.hex(' ').upper()}")
+                if not pre3_success:
+                    if logger: logger("[EEPROM STEP 3 PRE] 错误: 未收到步骤3前置设置肯定响应 (已重试10次)")
+                    return EOLResult(False, error="步骤3前置设置确认超时(已重试10次)", value="测试失败")
 
-                    # 顺序间隔 50ms
-                    time.sleep(0.05)
-
-                # ==================== 步骤 3 ====================
-                # 在发送读取指令之前，先发送 10 0A 01 00 01 00 00 00 设置指令，并确认肯定响应 11 0A 01 40
-                tx_pre_step3 = bytes([self.REQUEST_PREFIX, 0x0A, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00])
-                if logger:
-                    logger(f"[EEPROM STEP 3 PRE] 发送读取前置设置 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_pre_step3.hex(' ').upper()}")
-
-                if hasattr(self.can_driver, 'clear_rx_history'):
-                    self.can_driver.clear_rx_history(resp_id)
-
-                send_time_pre = time.time()
-                if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_pre_step3):
-                    return EOLResult(False, error="步骤3前置设置 CAN发送失败", value="测试失败")
-
-                msg_pre3 = self.can_driver.wait_for_message(
-                    can_id=resp_id,
-                    channel_id=None,
-                    predicate=lambda m: (
-                        len(m.get("data", b"")) >= 4
-                        and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
-                        and m.get("data", b"")[1] == 0x0A
-                        and m.get("data", b"")[2] == 0x01
-                        and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
-                    ),
-                    timeout=timeout,
-                    since_time=send_time_pre,
-                    consume=True
-                )
-                if not msg_pre3:
-                    if logger: logger("[EEPROM STEP 3 PRE] 错误: 未收到步骤3前置设置的肯定响应")
-                    return EOLResult(False, error="步骤3前置设置确认超时", value="测试失败")
-
-                raw_pre3 = msg_pre3.get("data", b"")
-                if logger:
-                    logger(f"[EEPROM STEP 3 PRE] 收到步骤3前置设置肯定响应 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_pre3.hex(' ').upper()}")
-
-                # 间隔 50ms
-                time.sleep(0.05)
+                # 间隔 80ms (防 Windows 计时器精度抖动，确保严格大于 50ms)
+                time.sleep(0.08)
 
                 # 发送 10 0A 03 00 0i 00 00 00，循环递增读取 8 个地址块数据，间隔 50ms
                 received_groups = {}
                 for i in range(1, 9):
                     tx_step3 = bytes([self.REQUEST_PREFIX, 0x0A, 0x03, 0x00, i, 0x00, 0x00, 0x00])
-                    if logger:
-                        logger(f"[EEPROM STEP 3] 发送第 {i} 组读取 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step3.hex(' ').upper()}")
+                    
+                    retry_count = 10
+                    success = False
+                    for attempt in range(1, retry_count + 1):
+                        if logger:
+                            if attempt > 1:
+                                logger(f"[EEPROM STEP 3] 第 {i} 组读取超时，正在进行第 {attempt - 1}/{retry_count - 1} 次自动重发与回读...")
+                            else:
+                                logger(f"[EEPROM STEP 3] 发送第 {i} 组读取 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_step3.hex(' ').upper()}")
 
-                    if hasattr(self.can_driver, 'clear_rx_history'):
-                        self.can_driver.clear_rx_history(resp_id)
+                        if hasattr(self.can_driver, 'clear_rx_history'):
+                            self.can_driver.clear_rx_history(resp_id)
 
-                    send_time = time.time()
-                    if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_step3):
-                        return EOLResult(False, error=f"步骤3 第{i}组读取 CAN发送失败", value="测试失败")
+                        send_time = time.time()
+                        if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_step3):
+                            time.sleep(0.05)
+                            continue
 
-                    msg_step3 = self.can_driver.wait_for_message(
-                        can_id=resp_id,
-                        channel_id=None,
-                        predicate=lambda m: (
-                            len(m.get("data", b"")) >= 8
-                            and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
-                            and m.get("data", b"")[1] == 0x0A
-                            and m.get("data", b"")[2] == 0x03
-                            and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
-                        ),
-                        timeout=timeout,
-                        since_time=send_time,
-                        consume=True
-                    )
-                    if not msg_step3:
-                        if logger: logger(f"[EEPROM STEP 3] 错误: 未收到第 {i} 组读取的响应")
-                        return EOLResult(False, error=f"步骤3 第{i}组读取超时", value="测试失败")
+                        msg_step3 = self.can_driver.wait_for_message(
+                            can_id=resp_id,
+                            channel_id=None,
+                            predicate=lambda m: (
+                                len(m.get("data", b"")) >= 8
+                                and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
+                                and m.get("data", b"")[1] == 0x0A
+                                and m.get("data", b"")[2] == 0x03
+                                and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
+                            ),
+                            timeout=timeout,
+                            since_time=send_time,
+                            consume=True
+                        )
+                        if msg_step3:
+                            raw_step3 = msg_step3.get("data", b"")
+                            if logger:
+                                logger(f"[EEPROM STEP 3] 收到数据报文 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_step3.hex(' ').upper()}")
 
-                    raw_step3 = msg_step3.get("data", b"")
-                    if logger:
-                        logger(f"[EEPROM STEP 3] 收到数据报文 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_step3.hex(' ').upper()}")
+                            # 提取第5至8字节（即 raw_step3[4:8]）作为回读数据组
+                            data_chunk = raw_step3[4:8]
+                            received_groups[i] = data_chunk
+                            if logger:
+                                logger(f"[EEPROM STEP 3] 成功暂存第 {i} 组回读数据: {data_chunk.hex(' ').upper()}")
+                            success = True
+                            break
+                        else:
+                            # 超时后稍微等待 50ms 再进行下一次重试
+                            time.sleep(0.05)
 
-                    # 提取第5至8字节（即 raw_step3[4:8]）作为回读数据组
-                    data_chunk = raw_step3[4:8]
-                    received_groups[i] = data_chunk
-                    if logger:
-                        logger(f"[EEPROM STEP 3] 成功暂存第 {i} 组回读数据: {data_chunk.hex(' ').upper()}")
+                    if not success:
+                        if logger:
+                            logger(f"[EEPROM STEP 3] 错误: 未收到第 {i} 组读取的响应 (重试 {retry_count} 次均失败)")
+                        return EOLResult(False, error=f"步骤3 第{i}组读取超时(重试{retry_count}次失败)", value="测试失败")
 
-                    # 间隔 50ms
-                    time.sleep(0.05)
+                    # 间隔 80ms (防 Windows 计时器精度抖动，确保严格大于 50ms)
+                    time.sleep(0.08)
 
                 # 将接收的数据与上面八组随机生成的数据进行比对
                 if len(received_groups) < 8:
@@ -340,39 +389,51 @@ class EOLProtocol:
                 cleanup_success = True
                 for i in range(1, 9):
                     tx_cleanup = bytes([self.REQUEST_PREFIX, 0x0A, 0x05, i, 0xFF, 0xFF, 0xFF, 0xFF])
-                    if logger:
-                        logger(f"[EEPROM CLEANUP] 发送恢复第 {i} 组 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_cleanup.hex(' ').upper()}")
-
-                    if hasattr(self.can_driver, 'clear_rx_history'):
-                        self.can_driver.clear_rx_history(resp_id)
-
-                    send_time = time.time()
-                    self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_cleanup)
-
-                    # 确认肯定响应
-                    msg_cleanup = self.can_driver.wait_for_message(
-                        can_id=resp_id,
-                        channel_id=None,
-                        predicate=lambda m: (
-                            len(m.get("data", b"")) >= 4
-                            and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
-                            and m.get("data", b"")[1] == 0x0A
-                            and m.get("data", b"")[2] == 0x05
-                            and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
-                        ),
-                        timeout=timeout,
-                        since_time=send_time,
-                        consume=True
-                    )
-                    if not msg_cleanup:
-                        if logger: logger(f"[EEPROM CLEANUP] 警告: 未收到第 {i} 组恢复擦除的肯定响应")
-                        cleanup_success = False
-                    else:
-                        raw_cleanup = msg_cleanup.get("data", b"")
+                    
+                    retry_count = 10
+                    cleanup_group_success = False
+                    for attempt in range(1, retry_count + 1):
                         if logger:
-                            logger(f"[EEPROM CLEANUP] 收到第 {i} 组恢复肯定响应 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_cleanup.hex(' ').upper()}")
+                            if attempt > 1:
+                                logger(f"[EEPROM CLEANUP] 第 {i} 组恢复擦除未收到肯定响应，正在进行第 {attempt - 1}/{retry_count - 1} 次重发 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_cleanup.hex(' ').upper()}")
+                            else:
+                                logger(f"[EEPROM CLEANUP] 发送恢复第 {i} 组 CAN TX CH:{self.channel_id} ID={hex(req_id).upper()} DATA={tx_cleanup.hex(' ').upper()}")
 
-                    time.sleep(0.05)
+                        if hasattr(self.can_driver, 'clear_rx_history'):
+                            self.can_driver.clear_rx_history(resp_id)
+
+                        send_time = time.time()
+                        self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_cleanup)
+
+                        msg_cleanup = self.can_driver.wait_for_message(
+                            can_id=resp_id,
+                            channel_id=None,
+                            predicate=lambda m: (
+                                len(m.get("data", b"")) >= 4
+                                and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
+                                and m.get("data", b"")[1] == 0x0A
+                                and m.get("data", b"")[2] == 0x05
+                                and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
+                            ),
+                            timeout=timeout,
+                            since_time=send_time,
+                            consume=True
+                        )
+                        if msg_cleanup:
+                            raw_cleanup = msg_cleanup.get("data", b"")
+                            if logger:
+                                logger(f"[EEPROM CLEANUP] 收到第 {i} 组恢复肯定响应 CAN RX CH:{self.channel_id} ID={hex(resp_id).upper()} DATA={raw_cleanup.hex(' ').upper()}")
+                            cleanup_group_success = True
+                            break
+                        else:
+                            time.sleep(0.05)
+
+                    if not cleanup_group_success:
+                        if logger: logger(f"[EEPROM CLEANUP] 警告: 未收到第 {i} 组恢复擦除的肯定响应 (已重试10次)")
+                        cleanup_success = False
+
+                    # 间隔 80ms (防 Windows 计时器精度抖动，确保严格大于 50ms)
+                    time.sleep(0.08)
 
                 if mismatch_found:
                     if logger:
@@ -390,7 +451,7 @@ class EOLProtocol:
         elif op_name == "绝缘测试":
             try:
                 if logger:
-                    logger(f"[*] 启动特殊执行下智界 EOL 绝缘测试自动化校验...")
+                    logger(f"[*] 启动特殊执行下3.5H EOL 绝缘测试自动化校验...")
 
                 # A. 提取 TX_ID, RX_ID 并进行安全转换
                 def _get_id(val, default):
@@ -654,7 +715,10 @@ class EOLProtocol:
                 self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_cleanup)
                 
                 value_str = f"正极绝缘:{rp:.1f}kΩ, 负极绝缘:{rn:.1f}kΩ"
-                return EOLResult(True, value=value_str)
+                res = EOLResult(True, value=value_str)
+                res.rp = rp
+                res.rn = rn
+                return res
 
             except Exception as e:
                 if logger:

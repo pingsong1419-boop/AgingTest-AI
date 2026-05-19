@@ -290,7 +290,7 @@ class ConfigTab(QWidget):
                 
         friendly_kv = {}
         
-        # 1. 智界 EOL 协议的精细翻译
+        # 1. 3.5H EOL 协议的精细翻译
         if "EOL" in str(device) or "EOL" in str(action):
             op = kv.get("EOL", action or "")
             

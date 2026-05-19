@@ -22,9 +22,10 @@ class SubStepType(Enum):
     CAN_SEND = "CAN发送"
     CAN_INTERACT = "CAN交互"
     CAN_RECEIVE = "CAN接收"
-    EOL_PROTOCOL = "智界EOL协议"
+    EOL_PROTOCOL = "3.5HEOL协议"
     WAIT = "等待"
     BARRIER = "同步屏障"
+    READ_VAR = "读取变量"
 
 class SubStepFailStrategy(Enum):
     STOP = "失败停止"
@@ -79,6 +80,7 @@ class ChannelWorker(QObject):
         self._retry_count = 0
         self.step_retry_count = 0
         self.last_hw_log = ""
+        self.variables = {}
         
         # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
         self.log_history = []
@@ -262,6 +264,9 @@ class ChannelWorker(QObject):
         eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
         result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], logger=hw_logger, **eol_cfg["kwargs"])
         result_value = result.value if result.success else result.error
+        if result.success and eol_cfg["op_name"] == "绝缘测试":
+            self.variables["正极绝缘"] = getattr(result, "rp", 0.0)
+            self.variables["负极绝缘"] = getattr(result, "rn", 0.0)
         hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
         return result.success, result_value
 
@@ -456,6 +461,21 @@ class ChannelWorker(QObject):
 
             elif sub_step.type == SubStepType.READ_INSTRUMENT:
                 device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
+                if "变量操作" in params.get("device", "") or "var:" in p_str.lower() or "读取变量" in params.get("action", ""):
+                    kv = self._parse_key_values(p_str)
+                    var_name = kv.get("VAR", "").strip()
+                    val = self.variables.get(var_name, None)
+                    if val is not None:
+                        if isinstance(val, (int, float)):
+                            result_value = f"{val:.1f}kΩ" if "绝缘" in var_name else f"{val:.2f}"
+                        else:
+                            result_value = str(val)
+                        success = True
+                    else:
+                        result_value = "变量未找到"
+                        success = False
+                    hw_logger(f"读取变量 [{var_name}] => {result_value}")
+                    return success, result_value
                 target_ch = int(re.search(r"CH:(\d+)", p_str).group(1)) if "CH:" in p_str else None
                 is_volt = "电压" in p_str or "volt" in p_str or "V" in p_str.upper()
                 
@@ -539,6 +559,22 @@ class ChannelWorker(QObject):
 
             elif sub_step.type == SubStepType.EOL_PROTOCOL:
                 success, result_value = self._execute_eol_protocol(mgr, params, hw_logger)
+
+            elif sub_step.type == SubStepType.READ_VAR:
+                params_str = params.get("params", "")
+                kv = self._parse_key_values(params_str)
+                var_name = kv.get("VAR", "").strip()
+                val = self.variables.get(var_name, None)
+                if val is not None:
+                    if isinstance(val, (int, float)):
+                        result_value = f"{val:.1f}kΩ" if "绝缘" in var_name else f"{val:.2f}"
+                    else:
+                        result_value = str(val)
+                    success = True
+                else:
+                    result_value = "变量未找到"
+                    success = False
+                hw_logger(f"读取变量 [{var_name}] => {result_value}")
 
             elif sub_step.type == SubStepType.WAIT:
                 ms = int(self._parse_numeric(params.get("params", 1000)))
@@ -888,7 +924,9 @@ class TestEngine(QObject):
             step.unit = item.get('unit', "NULL")
             for sub in item.get('sub_steps', []):
                 stype, t_str, p_str = SubStepType.SET_INSTRUMENT, sub.get('type', ""), str(sub.get('params', ""))
-                if "智界EOL" in t_str or "EOL协议" in t_str: stype = SubStepType.EOL_PROTOCOL
+                dev_str, act_str = sub.get('device', ""), sub.get('action', "")
+                if "3.5HEOL" in t_str or "EOL协议" in t_str: stype = SubStepType.EOL_PROTOCOL
+                elif "读取变量" in t_str or "变量操作" in dev_str or "读取变量" in act_str or "VAR:" in p_str: stype = SubStepType.READ_VAR
                 elif "读取" in t_str: stype = SubStepType.READ_INSTRUMENT
                 elif "CAN发送" in t_str: stype = SubStepType.CAN_SEND
                 elif "CAN接收" in t_str or "接收指定帧ID" in t_str: stype = SubStepType.CAN_RECEIVE

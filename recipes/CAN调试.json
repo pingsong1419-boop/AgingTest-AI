@@ -24,7 +24,7 @@
             ]
         },
         {
-            "name": "智界CAN调试-06-ADC",
+            "name": "3.5HCAN调试-06-ADC",
             "mode": "范围判定",
             "min": "11.0",
             "max": "13.0",
@@ -33,11 +33,11 @@
             "retry_count": "不复测",
             "sub_steps": [
                 {
-                    "name": "智界EOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / ADC:1 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / ADC:1 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x06 ADC读取",
                     "params": "EOL:0x06 ADC读取 / ADC:1 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
-                    "device": "智界EOL协议",
-                    "type": "智界EOL协议",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
                     "is_judgment": true,
                     "sync_exec": false,
                     "fail_strategy": "忽略继续"
@@ -45,7 +45,7 @@
             ]
         },
         {
-            "name": "智界CAN调试-06-ADC",
+            "name": "3.5HCAN调试-06-ADC",
             "mode": "范围判定",
             "min": "4.0",
             "max": "6.0",
@@ -54,11 +54,11 @@
             "retry_count": "不复测",
             "sub_steps": [
                 {
-                    "name": "智界EOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / ADC:34 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / ADC:34 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x06 ADC读取",
                     "params": "EOL:0x06 ADC读取 / ADC:34 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
-                    "device": "智界EOL协议",
-                    "type": "智界EOL协议",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
                     "is_judgment": true,
                     "sync_exec": false,
                     "fail_strategy": "忽略继续"
