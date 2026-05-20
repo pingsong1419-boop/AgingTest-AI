@@ -81,6 +81,7 @@ class ChannelWorker(QObject):
         self.step_retry_count = 0
         self.last_hw_log = ""
         self.variables = {}
+        self.is_suspended = False
         
         # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
         self.log_history = []
@@ -443,6 +444,12 @@ class ChannelWorker(QObject):
                             if ch.strip(): mgr.easy320.write_relay(int(self._parse_numeric(ch))-1, state)
 
                 elif "ca550" in device:
+                    if not mgr.ca550.is_connected:
+                        import data.db_manager as dbm
+                        cfg = dbm.DBManager().load_sys_config()
+                        com_port = cfg.get("ca550_com", "COM42")
+                        mgr.ca550.port = com_port
+                        mgr.ca550.connect()
                     if "Type:" in p_str:
                         f_code = 1 if "MA" in p_str.upper() else 2 if "OHM" in p_str.upper() else 3 if "RTD" in p_str.upper() else 4 if "TC" in p_str.upper() else 0
                         mgr.ca550.set_source_func(f_code)
@@ -500,8 +507,15 @@ class ChannelWorker(QObject):
                     elif "2#" in device: target_sim = mgr.simulators[1]
                     elif "3#" in device: target_sim = mgr.simulators[2]
                     if target_sim:
-                        physical_ch = (ch - 1) % 18 + 1
-                        result_value = target_sim.measure_voltage(physical_ch) if is_volt else target_sim.measure_current(physical_ch)
+                        if is_volt:
+                            total_v = 0.0
+                            for i in range(1, 19):
+                                v = target_sim.measure_voltage(i)
+                                if v >= 0: total_v += v
+                            result_value = total_v
+                        else:
+                            physical_ch = (ch - 1) % 18 + 1
+                            result_value = target_sim.measure_current(physical_ch)
                     else:
                         result_value = mgr.measure_voltage(ch) if is_volt else mgr.measure_current(ch)
                     success = result_value >= 0
@@ -516,6 +530,12 @@ class ChannelWorker(QObject):
                         result_value = dev.measure_voltage() if is_volt else dev.measure_current()
                         success = result_value is not None and result_value >= -999.0
                 elif "ca550" in device:
+                    if not mgr.ca550.is_connected:
+                        import data.db_manager as dbm
+                        cfg = dbm.DBManager().load_sys_config()
+                        com_port = cfg.get("ca550_com", "COM42")
+                        mgr.ca550.port = com_port
+                        mgr.ca550.connect()
                     mode = "measure" if "测量" in p_str or "measure" in p_str.lower() else "source"
                     result_value = self._parse_numeric(mgr.ca550.read_measure_data(mode))
                     success = result_value is not None
@@ -613,6 +633,13 @@ class ChannelWorker(QObject):
 
     def execute_sub_step(self, sub_step: SubStep, ignore_sync: bool = False):
         if not self.is_running: return
+        
+        # --- 联动挂起暂停检测 ---
+        if getattr(self, "is_suspended", False):
+            # 每隔 1 秒重试一次，非阻塞式挂起
+            QTimer.singleShot(1000, lambda: self.execute_sub_step(sub_step, ignore_sync))
+            return
+            
         params = sub_step.params
         is_sync = bool(params.get("sync_exec", False))
         if is_sync and not ignore_sync:
@@ -928,9 +955,9 @@ class TestEngine(QObject):
                 if "3.5HEOL" in t_str or "EOL协议" in t_str: stype = SubStepType.EOL_PROTOCOL
                 elif "读取变量" in t_str or "变量操作" in dev_str or "读取变量" in act_str or "VAR:" in p_str: stype = SubStepType.READ_VAR
                 elif "读取" in t_str: stype = SubStepType.READ_INSTRUMENT
-                elif "CAN发送" in t_str: stype = SubStepType.CAN_SEND
-                elif "CAN接收" in t_str or "接收指定帧ID" in t_str: stype = SubStepType.CAN_RECEIVE
-                elif "CAN交互" in t_str: stype = SubStepType.EOL_PROTOCOL if "EOL:" in p_str.upper() else SubStepType.CAN_INTERACT
+                elif "CAN发送" in t_str or "发送指令" in act_str: stype = SubStepType.CAN_SEND
+                elif "CAN接收" in t_str or "接收指定帧ID" in t_str or "接收指定帧ID" in act_str: stype = SubStepType.CAN_RECEIVE
+                elif "CAN交互" in t_str or "报文交互" in t_str: stype = SubStepType.EOL_PROTOCOL if "EOL:" in p_str.upper() else SubStepType.CAN_INTERACT
                 elif "等待" in t_str: stype = SubStepType.WAIT
                 elif "同步屏障" in t_str: stype = SubStepType.BARRIER
                 fs_str, fs = sub.get('fail_strategy', "失败停止"), SubStepFailStrategy.STOP
@@ -952,7 +979,6 @@ class TestEngine(QObject):
         with self._lock:
             if cid in self.sync_barrier_channels:
                 self.sync_barrier_channels.remove(cid)
-                self._check_and_release_barrier() # 移除后检查是否满足其他通道的集齐条件
             if cid in self.threads:
                 t, w = self.threads[cid], self.workers[cid]
                 try: w.test_finished.disconnect()
@@ -962,6 +988,7 @@ class TestEngine(QObject):
                 del self.workers[cid]; del self.threads[cid]; self.zombie_threads.append(t)
                 if cid in self.sync_groups: del self.sync_groups[cid]
                 t.finished.connect(t.deleteLater); t.finished.connect(lambda tt=t: self._cleanup_zombie(tt)); w.deleteLater()
+            self._check_and_release_barrier() # 剔除 channel worker 后再检查集齐条件，防止死锁
 
     def _cleanup_zombie(self, t):
         with self._lock:

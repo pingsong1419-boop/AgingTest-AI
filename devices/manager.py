@@ -7,6 +7,7 @@ from .ca550_driver import CA550Controller
 from .easy320_driver import Easy320Controller
 from .power_board_ru12 import PowerBoardRU12
 from .control_board import ControlBoard
+from .chamber_driver import ChamberController
 
 
 class DeviceManager:
@@ -25,6 +26,7 @@ class DeviceManager:
         self.ctrl_board_power = None
         self.ca550 = None
         self.easy320 = None
+        self.chamber = None
         
         
         
@@ -89,7 +91,12 @@ class DeviceManager:
         e320_ip = cfg.get("easy320_ip", "192.168.1.88")
         self.easy320 = Easy320Controller(e320_ip)
 
-        # 8. 60路老化控制板 (分布式)
+        # 8. 高低温老化箱
+        chamber_ip = cfg.get("chamber_ip", "192.168.1.150")
+        chamber_port = int(cfg.get("chamber_port", 502))
+        self.chamber = ChamberController(chamber_ip, chamber_port)
+
+        # 9. 60路老化控制板 (分布式)
         ch_configs = []
         if self.db_manager:
             ch_configs = self.db_manager.load_channel_config() or []
@@ -190,6 +197,7 @@ class DeviceManager:
         # 1. 基础控制与校准设备初始化
         if self.easy320: self.easy320.connect()
         if self.ca550: self.ca550.connect()
+        if self.chamber: self.chamber.connect()
         
         # 2. 电源类设备初始化
         if self.hv_source: self.hv_source.connect()
@@ -286,6 +294,7 @@ class DeviceManager:
         if self.ctrl_board_power: add_status("控制板供电电源 (Ctrl Board)", self.ctrl_board_power)
         if self.ca550: add_status("CA550 校准源", self.ca550, self.ca550.port)
         if self.easy320: add_status("Easy320 继电器", self.easy320)
+        if self.chamber: add_status("高低温老化箱", self.chamber)
         
         for i, sim in enumerate(self.simulators):
             add_status(f"{i+1}# 电池模拟器 (18CH)", sim)
@@ -308,6 +317,7 @@ class DeviceManager:
             
         if self.easy320: self.easy320.disconnect()
         if self.ca550: self.ca550.disconnect()
+        if self.chamber: self.chamber.disconnect()
 
     def emergency_stop(self):
         """紧急停止：关闭所有电源输出"""

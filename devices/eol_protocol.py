@@ -744,6 +744,59 @@ class EOLProtocol:
                 # ADC: 0x01 raw, 0x02 value
                 mode_str = str(kwargs.get("读取模式", kwargs.get("MODE", ""))).upper()
                 op_code = 0x01 if "RAW" in mode_str or "原始" in mode_str else 0x02
+                
+                try:
+                    adc_index = self._int_arg(kwargs, "ADC", "INDEX", "PARAM1")
+                    if adc_index in [0x20, 0x21, 0x2B, 0x2C, 0x2F, 0x30]:
+                        if logger:
+                            logger(f"[*] 触发特殊ADC通道(0x{adc_index:02X})高频采样模式：15-25ms随机采集，持续8秒取最大值")
+                        req_id = tx_id if tx_id is not None else self.REQUEST_ID
+                        resp_id = rx_id if rx_id is not None else self.RESPONSE_ID
+                        tx_data = bytes([self.REQUEST_PREFIX, 0x06, op_code, 0x00, adc_index, 0x00, 0x00, 0x00])
+                        
+                        import random
+                        max_val = None
+                        start_time = time.time()
+                        count = 0
+                        while time.time() - start_time < 8.0:
+                            if hasattr(self.can_driver, 'clear_rx_history'):
+                                self.can_driver.clear_rx_history(resp_id)
+                            t_send = time.time()
+                            self.can_driver.send_can_message(self.channel_id, req_id, can_type, dlc, tx_data)
+                            msg = self.can_driver.wait_for_message(
+                                can_id=resp_id, channel_id=None,
+                                predicate=lambda m: (
+                                    len(m.get("data", b"")) >= 4
+                                    and m.get("data", b"")[0] in [self.RESPONSE_PREFIX, self.REQUEST_PREFIX]
+                                    and m.get("data", b"")[1] == 0x06
+                                    and m.get("data", b"")[2] == op_code
+                                ),
+                                timeout=0.1, since_time=t_send, consume=True
+                            )
+                            if msg:
+                                raw = msg.get("data", b"")
+                                if raw[3] == self.POSITIVE_RESPONSE:
+                                    val = round(self._decode_index_u16(raw) * 0.001, 3)
+                                    count += 1
+                                    if logger: logger(f"[ADC HIGHSPEED] CAN RX: {raw.hex(' ').upper()} -> {val} V")
+                                    if max_val is None or val > max_val:
+                                        max_val = val
+                                else:
+                                    if logger: logger(f"[ADC HIGHSPEED] CAN RX (否定): {raw.hex(' ').upper()}")
+                            
+                            elapsed = time.time() - t_send
+                            target_interval = random.uniform(0.015, 0.025)
+                            if elapsed < target_interval:
+                                time.sleep(target_interval - elapsed)
+                                
+                        if max_val is not None:
+                            if logger: logger(f"[ADC HIGHSPEED] 8秒采集结束，共采集 {count} 次有效数据，最大值为: {max_val}")
+                            return EOLResult(True, value=max_val)
+                        else:
+                            if logger: logger(f"[ADC HIGHSPEED] 错误: 未能在8秒内采集到有效数据")
+                            return EOLResult(False, error="8秒高频采样无有效数据", value=0.0)
+                except Exception as ex:
+                    if logger: logger(f"[WARNING] ADC特殊采样解析异常: {ex}")
             
             # GPIO 控制读取与写入特殊处理 (0x04)
             elif "0x04" in op_name:

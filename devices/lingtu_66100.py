@@ -137,21 +137,21 @@ class Lingtu66100:
 
 
     def measure_voltage(self, channel: int, logger=None) -> float:
-        """测量实时电压: MEASure[ch]:VOLTage?"""
+        """测量/读取通道设定电压: SOURce[ch]:VOLTage?"""
         # BUG-07修复: 加锁，防止多线程并发时响应报文乱序
         with self._lock:
             if not self.is_connected:
                 if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
                 return -1.0
             try:
-                cmd = f"MEAS{channel}:VOLT?\n"
+                cmd = f"SOUR{channel}:VOLT?\n"
                 if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
                 self.sock.send(cmd.encode())
                 data = self.sock.recv(1024).decode().strip()
                 if logger: logger(f"[IP: {self.ip}] [RX] {data} V")
                 return float(data)
             except Exception as e:
-                if logger: logger(f"[IP: {self.ip}] [!] 测量电压异常: {e}")
+                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电压异常: {e}")
                 return -1.0
 
     def measure_current(self, channel: int, logger=None) -> float:

@@ -16,6 +16,7 @@ from ui.tabs.easy320_tab_standalone import Easy320StandaloneTab
 from ui.tabs.ca550_tab_standalone import CA550StandaloneTab
 from ui.tabs.rn_can_tab import RNCANTab
 from ui.tabs.power_board_tab import PowerBoardTab
+from ui.tabs.chamber_tab import ChamberTab
 
 
 
@@ -54,7 +55,11 @@ class MainWindow(QMainWindow):
         self.tab_overview = OverviewTab(self.engine, self.db_manager)
         self.tabs.addTab(self.tab_overview, "多通道监控")
 
-        # 2. 测试用例/工步配置页
+        # 2. 高低温老化箱监控页
+        self.tab_chamber = ChamberTab(self.device_manager, self.db_manager)
+        self.tabs.addTab(self.tab_chamber, "高低温老化箱")
+
+        # 3. 测试用例/工步配置页
         self.tab_config = ConfigTab(self.db_manager)
         self.tabs.addTab(self.tab_config, "工步与配方配置")
 

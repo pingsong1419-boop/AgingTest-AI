@@ -881,6 +881,11 @@ class ConfigTab(QWidget):
             count = 0
             
             for idx, item in enumerate(selected_nodes):
+                has_sync = False
+                for j in range(item.childCount()):
+                    if item.child(j).data(3, Qt.UserRole):
+                        has_sync = True; break
+                        
                 # 统一修改测试项名称
                 if cfg["change_name"]:
                     prefix = cfg["name_prefix"]
@@ -903,11 +908,11 @@ class ConfigTab(QWidget):
                     
                 # 统一修改 NG 复测选择
                 if cfg["change_retry"]:
-                    item.setData(1, Qt.UserRole, cfg['retry_count'])
+                    item.setData(1, Qt.UserRole, "不复测" if has_sync else cfg['retry_count'])
                     
                 # 统一修改 NG 停止策略
                 if cfg["change_strategy"]:
-                    item.setText(4, cfg['strategy'])
+                    item.setText(4, "任何NG停止" if has_sync else cfg['strategy'])
                     
                 count += 1
                 
@@ -1006,6 +1011,17 @@ class ConfigTab(QWidget):
         # 遍历树状图
         for i in range(self.step_tree.topLevelItemCount()):
             item_node = self.step_tree.topLevelItem(i)
+            
+            # --- 强制校验同步工步规则 ---
+            has_sync = False
+            for j in range(item_node.childCount()):
+                if item_node.child(j).data(3, Qt.UserRole):
+                    has_sync = True; break
+            if has_sync:
+                item_node.setData(1, Qt.UserRole, "不复测")
+                item_node.setText(4, "任何NG停止")
+            # --------------------------
+            
             item_data = {
                 "name": item_node.text(0),
                 "mode": item_node.text(1),
@@ -1126,6 +1142,12 @@ class ConfigTab(QWidget):
         if not parent:
             # 这是一个『测试项』(Top Level)
             from ui.dialogs.test_item_dialog import TestItemDialog
+            
+            has_sync = False
+            for j in range(item.childCount()):
+                if item.child(j).data(3, Qt.UserRole):
+                    has_sync = True; break
+                    
             data = {
                 'name': item.text(0),
                 'min': item.text(2),
@@ -1133,7 +1155,8 @@ class ConfigTab(QWidget):
                 'strategy': item.text(4),
                 'standard_type': item.data(0, Qt.UserRole) or '数值',
                 'retry_count': item.data(1, Qt.UserRole) or '不复测',
-                'unit': item.data(2, Qt.UserRole) or 'NULL'
+                'unit': item.data(2, Qt.UserRole) or 'NULL',
+                'has_sync_step': has_sync
             }
             dialog = TestItemDialog(self, data=data)
             if dialog.exec():

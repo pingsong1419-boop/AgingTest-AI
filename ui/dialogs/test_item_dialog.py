@@ -81,6 +81,12 @@ class TestItemDialog(QDialog):
             self.retry_combo.setCurrentText(data.get('retry_count', '不复测'))
             self.strategy_combo.setCurrentText(data.get('strategy', '任何NG停止'))
             
+            if data.get('has_sync_step', False):
+                self.retry_combo.setCurrentText('不复测')
+                self.retry_combo.setEnabled(False)
+                self.strategy_combo.setCurrentText('任何NG停止')
+                self.strategy_combo.setEnabled(False)
+            
         self.on_type_changed(self.type_combo.currentText())
         
         layout.addStretch()

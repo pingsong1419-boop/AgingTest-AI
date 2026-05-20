@@ -730,6 +730,14 @@ class StepDialog(QDialog):
             self.cb_judgment.setChecked(data.get('is_judgment', False))
             self.cb_sync.setChecked(data.get('sync_exec', False))
             self.fail_strategy_combo.setCurrentText(data.get('fail_strategy', "失败停止"))
+            
+            category = self.category_combo.currentText()
+            device_text = self.device_combo.currentText()
+            if category == "设备操作" and "老化功能板继电器" not in device_text:
+                self.cb_sync.setChecked(True)
+                self.cb_sync.setEnabled(False)
+            else:
+                self.cb_sync.setEnabled(True)
 
             # 6. 还原具体业务参数 (特征匹配法 + 异常隔离)
             import re
@@ -948,10 +956,12 @@ class StepDialog(QDialog):
         if not self.is_loading:
             category = self.category_combo.currentText()
             if category == "设备操作":
-                is_excluded = any(x in device_text for x in ["老化功能板继电器", "Easy320", "控制板供电电源"])
+                is_excluded = "老化功能板继电器" in device_text
                 self.cb_sync.setChecked(not is_excluded)
+                self.cb_sync.setEnabled(is_excluded)
             else:
                 self.cb_sync.setChecked(False)
+                self.cb_sync.setEnabled(True)
             
             self.on_action_changed()
 

@@ -128,7 +128,7 @@ class SimulatorTab(QWidget):
         table_group = QGroupBox("本台机 18 通道实时状态回读")
         table_layout = QVBoxLayout()
         self.table = QTableWidget(18, 2)
-        self.table.setHorizontalHeaderLabels(["通道", "实时电压 (V)"])
+        self.table.setHorizontalHeaderLabels(["通道", "设定电压 (V)"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         for i in range(18):
             self.table.setItem(i, 0, QTableWidgetItem(f"CH {i+1}"))
