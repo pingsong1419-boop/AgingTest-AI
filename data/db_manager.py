@@ -509,6 +509,46 @@ class DBManager:
             return False
         except: return False
 
+    # --- 老化箱工步配方 (Chamber Preset) JSON 存储逻辑 (与测试配方隔离) ---
+    def get_chamber_preset_dir(self):
+        preset_dir = os.path.join(os.path.dirname(self.db_path), "chamber_presets")
+        os.makedirs(preset_dir, exist_ok=True)
+        return preset_dir
+
+    def save_chamber_preset_json(self, name: str, data: Dict[str, Any]) -> bool:
+        try:
+            import json
+            file_path = os.path.join(self.get_chamber_preset_dir(), f"{name}.json")
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            return True
+        except: return False
+
+    def load_chamber_preset_json(self, name: str) -> Optional[Dict[str, Any]]:
+        try:
+            import json
+            file_path = os.path.join(self.get_chamber_preset_dir(), f"{name}.json")
+            if not os.path.exists(file_path): return None
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except: return None
+
+    def list_chamber_presets(self) -> List[str]:
+        try:
+            preset_dir = self.get_chamber_preset_dir()
+            files = [f for f in os.listdir(preset_dir) if f.endswith(".json")]
+            return [os.path.splitext(f)[0] for f in files]
+        except: return []
+
+    def delete_chamber_preset(self, name: str) -> bool:
+        try:
+            file_path = os.path.join(self.get_chamber_preset_dir(), f"{name}.json")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                return True
+            return False
+        except: return False
+
     # --- 系统与硬件配置存储逻辑 ---
     
     def get_config_dir(self):

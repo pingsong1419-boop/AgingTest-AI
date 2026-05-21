@@ -406,32 +406,38 @@ class OverviewTab(QWidget):
             )
             return
 
-        # 7. 通过全部校验，正式下发测试指令启动引擎
+        # 7. 通过全部校验，准备进入老化箱界面
         if not self.engine:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.critical(self, "错误", "测试引擎未初始化！")
             return
 
-        from PySide6.QtWidgets import QMessageBox, QPushButton
-        msg_box = QMessageBox(self)
-        msg_box.setWindowTitle("启动老化测试")
-        msg_box.setText("请选择老化箱运行模式：")
-        
-        btn_bypass = msg_box.addButton("屏蔽老化箱调试启动", QMessageBox.ActionRole)
-        btn_normal = msg_box.addButton("启动老化测试工步", QMessageBox.ActionRole)
-        btn_cancel = msg_box.addButton("取消", QMessageBox.RejectRole)
-        
-        msg_box.exec()
-        
-        clicked_btn = msg_box.clickedButton()
-        if clicked_btn == btn_cancel:
-            return
+        # 不再弹窗选择，直接跳转到“高低温老化箱”通讯控制界面，等待用户加载配方并点击“启动老化测试工步”
+        parent_widget = self.parentWidget()
+        while parent_widget:
+            from PySide6.QtWidgets import QTabWidget
+            if isinstance(parent_widget, QTabWidget):
+                for idx in range(parent_widget.count()):
+                    if parent_widget.tabText(idx) == "高低温老化箱":
+                        parent_widget.setCurrentIndex(idx)
+                        break
+                break
+            parent_widget = parent_widget.parentWidget()
 
-        for cid in selected_cids:
-            # 缓存中获取配方项
-            recipe_items = self.channel_recipes[cid]
+    def trigger_multi_channel_tests(self):
+        """由老化箱界面调用：立即触发已勾选且配方完整的通道进行测试"""
+        selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+        if not selected_cids:
+            return
             
-            # 获取对应的条码以进行数据库新建测试记录
+        recipe_name = self.combo_recipe.currentText()
+            
+        for cid in selected_cids:
+            # 如果某通道没有准备好配方，则跳过
+            if cid not in getattr(self, 'channel_recipes', {}):
+                continue
+                
+            recipe_items = self.channel_recipes[cid]
             ch_widget = self.channel_widgets[cid - 1]
             shelf = ch_widget.shelf_barcode
             master = ch_widget.master_barcode
@@ -441,32 +447,8 @@ class OverviewTab(QWidget):
             if self.db_manager:
                 test_id = self.db_manager.start_new_test(cid, shelf, master, slaves, recipe_name)
                 
-            # 启动单个通道测试，传递真实的 test_id，同时加入本组的同步列表中
             self.engine.start_channel_test(cid, recipe_items, test_id=test_id, sync_group=selected_cids)
-            # 界面反馈：立刻更新通道状态为“测试中”，使用绿色
             self.channel_widgets[cid - 1].set_status("测试中", "#28A745")
-            
-        from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(self, "启动成功", f"成功启动 {len(selected_cids)} 个通道的电池老化测试！")
-
-        # 成功启动测试后，按需跳转到“高低温老化箱”通讯控制界面并自动开启联动测试工步
-        parent_widget = self.parentWidget()
-        while parent_widget:
-            from PySide6.QtWidgets import QTabWidget
-            if isinstance(parent_widget, QTabWidget):
-                for idx in range(parent_widget.count()):
-                    if parent_widget.tabText(idx) == "高低温老化箱":
-                        if clicked_btn == btn_normal:
-                            parent_widget.setCurrentIndex(idx)
-                        # 自动触发联动开始！
-                        chamber_tab = parent_widget.widget(idx)
-                        if clicked_btn == btn_bypass:
-                            chamber_tab.start_aging_bypass_chamber()
-                        elif clicked_btn == btn_normal:
-                            chamber_tab.start_aging_sequence()
-                        break
-                break
-            parent_widget = parent_widget.parentWidget()
 
     def get_chamber_tab(self):
         parent = self.parent()
@@ -480,12 +462,7 @@ class OverviewTab(QWidget):
     def on_channel_step_started(self, cid, step_name):
         idx = cid - 1
         if 0 <= idx < len(self.channel_widgets):
-            chamber_tab = self.get_chamber_tab()
-            if chamber_tab and hasattr(chamber_tab, "chk_linkage") and chamber_tab.chk_linkage.isChecked() and chamber_tab.sequence_running:
-                # 联动运行期间，由老化箱步骤控制卡片状态文本，防止重写冲突
-                pass
-            else:
-                self.channel_widgets[idx].set_status(f"测试中({step_name})", "#28A745")
+            self.channel_widgets[idx].set_status(f"测试中({step_name})", "#28A745")
 
     @Slot(int, bool)
     def on_channel_test_finished(self, cid, success):

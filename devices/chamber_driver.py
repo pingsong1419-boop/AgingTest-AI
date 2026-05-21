@@ -14,7 +14,7 @@ class ChamberController:
     支持真实 S7-200 Smart PLC 网络读写与高仿真自适应模拟运行双模。
     
     点位映射机制：
-    - V 区映射为 DB1 (例如 V0.5 -> DB1.DBX0.5, VD700 -> DB1.DBD700)
+    - V 区映射为 DB1 (例如 V0.5 -> DB1.DBX0.5, VD750 -> DB1.DBD750)
     - I 区 -> Area 0x82
     - Q 区 -> Area 0x83
     """
@@ -33,7 +33,7 @@ class ChamberController:
             "V0.6": False,      # 系统停止
             "V699.0": False,    # 制冷、制热模式转换 (False=制冷, True=制热)
             "V699.2": False,    # 手动、自动模式转换 (False=手动, True=自动)
-            "VD700": 25.0,      # 制冷设定温度
+            "VD750": 25.0,      # 制冷设定温度
             "VD800": 25.0,      # 制热设定温度
 
             # 2. 只读状态点位 (Q / I)
@@ -232,10 +232,15 @@ class ChamberController:
                 if return_code != 0xFF:
                     return b""
                     
-                bit_len = struct.unpack(">H", resp[data_offset + 2: data_offset + 4])[0]
-                byte_len = bit_len // 8
-                
                 payload_offset = data_offset + 4
+                byte_len = length
+                # Some S7 stacks return BYTE read lengths in bits. The mapping file
+                # uses byte lengths, so byte length is primary and bit length is fallback.
+                remaining = len(resp) - payload_offset
+                if byte_len > remaining:
+                    length_field = struct.unpack(">H", resp[data_offset + 2: data_offset + 4])[0]
+                    byte_len = length_field // 8
+
                 if payload_offset + byte_len > len(resp):
                     return b""
                     
@@ -261,14 +266,14 @@ class ChamberController:
                 addr_0 = bit_offset & 0xFF
                 
                 data_len = 4 + len(payload)
-                total_len = 31 + len(payload)
+                total_len = 35 + len(payload)
                 pdu_ref = random.randint(1, 65535)
                 
                 transport_size_param = 0x01 if is_bit else 0x02
                 length_param = 1 if is_bit else len(payload)
                 
                 transport_size_data = 0x03 if is_bit else 0x04
-                length_data_field = 1 if is_bit else len(payload)
+                length_data_field = len(payload) if is_bit else len(payload) * 8
                 
                 packet = bytearray([
                     0x03, 0x00, (total_len >> 8) & 0xFF, total_len & 0xFF, # TPKT
@@ -294,7 +299,7 @@ class ChamberController:
                     # --- Data Field ---
                     0x00,                    # Return Code
                     transport_size_data,     # Transport size in data
-                    (length_data_field >> 8) & 0xFF, length_data_field & 0xFF # Data length (bits for bit, bytes for byte)
+                    (length_data_field >> 8) & 0xFF, length_data_field & 0xFF # Data length in bytes
                 ])
                 packet.extend(payload)
                 
@@ -323,6 +328,7 @@ class ChamberController:
 
     def write_bit(self, name: str, value: bool) -> bool:
         """写入 BOOL 变量 (系统启动/停止/模式等)"""
+        paired_write = None
         with self.lock:
             self.data_store[name] = value
             
@@ -330,20 +336,30 @@ class ChamberController:
             if name == "V0.5" and value:
                 self.data_store["V0.6"] = False
                 self.sim_system_on = True
+                paired_write = ("V0.6", False)
             elif name == "V0.6" and value:
                 self.data_store["V0.5"] = False
                 self.sim_system_on = False
+                paired_write = ("V0.5", False)
 
         if not self.use_simulation and self.sock:
-            try:
-                parts = name.replace("V", "").split(".")
-                start_byte = int(parts[0])
-                bit = int(parts[1])
-                payload = b"\x01" if value else b"\x00"
-                self.write_s7_data(area=0x84, db_number=1, start_byte=start_byte, bit=bit, is_bit=True, payload=payload)
-            except Exception as e:
-                logger.error(f"[S7PLC] 写入 {name} 失败: {e}")
+            ok = True
+            if paired_write:
+                ok = self._write_bit_physical(*paired_write) and ok
+            ok = self._write_bit_physical(name, value) and ok
+            return ok
         return True
+
+    def _write_bit_physical(self, name: str, value: bool) -> bool:
+        try:
+            parts = name.replace("V", "").split(".")
+            start_byte = int(parts[0])
+            bit = int(parts[1])
+            payload = b"\x01" if value else b"\x00"
+            return self.write_s7_data(area=0x84, db_number=1, start_byte=start_byte, bit=bit, is_bit=True, payload=payload)
+        except Exception as e:
+            logger.error(f"[S7PLC] 写入 {name} 失败: {e}")
+            return False
 
     def write_real(self, name: str, value: float) -> bool:
         """写入 REAL 实数变量 (设定温度)"""
@@ -354,9 +370,10 @@ class ChamberController:
             try:
                 start_byte = int(name.replace("VD", ""))
                 payload = struct.pack(">f", value)
-                self.write_s7_data(area=0x84, db_number=1, start_byte=start_byte, bit=0, is_bit=False, payload=payload)
+                return self.write_s7_data(area=0x84, db_number=1, start_byte=start_byte, bit=0, is_bit=False, payload=payload)
             except Exception as e:
                 logger.error(f"[S7PLC] 写入 {name} 失败: {e}")
+                return False
         return True
 
     def get_all_data(self) -> dict:
@@ -416,7 +433,7 @@ class ChamberController:
                 
             time.sleep(0.02)
             
-            # 3. 核心高度合并：读取 V699.0-VD803 (105 bytes: 包含 V699(1 byte) + VD700到VD803(104 bytes))
+            # 3. 核心高度合并：读取 V699.0-VD803 (105 bytes: 包含 V699、VD720、VD750、VD800)
             v_combo_699 = self.read_bytes(area=0x84, db_number=1, start_byte=699, length=105)
             if v_combo_699 and len(v_combo_699) >= 105:
                 # 解析 V699
@@ -424,8 +441,8 @@ class ChamberController:
                 self.data_store["V699.2"] = bool(v_combo_699[0] & (1 << 2))
                 
                 # 解析 reals (偏移量 = byte_idx - 699)
-                self.data_store["VD700"] = struct.unpack(">f", v_combo_699[1:5])[0]
                 self.data_store["VD720"] = struct.unpack(">f", v_combo_699[21:25])[0]
+                self.data_store["VD750"] = struct.unpack(">f", v_combo_699[51:55])[0]
                 self.data_store["VD800"] = struct.unpack(">f", v_combo_699[101:105])[0]
                 
             time.sleep(0.02)
@@ -457,7 +474,7 @@ class ChamberController:
             logger.error(f"[S7PLC] get_all_data 物理抓取失败: {e}")
             self._handle_socket_error()
             
-        for k in ["VD720", "VD220", "VD224", "VD228"]:
+        for k in ["VD720", "VD220", "VD224", "VD228", "VD750"]:
             try:
                 self.data_store[k] = round(self.data_store[k], 1)
             except:
@@ -469,7 +486,7 @@ class ChamberController:
         """高保真 PLC 仿真运行逻辑机"""
         is_on = self.data_store["V0.5"] and not self.data_store["V0.6"]
         mode_heat = self.data_store["V699.0"]
-        target_temp = self.data_store["VD800"] if mode_heat else self.data_store["VD700"]
+        target_temp = self.data_store["VD800"] if mode_heat else self.data_store["VD750"]
         current_temp = self.data_store["VD720"]
 
         rate = 0.6

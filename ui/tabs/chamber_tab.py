@@ -1,5 +1,8 @@
 import sys
 import time
+import logging
+
+logger = logging.getLogger("ChamberApp")
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                 QPushButton, QGroupBox, QLineEdit, QScrollArea, 
                                 QFrame, QMessageBox, QGridLayout, QTableWidget, 
@@ -23,7 +26,7 @@ class ChamberTab(QWidget):
         self.steps_data = [] # 存储当前编辑中的工步 [{name, temp, hours, status}]
         self.active_step_idx = -1
         self.step_elapsed_sec = 0.0 # 当前工步已过时间(小时表示)
-        self.speed_factor = 3600.0   # 默认加速比 3600x (1秒仿真1小时，极易测试)
+        self.speed_factor = 1.0   # 默认实时倍速 1x
         self.sequence_running = False
 
         self._init_ui()
@@ -130,7 +133,7 @@ class ChamberTab(QWidget):
         lbl_t_title.setStyleSheet("color: #A0A0B0; font-size: 12px; font-weight: bold; border: none;")
         self.lbl_temp_val = QLabel("25.0 °C")
         self.lbl_temp_val.setStyleSheet("color: #00E5FF; font-size: 34px; font-weight: bold; font-family: Consolas; border: none; padding: 2px 0;")
-        self.lbl_temp_tgt = QLabel("设定温度: -- °C (制冷 VD700 / 制热 VD800)")
+        self.lbl_temp_tgt = QLabel("设定温度: -- °C (制冷 VD750 / 制热 VD800)")
         self.lbl_temp_tgt.setStyleSheet("color: #6C757D; font-size: 11px; border: none;")
         ly_temp.addWidget(lbl_t_title)
         ly_temp.addWidget(self.lbl_temp_val)
@@ -152,43 +155,32 @@ class ChamberTab(QWidget):
         ly_pt.addWidget(self.lbl_pt_lbl)
         grid_metrics.addWidget(self.card_pt, 0, 1)
 
-        # 卡片 3: PLC 核心操作面板 (V 寄存器读写)
+        # 卡片 3: PLC 核心状态面板 (只读显示)
         self.card_plc = QFrame()
         self.card_plc.setStyleSheet("background-color: #131326; border: 1px solid #2A2A40; border-radius: 10px;")
         ly_plc = QVBoxLayout(self.card_plc)
-        lbl_p_title = QLabel("💻 PLC 核心控制台 (V0.5 / V0.6 / V699)")
+        ly_plc.setSpacing(6)
+        
+        lbl_p_title = QLabel("💻 PLC 运行状态 (V0.5 / V0.6 / V699)")
         lbl_p_title.setStyleSheet("color: #A0A0B0; font-size: 12px; font-weight: bold; border: none;")
         ly_plc.addWidget(lbl_p_title)
         
-        lay_p_btns = QGridLayout()
-        self.btn_sys_start = QPushButton("系统启动 V0.5")
-        self.btn_sys_start.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 11px;")
-        self.btn_sys_start.clicked.connect(lambda: self.write_plc_bit("V0.5", True))
+        self.lbl_status_sys = QLabel("系统状态: --")
+        self.lbl_status_sys.setAlignment(Qt.AlignCenter)
+        self.lbl_status_sys.setStyleSheet("color: #777777; font-size: 11px; font-weight: bold; background-color: #16162C; border: 1px solid #25253A; border-radius: 4px; padding: 6px;")
         
-        self.btn_sys_stop = QPushButton("系统停止 V0.6")
-        self.btn_sys_stop.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 11px;")
-        self.btn_sys_stop.clicked.connect(lambda: self.write_plc_bit("V0.6", True))
+        self.lbl_status_mode = QLabel("运行模式: --")
+        self.lbl_status_mode.setAlignment(Qt.AlignCenter)
+        self.lbl_status_mode.setStyleSheet("color: #777777; font-size: 11px; font-weight: bold; background-color: #16162C; border: 1px solid #25253A; border-radius: 4px; padding: 6px;")
         
-        self.btn_mode_switch = QPushButton("冷热模式 V699.0")
-        self.btn_mode_switch.setCheckable(True)
-        self.btn_mode_switch.setStyleSheet("background-color: #17A2B8; color: white; font-weight: bold; font-size: 11px;")
-        self.btn_mode_switch.clicked.connect(self.toggle_mode_switch)
+        self.lbl_status_ctrl = QLabel("控制模式: --")
+        self.lbl_status_ctrl.setAlignment(Qt.AlignCenter)
+        self.lbl_status_ctrl.setStyleSheet("color: #777777; font-size: 11px; font-weight: bold; background-color: #16162C; border: 1px solid #25253A; border-radius: 4px; padding: 6px;")
         
-        self.btn_auto_switch = QPushButton("手自模式 V699.2")
-        self.btn_auto_switch.setCheckable(True)
-        self.btn_auto_switch.setStyleSheet("background-color: #6C757D; color: white; font-weight: bold; font-size: 11px;")
-        self.btn_auto_switch.clicked.connect(self.toggle_auto_switch)
+        ly_plc.addWidget(self.lbl_status_sys)
+        ly_plc.addWidget(self.lbl_status_mode)
+        ly_plc.addWidget(self.lbl_status_ctrl)
         
-        lay_p_btns.addWidget(self.btn_sys_start, 0, 0)
-        lay_p_btns.addWidget(self.btn_sys_stop, 0, 1)
-        lay_p_btns.addWidget(self.btn_mode_switch, 1, 0)
-        lay_p_btns.addWidget(self.btn_auto_switch, 1, 1)
-        ly_plc.addLayout(lay_p_btns)
-        
-        # 实时启停显示
-        self.lbl_plc_state = QLabel("PLC 模式: 停止中 | 模式: --")
-        self.lbl_plc_state.setStyleSheet("color: #E2E2E2; font-size: 11px; font-weight: bold; border: none;")
-        ly_plc.addWidget(self.lbl_plc_state)
         grid_metrics.addWidget(self.card_plc, 0, 2)
 
         # 卡片 4: 当前老化工步实时执行监控
@@ -278,7 +270,7 @@ class ChamberTab(QWidget):
         preset_layout.addWidget(QLabel("  时间加速比:"))
         self.combo_speed = QComboBox()
         self.combo_speed.addItems(["实时 (1x)", "加速 (60x) - 1分表1小时", "极速 (3600x) - 1秒表1小时"])
-        self.combo_speed.setCurrentIndex(2) # 默认极速方便测试
+        self.combo_speed.setCurrentIndex(0) # 默认显示为实时 1x
         self.combo_speed.currentIndexChanged.connect(self.change_speed_factor)
         preset_layout.addWidget(self.combo_speed)
         
@@ -292,9 +284,15 @@ class ChamberTab(QWidget):
         steps_layout.addLayout(preset_layout)
         
         # 工步配置表格
-        self.table_steps = QTableWidget(0, 5)
-        self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "目标温度 (℃)", "时间 (h) / 倒计时", "执行状态"])
-        self.table_steps.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table_steps = QTableWidget(0, 6)
+        self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "目标温度 (℃)", "测试时间/倒计时", "超时时间", "执行状态"])
+        self.table_steps.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.table_steps.setColumnWidth(0, 65)   # 工步序号缩小
+        self.table_steps.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch) # 工步名称占据多余空间
+        self.table_steps.setColumnWidth(2, 95)   # 目标温度缩小
+        self.table_steps.setColumnWidth(3, 175)  # 测试时间栏增大，充分显示倒计时
+        self.table_steps.setColumnWidth(4, 75)   # 超时时间缩小
+        self.table_steps.setColumnWidth(5, 90)   # 执行状态
         self.table_steps.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_steps.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table_steps.setStyleSheet("""
@@ -317,6 +315,7 @@ class ChamberTab(QWidget):
             }
         """)
         steps_layout.addWidget(self.table_steps)
+        self.table_steps.cellChanged.connect(self.on_cell_changed)
         
         # 整体工步总进度条
         progress_total_layout = QHBoxLayout()
@@ -344,13 +343,15 @@ class ChamberTab(QWidget):
         # 工步操作按钮栏
         actions_layout = QHBoxLayout()
         
-        btn_add = QPushButton("➕ 新增工步")
-        btn_add.clicked.connect(self.add_blank_step)
-        actions_layout.addWidget(btn_add)
+        self.btn_add = QPushButton("➕ 新增工步")
+        self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_add.clicked.connect(self.add_blank_step)
+        actions_layout.addWidget(self.btn_add)
         
-        btn_del = QPushButton("❌ 删除工步")
-        btn_del.clicked.connect(self.delete_selected_step)
-        actions_layout.addWidget(btn_del)
+        self.btn_del = QPushButton("❌ 删除工步")
+        self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_del.clicked.connect(self.delete_selected_step)
+        actions_layout.addWidget(self.btn_del)
         
         actions_layout.addStretch()
         
@@ -394,10 +395,11 @@ class ChamberTab(QWidget):
         
         # 手动参数下发栏
         man_set_layout = QHBoxLayout()
-        man_set_layout.addWidget(QLabel("制冷设定 (VD700):"))
+        man_set_layout.addWidget(QLabel("制冷设定 (VD750):"))
         self.dsp_cool = QDoubleSpinBox()
         self.dsp_cool.setRange(-50, 100)
         self.dsp_cool.setValue(25.0)
+        self.dsp_cool.setDecimals(1)
         self.dsp_cool.setSingleStep(0.5)
         self.dsp_cool.setStyleSheet("background-color: #1A1A2E; color: white; border: 1px solid #3E3E5C; border-radius: 4px;")
         man_set_layout.addWidget(self.dsp_cool)
@@ -406,11 +408,12 @@ class ChamberTab(QWidget):
         self.dsp_heat = QDoubleSpinBox()
         self.dsp_heat.setRange(0, 150)
         self.dsp_heat.setValue(25.0)
+        self.dsp_heat.setDecimals(1)
         self.dsp_heat.setSingleStep(0.5)
         self.dsp_heat.setStyleSheet("background-color: #1A1A2E; color: white; border: 1px solid #3E3E5C; border-radius: 4px;")
         man_set_layout.addWidget(self.dsp_heat)
         
-        btn_apply_tgt = QPushButton("下发 VD")
+        btn_apply_tgt = QPushButton("下发设定")
         btn_apply_tgt.setStyleSheet("background-color: #17A2B8; color: white;")
         btn_apply_tgt.clicked.connect(self.apply_manual_targets)
         man_set_layout.addWidget(btn_apply_tgt)
@@ -548,21 +551,40 @@ class ChamberTab(QWidget):
             self.lbl_mode.setText("通讯模式: 未连接")
             self.lbl_mode.setStyleSheet("background-color: #1A1A2E; color: #A0A0B0; border: 1px solid #3E3E5C; border-radius: 4px; padding: 4px 10px; font-weight: bold;")
 
-    def write_plc_bit(self, point: str, val: bool):
+    def write_plc_bit(self, point: str, val: bool, sync: bool = True):
         """下发 PLC bit 控制位"""
         if self.chamber and self.chamber.is_connected:
-            self.chamber.write_bit(point, val)
-            self.sync_plc_data()
+            ok = self.chamber.write_bit(point, val)
+            if sync:
+                self.sync_plc_data()
+            return ok
+        return False
 
-    def toggle_mode_switch(self):
-        """切换制冷/制热模式 V699.0"""
-        checked = self.btn_mode_switch.isChecked()
-        self.write_plc_bit("V699.0", checked)
 
-    def toggle_auto_switch(self):
-        """切换手动/自动模式 V699.2"""
-        checked = self.btn_auto_switch.isChecked()
-        self.write_plc_bit("V699.2", checked)
+
+    def should_heat_step(self, step_name: str, target_temp: float) -> bool:
+        """根据工步名称和目标温度判断制热/制冷模式。"""
+        mode = self.temperature_step_mode(step_name)
+        if mode == "cool":
+            return False
+        if mode == "heat":
+            return True
+        return target_temp >= 25.0
+
+    def temperature_step_mode(self, step_name: str):
+        """返回温度目标工步类型：heat / cool / None。"""
+        if "降温至目标温度" in step_name or ("降温" in step_name and "目标温度" in step_name):
+            return "cool"
+        if "升温至目标温度" in step_name or ("升温" in step_name and "目标温度" in step_name):
+            return "heat"
+        return None
+
+    def apply_cooling_target(self, target_temp: float):
+        """写入制冷目标温度。"""
+        if not self.chamber:
+            return False
+
+        return self.chamber.write_real("VD750", target_temp)
 
     def apply_manual_targets(self):
         """手动设置 VD 设定温度并下发"""
@@ -571,11 +593,11 @@ class ChamberTab(QWidget):
         cool_val = self.dsp_cool.value()
         heat_val = self.dsp_heat.value()
         
-        self.chamber.write_real("VD700", cool_val)
+        self.apply_cooling_target(cool_val)
         self.chamber.write_real("VD800", heat_val)
         
-        self.lbl_temp_tgt.setText(f"设定温度: 制冷 {cool_val:.1f} °C / 制热 {heat_val:.1f} °C")
-        QMessageBox.information(self, "设定成功", f"设定温度寄存器写入成功：\n制冷 VD700 -> {cool_val} °C\n制热 VD800 -> {heat_val} °C")
+        self.lbl_temp_tgt.setText(f"设定温度: 制冷 VD750={cool_val:.1f} °C / 制热 VD800={heat_val:.1f} °C")
+        QMessageBox.information(self, "设定成功", f"设定温度寄存器写入成功：\n制冷 VD750 -> {cool_val} °C\n制热 VD800 -> {heat_val} °C")
 
     def toggle_sim_fault(self, state):
         """配合仿真逻辑：手动注入断水或急停故障以进行排故演示"""
@@ -596,8 +618,8 @@ class ChamberTab(QWidget):
     # --- 4. 老化测试工步配方库设计 ---
     def refresh_preset_list(self):
         self.combo_presets.clear()
-        if self.db_manager and hasattr(self.db_manager, "list_recipes"):
-            recipes = self.db_manager.list_recipes()
+        if self.db_manager and hasattr(self.db_manager, "list_chamber_presets"):
+            recipes = self.db_manager.list_chamber_presets()
             if recipes:
                 self.combo_presets.addItems(recipes)
             else:
@@ -614,21 +636,22 @@ class ChamberTab(QWidget):
         self.stop_aging_sequence()
         self.steps_data.clear()
         
-        if self.db_manager and hasattr(self.db_manager, "load_recipe_json"):
-            data = self.db_manager.load_recipe_json(profile_name)
+        if self.db_manager and hasattr(self.db_manager, "load_chamber_preset_json"):
+            data = self.db_manager.load_chamber_preset_json(profile_name)
             if data and "steps" in data:
                 for s in data["steps"]:
                     self.steps_data.append({
                         "name": s.get("name", "自定义工步"),
                         "temp": s.get("temp", 25.0),
                         "hours": s.get("hours", 1.0),
+                        "timeout": s.get("timeout", 0.0),
                         "status": "等待中"
                     })
                 self.refresh_steps_table()
                 return
 
         # 兜底默认方案
-        self.steps_data.append({"name": "常温保持", "temp": 25.0, "hours": 0.2, "status": "等待中"})
+        self.steps_data.append({"name": "维持温度", "temp": 25.0, "hours": 0.2, "timeout": 0.0, "status": "等待中"})
         self.refresh_steps_table()
 
     def save_preset(self):
@@ -642,9 +665,16 @@ class ChamberTab(QWidget):
 
         name, ok = QInputDialog.getText(self, "保存老化方案", "请输入新方案名称:")
         if ok and name:
-            if self.db_manager and hasattr(self.db_manager, "save_recipe_json"):
+            if self.db_manager and hasattr(self.db_manager, "load_chamber_preset_json"):
+                existing_data = self.db_manager.load_chamber_preset_json(name)
+                if existing_data is not None:
+                    ret = QMessageBox.question(self, "确认覆盖", f"老化方案 '{name}' 已存在，是否覆盖？")
+                    if ret != QMessageBox.Yes:
+                        return
+
+            if self.db_manager and hasattr(self.db_manager, "save_chamber_preset_json"):
                 data = {"steps": self.steps_data}
-                if self.db_manager.save_recipe_json(name, data):
+                if self.db_manager.save_chamber_preset_json(name, data):
                     QMessageBox.information(self, "成功", f"老化方案 '{name}' 已保存！")
                     self.refresh_preset_list()
                     self.combo_presets.setCurrentText(name)
@@ -657,8 +687,8 @@ class ChamberTab(QWidget):
         
         ret = QMessageBox.question(self, "确认删除", f"确定要删除方案 '{name}' 吗？")
         if ret == QMessageBox.Yes:
-            if self.db_manager and hasattr(self.db_manager, "delete_recipe"):
-                if self.db_manager.delete_recipe(name):
+            if self.db_manager and hasattr(self.db_manager, "delete_chamber_preset"):
+                if self.db_manager.delete_chamber_preset(name):
                     QMessageBox.information(self, "成功", "方案已删除！")
                     self.refresh_preset_list()
                 else:
@@ -666,18 +696,111 @@ class ChamberTab(QWidget):
 
     def _sync_table_to_data(self):
         """将表格中可能正在编辑的数据同步回 steps_data 内存中"""
+        # 强制结束当前可能处于输入状态的单元格编辑并保存数据（解决直接点击启动按钮时编辑尚未提交的问题）
+        self.table_steps.setCurrentCell(-1, -1)
+        
         for row in range(self.table_steps.rowCount()):
+            if row >= len(self.steps_data):
+                continue
             combo = self.table_steps.cellWidget(row, 1)
             if combo:
                 self.steps_data[row]["name"] = combo.currentText()
             try:
-                self.steps_data[row]["temp"] = float(self.table_steps.item(row, 2).text())
-                hours_str = self.table_steps.item(row, 3).text()
-                if "h" in hours_str: hours_str = hours_str.split("h")[0]
-                self.steps_data[row]["hours"] = float(hours_str)
-            except: pass
+                temp_item = self.table_steps.item(row, 2)
+                hours_item = self.table_steps.item(row, 3)
+                timeout_item = self.table_steps.item(row, 4)
+                
+                if temp_item:
+                    self.steps_data[row]["temp"] = float(temp_item.text())
+                if hours_item:
+                    hours_str = hours_item.text()
+                    if "h" in hours_str: hours_str = hours_str.split("h")[0]
+                    self.steps_data[row]["hours"] = float(hours_str)
+                if timeout_item:
+                    timeout_str = timeout_item.text()
+                    if "h" in timeout_str: timeout_str = timeout_str.split("h")[0]
+                    self.steps_data[row]["timeout"] = float(timeout_str)
+            except:
+                pass
+    def on_cell_changed(self, row, col):
+        if col not in (2, 3, 4):
+            return
+        if row >= len(self.steps_data):
+            return
+            
+        item = self.table_steps.item(row, col)
+        if not item:
+            return
+            
+        self.table_steps.blockSignals(True)
+        try:
+            val_str = item.text().strip()
+            if col == 2: # Temp
+                if self.steps_data[row].get("name", "") in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
+                    item.setText("--")
+                    return
+                val = float(val_str)
+                if val < -45.0: val = -45.0
+                if val > 90.0: val = 90.0
+                self.steps_data[row]["temp"] = val
+                # 重新格式化为 1 位小数
+                item.setText(f"{self.steps_data[row]['temp']:.1f}")
+            elif col == 3: # Hours (测试时间)
+                if "h" in val_str:
+                    val_str = val_str.split("h")[0].strip()
+                self.steps_data[row]["hours"] = float(val_str)
+                # 重新格式化为 3 位小数
+                if self.steps_data[row]["status"] == "运行中...":
+                    if self.steps_data[row]["hours"] > 0:
+                        rem = max(0, self.steps_data[row]["hours"] - self.step_elapsed_sec)
+                        h = int(rem)
+                        m = int((rem - h) * 60)
+                        s = int(((rem - h) * 60 - m) * 60)
+                        item.setText(f"{self.steps_data[row]['hours']:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                    else:
+                        item.setText("0.000")
+                elif self.steps_data[row]["status"] == "已完成":
+                    item.setText(f"{self.steps_data[row]['hours']:.3f}h (已完成)")
+                else:
+                    item.setText(f"{self.steps_data[row]['hours']:.3f}")
+            elif col == 4: # Timeout (超时时间)
+                if "h" in val_str:
+                    val_str = val_str.split("h")[0].strip()
+                self.steps_data[row]["timeout"] = float(val_str)
+                # 重新格式化为 3 位小数
+                if self.steps_data[row]["status"] == "运行中...":
+                    if self.steps_data[row]["hours"] == 0 and self.steps_data[row]["timeout"] > 0:
+                        rem = max(0, self.steps_data[row]["timeout"] - self.step_elapsed_sec)
+                        h = int(rem)
+                        m = int((rem - h) * 60)
+                        s = int(((rem - h) * 60 - m) * 60)
+                        item.setText(f"{self.steps_data[row]['timeout']:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                    else:
+                        item.setText(f"{self.steps_data[row]['timeout']:.3f}")
+                elif self.steps_data[row]["status"] in ("已完成", "已完成(超时)", "超时未达标"):
+                    item.setText(f"{self.steps_data[row]['timeout']:.3f}h (已完成)")
+                else:
+                    item.setText(f"{self.steps_data[row]['timeout']:.3f}")
+            
+            # 如果修改的是当前正在运行的工步，且工步引擎处于启动状态，立即下发PLC
+            if row == self.active_step_idx and self.sequence_running:
+                self.apply_step_temperatures(self.active_step_idx)
+        except Exception as e:
+            # 异常时恢复原数值
+            if col == 2:
+                if self.steps_data[row].get("name", "") in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
+                    item.setText("--")
+                else:
+                    item.setText(f"{self.steps_data[row]['temp']:.1f}")
+            elif col == 3:
+                item.setText(f"{self.steps_data[row]['hours']:.3f}")
+            elif col == 4:
+                item.setText(f"{self.steps_data[row]['timeout']:.3f}")
+        finally:
+            self.table_steps.blockSignals(False)
 
     def refresh_steps_table(self):
+        self.table_steps.blockSignals(True)
         self.table_steps.setRowCount(len(self.steps_data))
         for row, step in enumerate(self.steps_data):
             # 序号
@@ -686,20 +809,46 @@ class ChamberTab(QWidget):
             item_seq.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             
             # 设定温度
-            item_temp = QTableWidgetItem(f"{step['temp']:.1f}")
+            if step.get("name", "") in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
+                item_temp = QTableWidgetItem("--")
+                item_temp.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            else:
+                item_temp = QTableWidgetItem(f"{step.get('temp', 25.0):.1f}")
             item_temp.setTextAlignment(Qt.AlignCenter)
             
-            # 恒温时间
-            # Issue 3: 显示倒计时
+            # 测试时间/倒计时
+            test_val = step.get('hours', 0.0)
             if step["status"] == "运行中...":
-                rem = max(0, step['hours'] - self.step_elapsed_sec)
-                h = int(rem)
-                m = int((rem - h) * 60)
-                s = int(((rem - h) * 60 - m) * 60)
-                item_hours = QTableWidgetItem(f"{step['hours']:.2f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                if test_val > 0:
+                    rem = max(0, test_val - self.step_elapsed_sec)
+                    h = int(rem)
+                    m = int((rem - h) * 60)
+                    s = int(((rem - h) * 60 - m) * 60)
+                    item_hours = QTableWidgetItem(f"{test_val:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                else:
+                    item_hours = QTableWidgetItem("0.000")
+            elif step["status"] == "已完成":
+                item_hours = QTableWidgetItem(f"{test_val:.3f}h (已完成)")
             else:
-                item_hours = QTableWidgetItem(f"{step['hours']:.2f}")
+                item_hours = QTableWidgetItem(f"{test_val:.3f}")
             item_hours.setTextAlignment(Qt.AlignCenter)
+            
+            # 超时时间
+            timeout_val = step.get('timeout', 0.0)
+            if step["status"] == "运行中...":
+                if test_val == 0 and timeout_val > 0:
+                    rem = max(0, timeout_val - self.step_elapsed_sec)
+                    h = int(rem)
+                    m = int((rem - h) * 60)
+                    s = int(((rem - h) * 60 - m) * 60)
+                    item_timeout = QTableWidgetItem(f"{timeout_val:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                else:
+                    item_timeout = QTableWidgetItem(f"{timeout_val:.3f}")
+            elif step["status"] == "超时未达标":
+                item_timeout = QTableWidgetItem(f"{timeout_val:.3f}h (超时)")
+            else:
+                item_timeout = QTableWidgetItem(f"{timeout_val:.3f}")
+            item_timeout.setTextAlignment(Qt.AlignCenter)
             
             # 执行状态
             item_status = QTableWidgetItem(step["status"])
@@ -711,45 +860,86 @@ class ChamberTab(QWidget):
                 item_status.setFont(QFont("Consolas", 9, QFont.Bold))
             elif step["status"] == "已完成":
                 item_status.setForeground(QColor("#8A8A9E"))
+            elif step["status"] == "超时未达标":
+                item_status.setForeground(QColor("#FF3B30"))
+                item_status.setFont(QFont("Consolas", 9, QFont.Bold))
             
             self.table_steps.setItem(row, 0, item_seq)
             
             # Issue 2: 工步下拉选择
             combo = QComboBox()
-            combo.addItems(["升温至目标温度", "降温至目标温度", "维持温度", "启动多通道测试", "BMS带载工作", "老化完成取料", step["name"]])
+            step_options = ["升温至目标温度", "降温至目标温度", "维持温度", "启动多通道测试", "BMS带载工作", "老化完成取料"]
+            if step["name"] not in step_options:
+                step_options.append(step["name"])
+            combo.addItems(step_options)
             combo.setCurrentText(step["name"])
             combo.setStyleSheet("background-color: #1A1A2E; color: white; border: 1px solid #3E3E5C;")
             # 绑定下拉框数据到 underlying step list
             def _update_name(text, r=row):
                 self.steps_data[r]["name"] = text
+                if text in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
+                    item_t = self.table_steps.item(r, 2)
+                    if item_t:
+                        item_t.setText("--")
+                        item_t.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                else:
+                    item_t = self.table_steps.item(r, 2)
+                    if item_t:
+                        item_t.setText(f"{self.steps_data[r].get('temp', 25.0):.1f}")
+                        item_t.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
             combo.currentTextChanged.connect(_update_name)
             self.table_steps.setCellWidget(row, 1, combo)
             
             self.table_steps.setItem(row, 2, item_temp)
             self.table_steps.setItem(row, 3, item_hours)
-            self.table_steps.setItem(row, 4, item_status)
+            self.table_steps.setItem(row, 4, item_timeout)
+            self.table_steps.setItem(row, 5, item_status)
+        self.table_steps.blockSignals(False)
 
     def add_blank_step(self):
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "当前老化测试正在运行，不允许新增工步！")
+            return
+            
+        self._sync_table_to_data() # 在新增前先把用户对现有表格的修改同步回内存
         row = self.table_steps.rowCount()
         self.steps_data.append({
             "name": f"自定义工步 {row + 1}",
             "temp": 25.0,
-            "hours": 1.0,
+            "hours": 0.0,
+            "timeout": 0.0,
             "status": "等待中"
         })
         self.refresh_steps_table()
 
+
     def delete_selected_step(self):
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "当前老化测试正在运行，不允许删除工步！")
+            return
+            
+        # 先获取要删除的行索引，再进行数据同步（防止同步时清除当前选中状态）
         idx = self.table_steps.currentRow()
+        if idx < 0:
+            selected_items = self.table_steps.selectedItems()
+            if selected_items:
+                idx = selected_items[0].row()
+                
+        self._sync_table_to_data() # 在删除前先把用户对现有表格的修改同步回内存
+                
         if 0 <= idx < len(self.steps_data):
             self.steps_data.pop(idx)
             self.refresh_steps_table()
+        else:
+            QMessageBox.warning(self, "提示", "请先在表格中点击选择您要删除的工步行！")
 
     def start_aging_bypass_chamber(self):
         """屏蔽老化箱，强制放行多通道测试（直接唤醒所有由于挂起导致暂停的通道，不下发PLC指令）"""
         if not self.steps_data:
             QMessageBox.warning(self, "警告", "请先配置或加载老化测试工步！")
             return
+
+        self._sync_table_to_data()
             
         self._is_bypass_chamber = True
         self.active_step_idx = 0
@@ -765,12 +955,21 @@ class ChamberTab(QWidget):
         self.btn_bypass_run.setEnabled(False)
         self.btn_bypass_run.setStyleSheet("background-color: #555555; color: #888888; border-radius: 4px;")
         
+        # 禁用新增和删除工步按钮
+        self.btn_add.setEnabled(False)
+        self.btn_add.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_del.setEnabled(False)
+        self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        
         # 联动复位：解除所有 worker 的挂起状态
         overview_tab = self.get_overview_tab()
-        if overview_tab and overview_tab.engine:
-            with overview_tab.engine._lock:
-                for worker in overview_tab.engine.workers.values():
-                    worker.is_suspended = False
+        if overview_tab:
+            if self.chk_linkage.isChecked():
+                overview_tab.trigger_multi_channel_tests()
+            if overview_tab.engine:
+                with overview_tab.engine._lock:
+                    for worker in overview_tab.engine.workers.values():
+                        worker.is_suspended = False
 
     def start_aging_sequence(self):
         """启动老化测试工步自动运行引擎"""
@@ -778,10 +977,13 @@ class ChamberTab(QWidget):
         if not self.steps_data:
             QMessageBox.warning(self, "警告", "请先配置或加载老化测试工步！")
             return
+
+        # 启动前必须先同步表格，否则刚编辑的工步类型/目标温度会被刷新覆盖。
+        self._sync_table_to_data()
             
         # 真正开启 PLC 系统启动指令
-        self.write_plc_bit("V0.5", True)
-        self.write_plc_bit("V0.6", False)
+        self.write_plc_bit("V0.5", True, sync=False)
+        self.write_plc_bit("V0.6", False, sync=False)
         
         self.active_step_idx = 0
         self.step_elapsed_sec = 0.0
@@ -797,6 +999,17 @@ class ChamberTab(QWidget):
         self.btn_bypass_run.setEnabled(False)
         self.btn_bypass_run.setStyleSheet("background-color: #555555; color: #888888; border-radius: 4px;")
         
+        # 禁用新增和删除工步按钮
+        self.btn_add.setEnabled(False)
+        self.btn_add.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_del.setEnabled(False)
+        self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+
+        # 立即触发已勾选的多通道测试
+        overview_tab = self.get_overview_tab()
+        if overview_tab and self.chk_linkage.isChecked():
+            overview_tab.trigger_multi_channel_tests()
+            
         # 激活第一步的温度下发
         self.apply_step_temperatures(0)
 
@@ -807,8 +1020,9 @@ class ChamberTab(QWidget):
         self.step_elapsed_sec = 0.0
         
         # 关闭 PLC 系统启动
-        self.write_plc_bit("V0.5", False)
-        self.write_plc_bit("V0.6", True)
+        self.write_plc_bit("V0.5", False, sync=False)
+        self.write_plc_bit("V0.6", True, sync=False)
+        self.sync_plc_data()
         
         # 联动复位：解除所有 worker 的挂起状态
         overview_tab = self.get_overview_tab()
@@ -826,6 +1040,13 @@ class ChamberTab(QWidget):
         self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_bypass_run.setEnabled(True)
         self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        
+        # 启用新增和删除工步按钮
+        self.btn_add.setEnabled(True)
+        self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_del.setEnabled(True)
+        self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        
         self._is_bypass_chamber = False
         
         self.lbl_active_step.setText("当前阶段: 已停机终止")
@@ -840,26 +1061,28 @@ class ChamberTab(QWidget):
             return
             
         step = self.steps_data[idx]
+        step_name = step.get("name", "")
         target_temp = step["temp"]
         
-        # 根据工步温度判断启动制冷模式或制热模式
-        # V699.0 : False=制冷, True=制热 (通常设定温度 >= 25℃ 设为制热，低于 25℃ 设为制冷)
-        mode_heat = target_temp >= 25.0
+        if step_name in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
+            # 这三个辅助工步不需要目标温度和启动老化箱
+            return
+
+        mode_heat = self.should_heat_step(step_name, target_temp)
         
         # 写入 PLC 寄存器
-        self.write_plc_bit("V699.0", mode_heat)
+        mode_ok = self.write_plc_bit("V699.0", mode_heat, sync=False)
         if mode_heat:
-            self.chamber.write_real("VD800", target_temp) # 制热
+            target_ok = self.chamber.write_real("VD800", target_temp) # 制热
         else:
-            self.chamber.write_real("VD700", target_temp) # 制冷
+            target_ok = self.apply_cooling_target(target_temp) # 制冷：VD750
             
-        # 设置模式按钮样式
-        self.btn_mode_switch.setChecked(mode_heat)
-        self.btn_mode_switch.setText("制热模式 V699.0" if mode_heat else "制冷模式 V699.0")
-        
         # 联动自动模式 V699.2 为 ON，让 PLC 根据我们写的目标值自己恒温
-        self.write_plc_bit("V699.2", True)
-        self.btn_auto_switch.setChecked(True)
+        auto_ok = self.write_plc_bit("V699.2", True, sync=False)
+        self.sync_plc_data()
+        if not (mode_ok and target_ok and auto_ok):
+            self.lbl_status.setText("PLC 状态: 温度目标写入失败")
+            self.lbl_status.setStyleSheet("color: #DC3545; font-weight: bold;")
 
     # --- 5. 定时数据刷新与工步运行引擎 Tick ---
     @Slot()
@@ -907,50 +1130,97 @@ class ChamberTab(QWidget):
 
         data = self.chamber.get_all_data()
         
+        # 实时同步 UI 的模拟故障选择到 data 和 chamber.data_store (物理与仿真均生效)
+        if self.chk_fault_estop.isChecked():
+            data["V21.0"] = True
+            self.chamber.data_store["V21.0"] = True
+        if self.chk_fault_water.isChecked():
+            data["V22.4"] = True
+            self.chamber.data_store["V22.4"] = True
+        
         # 1. 刷新卡片数值 (PT100 只需要显示一个温度 VD220)
         self.lbl_temp_val.setText(f"{data['VD720']:.1f} °C")
         self.lbl_pt1_val.setText(f"{data['VD220']:.1f} °C")
         
-        self.lbl_temp_tgt.setText(f"PLC 设定温度: 制冷 VD700={data['VD700']:.1f}°C / 制热 VD800={data['VD800']:.1f}°C")
+        cool_target = data.get("VD750", 25.0)
+        heat_target = data.get("VD800", 25.0)
+        self.lbl_temp_tgt.setText(f"PLC 设定温度: 制冷 VD750={cool_target:.1f}°C / 制热 VD800={heat_target:.1f}°C")
         
-        # 2. 刷新 PLC 控制模式标签
-        sys_state = "启动 (V0.5)" if (data["V0.5"] and not data["V0.6"]) else "停止 (V0.6)"
-        mode_state = "制热 V699.0" if data["V699.0"] else "制冷 V699.0"
-        ctrl_mode = "自动" if data["V699.2"] else "手动"
-        self.lbl_plc_state.setText(f"系统: {sys_state} | 模式: {mode_state} | 控制: {ctrl_mode}")
+        # 实时同步 PLC 设定温度到 spinbox (当没有焦点时)
+        if not self.dsp_cool.hasFocus():
+            self.dsp_cool.blockSignals(True)
+            self.dsp_cool.setValue(cool_target)
+            self.dsp_cool.blockSignals(False)
+        if not self.dsp_heat.hasFocus():
+            self.dsp_heat.blockSignals(True)
+            self.dsp_heat.setValue(heat_target)
+            self.dsp_heat.blockSignals(False)
         
-        # 刷新按键自身按下状态 (由 PLC 寄存器回读同步，保证状态百分百一致)
-        self.btn_mode_switch.setChecked(data["V699.0"])
-        self.btn_mode_switch.setText("制热模式 V699.0" if data["V699.0"] else "制冷模式 V699.0")
-        
-        self.btn_auto_switch.setChecked(data["V699.2"])
-        self.btn_auto_switch.setText("自动模式 V699.2" if data["V699.2"] else "手动模式 V699.2")
+        # 2. 刷新 PLC 状态显示指示牌
+        is_running = data.get("V0.5", False) and not data.get("V0.6", False)
+        if is_running:
+            self.lbl_status_sys.setStyleSheet("color: #39FF14; font-size: 11px; font-weight: bold; background-color: #122812; border: 1px solid #1B3F1B; border-radius: 4px; padding: 6px;")
+            self.lbl_status_sys.setText("▶ 系统运行状态: 启动中 (V0.5)")
+        else:
+            self.lbl_status_sys.setStyleSheet("color: #FF4D4D; font-size: 11px; font-weight: bold; background-color: #3E1010; border: 1px solid #6C1E1E; border-radius: 4px; padding: 6px;")
+            self.lbl_status_sys.setText("⏹ 系统运行状态: 已停止 (V0.6)")
+
+        mode_heat = data.get("V699.0", False)
+        if mode_heat:
+            self.lbl_status_mode.setStyleSheet("color: #FF9F0A; font-size: 11px; font-weight: bold; background-color: #2D1A00; border: 1px solid #4D2B00; border-radius: 4px; padding: 6px;")
+            self.lbl_status_mode.setText("🔥 运行模式: 制热模式 (V699.0)")
+        else:
+            self.lbl_status_mode.setStyleSheet("color: #00E5FF; font-size: 11px; font-weight: bold; background-color: #002B3D; border: 1px solid #004D66; border-radius: 4px; padding: 6px;")
+            self.lbl_status_mode.setText("❄️ 运行模式: 制冷模式 (V699.0)")
+
+        ctrl_auto = data.get("V699.2", False)
+        if ctrl_auto:
+            self.lbl_status_ctrl.setStyleSheet("color: #39FF14; font-size: 11px; font-weight: bold; background-color: #122812; border: 1px solid #1B3F1B; border-radius: 4px; padding: 6px;")
+            self.lbl_status_ctrl.setText("🤖 控制模式: 自动恒温 (V699.2)")
+        else:
+            self.lbl_status_ctrl.setStyleSheet("color: #AAAAAA; font-size: 11px; font-weight: bold; background-color: #222230; border: 1px solid #3E3E5C; border-radius: 4px; padding: 6px;")
+            self.lbl_status_ctrl.setText("✍️ 控制模式: 手动控制 (V699.2)")
 
         # 3. 刷新 I/O 状态指示灯
+        io_descs = {
+            "Q1.5": "门禁状态", "Q1.6": "灯状态", 
+            "Q0.3": "高温机1", "Q0.4": "低温机1", "Q0.5": "冷风机1",
+            "Q1.0": "高温机2", "Q1.1": "低温机2", "Q1.2": "冷风机2",
+            "Q0.0": "加热器", "Q0.1": "热风机", "I2.4": "水流开关"
+        }
         for point, lamp in self.io_lamps.items():
             val = data.get(point, False)
+            desc = io_descs.get(point, "")
             if val:
                 # 绿色发光激活样式
                 lamp.setStyleSheet("color: #39FF14; font-size: 10px; font-weight: bold; background-color: #122812; border: 1px solid #1B3F1B; border-radius: 4px; padding: 4px;")
-                lamp.setText(f"🟢 {point}\n{lamp.text().split(point)[1].strip()}")
+                lamp.setText(f"🟢 {point}\n{desc}")
             else:
                 # 灰色不激活状态
                 lamp.setStyleSheet("color: #777777; font-size: 10px; background-color: #16162C; border: 1px solid #25253A; border-radius: 4px; padding: 4px;")
-                lamp.setText(f"⚪ {point}\n{lamp.text().split(point)[1].strip()}")
+                lamp.setText(f"⚪ {point}\n{desc}")
 
         # 4. 刷新只读故障诊断警报 (V 报警寄存器)
+        alarm_descs = {
+            "V15.1": "高温机1接触器", "V15.2": "高温机1综合保护", "V15.3": "高温机1油压差", "V15.5": "高温机1高低压",
+            "V16.1": "低温机1接触器", "V16.2": "低温机1综合保护", "V16.3": "低温机1油压差", "V16.5": "低温机1高低压",
+            "V17.1": "高温机2接触器", "V17.2": "高温机2综合保护", "V17.3": "高温机2油压差", "V17.5": "高温机2高低压",
+            "V18.1": "低温机2接触器", "V18.2": "低温机2综合保护", "V18.3": "低温机2油压差", "V18.5": "低温机2高低压",
+            "V21.0": "急停按钮动作", "V21.1": "相序保护报警", "V22.7": "加热风机故障", "V22.4": "水流开关故障"
+        }
         has_any_alarm = False
         for point, lamp in self.alarm_lamps.items():
             val = data.get(point, False)
+            desc = alarm_descs.get(point, "")
             if val:
                 has_any_alarm = True
                 # 炫酷红色故障闪烁
                 lamp.setStyleSheet("color: #FF4D4D; font-size: 9px; font-weight: bold; background-color: #3E1010; border: 1px solid #6C1E1E; border-radius: 4px; padding: 4px;")
-                lamp.setText(f"🚨 {point}\n{lamp.text().split(point)[1].strip()}")
+                lamp.setText(f"🚨 {point}\n{desc}")
             else:
                 # 正常无故障样式
                 lamp.setStyleSheet("color: #777777; font-size: 9px; background-color: #1A121A; border: 1px solid #2D1B2D; border-radius: 4px; padding: 4px;")
-                lamp.setText(f"⚪ {point}\n{lamp.text().split(point)[1].strip()}")
+                lamp.setText(f"⚪ {point}\n{desc}")
                 
         # 如系统触发急停或重大报警，强制自动终止老化测试工步 (保障物理实验安全)
         if has_any_alarm and self.sequence_running:
@@ -959,32 +1229,90 @@ class ChamberTab(QWidget):
 
     def drive_aging_sequence_step(self):
         """老化测试工步计时执行逻辑机 (定时驱动器)"""
-        # 从表格抓取实时修改后的温度和时间参数
-        try:
-            # 允许测试人员在表格上实时编辑修改 (灵活性极高)
-            combo = self.table_steps.cellWidget(self.active_step_idx, 1)
-            item_name = combo.currentText() if combo else self.steps_data[self.active_step_idx]["name"]
-            item_temp = float(self.table_steps.item(self.active_step_idx, 2).text())
-            hours_text = self.table_steps.item(self.active_step_idx, 3).text()
-            item_hours = float(hours_text.split("h")[0]) if "h" in hours_text else float(hours_text)
-            
-            # 更新缓存
-            self.steps_data[self.active_step_idx]["name"] = item_name
-            self.steps_data[self.active_step_idx]["temp"] = item_temp
-            self.steps_data[self.active_step_idx]["hours"] = item_hours
-        except Exception as e:
-            # 如果解析出错，使用预存的数据
-            pass
+        # 从表格抓取实时修改后的温度和时间参数。必须同步所有行，避免刷新时覆盖尚未运行的工步编辑。
+        self._sync_table_to_data()
             
         step = self.steps_data[self.active_step_idx]
-        total_hours = step["hours"]
+        step_name = step.get("name", "")
         
-        # 驱动工步计时：小时累加 = (1秒 * 加速比) / 3600.0 (小时/秒)
-        hours_per_tick = (1.0 * self.speed_factor) / 3600.0
+        # --- 硬件控制一次性初始化动作 ---
+        if getattr(self, "_current_step_init_idx", -1) != self.active_step_idx:
+            self._current_step_init_idx = self.active_step_idx
+            
+            if step_name == "BMS带载工作":
+                logger.info("[老化引擎] 进入 'BMS带载工作'，配置主机电源与老化板继电器")
+                if getattr(self, "mgr", None) and getattr(self.mgr, "dut_power", None):
+                    self.mgr.dut_power.set_voltage(12.0)
+                    self.mgr.dut_power.set_current(200.0)
+                    self.mgr.dut_power.output_control(True)
+                
+                # 按顺序控制勾选通道的老化功能板继电器的1，11继电器
+                overview_tab = self.get_overview_tab()
+                if overview_tab and getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
+                    selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+                    for cid in selected_cids:
+                        if cid in self.mgr.boards:
+                            board = self.mgr.boards[cid]
+                            board.relays.write_relay(1, True)
+                            board.relays.write_relay(11, True)
+                            
+                # 倒计时停止，执行状态变更
+                step["hours"] = 0.0
+                step["timeout"] = 0.0
+                self.steps_data[self.active_step_idx]["hours"] = 0.0
+                self.steps_data[self.active_step_idx]["timeout"] = 0.0
+                
+            elif step_name == "老化完成取料":
+                logger.info("[老化引擎] 进入 '老化完成取料'，关闭主机电源与所有继电器")
+                if getattr(self, "mgr", None):
+                    if getattr(self.mgr, "dut_power", None):
+                        self.mgr.dut_power.output_control(False)
+                    if hasattr(self.mgr, "boards"):
+                        for cid, board in self.mgr.boards.items():
+                            board.relays.write_all_off()
+                            
+                # 倒计时停止，执行状态变更
+                step["hours"] = 0.0
+                step["timeout"] = 0.0
+                self.steps_data[self.active_step_idx]["hours"] = 0.0
+                self.steps_data[self.active_step_idx]["timeout"] = 0.0
+
+        if not getattr(self, "_is_bypass_chamber", False):
+            if step_name in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
+                # 只需要维持当前温度，不需要升温降温控制。
+                # 将目标温度设置为当前实际温度 (VD720)，防止其继续向原来的目标升降温。
+                current_temp = self.chamber.data_store.get("VD720", 25.0) if self.chamber else 25.0
+                mode_heat = self.should_heat_step(step_name, current_temp)
+                self.chamber.write_bit("V699.0", mode_heat)
+                if mode_heat:
+                    self.chamber.write_real("VD800", current_temp)
+                else:
+                    self.apply_cooling_target(current_temp)
+                self.chamber.write_bit("V699.2", True)
+            else:
+                mode_heat = self.should_heat_step(step_name, step["temp"])
+                self.chamber.write_bit("V699.0", mode_heat)
+                if mode_heat:
+                    self.chamber.write_real("VD800", step["temp"])
+                else:
+                    self.apply_cooling_target(step["temp"])
+                self.chamber.write_bit("V699.2", True)
+
+        test_hours = step.get("hours", 0.0)
+        timeout_hours = step.get("timeout", 0.0)
+        
+        # 驱动工步计时：如果是物理 PLC 联机状态，强制 1.0 实时倍速运行（避免物理测试时间瞬间耗尽）；仿真模式下才支持时间加速
+        effective_speed = 1.0 if (self.chamber and not self.chamber.use_simulation) else self.speed_factor
+        hours_per_tick = (1.0 * effective_speed) / 3600.0
         self.step_elapsed_sec += hours_per_tick
         
         # 当前工步进度百分比
-        pct = min(100, int((self.step_elapsed_sec / total_hours) * 100))
+        if test_hours > 0:
+            pct = min(100, int((self.step_elapsed_sec / test_hours) * 100))
+        elif timeout_hours > 0:
+            pct = min(100, int((self.step_elapsed_sec / timeout_hours) * 100))
+        else:
+            pct = 100
         self.pbar_step.setValue(pct)
         
         # 刷新本行的倒计时显示
@@ -992,7 +1320,12 @@ class ChamberTab(QWidget):
         
         # 更新工步卡片显示
         self.lbl_active_step.setText(f"当前阶段: {step['name']} (Step {self.active_step_idx + 1}/{len(self.steps_data)})")
-        self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {total_hours:.2f} 小时")
+        if test_hours > 0:
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {test_hours:.3f} 小时 (测试)")
+        elif timeout_hours > 0:
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {timeout_hours:.3f} 小时 (超时界限)")
+        else:
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / 0.000 小时 (即时)")
         
         # --- 联动多通道测试控制逻辑 ---
         if hasattr(self, "chk_linkage") and self.chk_linkage.isChecked():
@@ -1052,43 +1385,109 @@ class ChamberTab(QWidget):
                     suspend_all = False
                     status_text += " (屏蔽强制放行)"
                 
-                # 1. 动态设置引擎中各个活动 worker 的挂起状态
-                if overview_tab.engine:
-                    with overview_tab.engine._lock:
-                        for cid, worker in overview_tab.engine.workers.items():
-                            worker.is_suspended = suspend_all
-                            
-                # 2. 动态更新 OverviewTab 通道卡片在 UI 的状态文本
-                for i, widget in enumerate(overview_tab.channel_widgets):
-                    # 如果该通道被勾选，更新其显示
-                    if widget.chk_select.isChecked():
-                        cid = i + 1
-                        # 如果 worker 存在且在运行
-                        is_worker_running = cid in overview_tab.engine.workers if overview_tab.engine else False
-                        if is_worker_running:
-                            widget.set_status(status_text, status_color)
+                # 1. 动态设置引擎中各个活动 worker 的挂起状态已移除，允许多通道测试与老化箱并行独立执行
+                # 2. 动态更新 UI 状态文本功能已交还给多通道自身，使其能实时显示测试项。
         
         # 总体总测试进度计算
-        completed_step_hours = sum(self.steps_data[i]["hours"] for i in range(self.active_step_idx))
-        total_profile_hours = sum(s["hours"] for s in self.steps_data)
-        overall_hours = completed_step_hours + min(total_hours, self.step_elapsed_sec)
-        overall_pct = min(100, int((overall_hours / total_profile_hours) * 100))
+        total_profile_hours = sum(s.get("hours", 0.0) for s in self.steps_data)
+        if total_profile_hours > 0:
+            completed_step_hours = sum(self.steps_data[i].get("hours", 0.0) for i in range(self.active_step_idx))
+            current_effective_elapsed = min(test_hours, self.step_elapsed_sec) if test_hours > 0 else 0.0
+            overall_hours = completed_step_hours + current_effective_elapsed
+            overall_pct = min(100, int((overall_hours / total_profile_hours) * 100))
+        else:
+            overall_pct = 100
         self.pbar_total.setValue(overall_pct)
         
-        # 判断当前工步是否计时结束
-        if self.step_elapsed_sec >= total_hours:
-            # 当前工步设为已完成
-            self.steps_data[self.active_step_idx]["status"] = "已完成"
+        # _handle_timeout_ng is moved to the end of the class
+        # 判断当前工步是否结束
+        step_completed = False
+        completion_reason = "时间耗尽"
+        step_name = step.get("name", "")
+        
+        # 预先判断多通道测试完成情况
+        all_checked_finished = False
+        has_selected_channels = False
+        if hasattr(self, "chk_linkage") and self.chk_linkage.isChecked():
+            overview_tab = self.get_overview_tab()
+            if overview_tab and overview_tab.engine:
+                selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+                if selected_cids:
+                    has_selected_channels = True
+                    with overview_tab.engine._lock:
+                        workers_keys = list(overview_tab.engine.workers.keys())
+                        all_checked_finished = all(cid not in overview_tab.engine.workers for cid in selected_cids)
+                    if int(self.step_elapsed_sec * 3600) % 5 == 0:
+                        print(f"[Aging Debug] Step '{step_name}': test_hours={test_hours}, selected_cids={selected_cids}, workers={workers_keys}, all_checked_finished={all_checked_finished}")
+
+        # 如果当前是一个倒计时测试工步，且所有勾选通道已经测试完成，直接结束倒计时
+        if test_hours > 0 and has_selected_channels and all_checked_finished:
+            step_completed = True
+            completion_reason = "全部通道测试完成"
+            logger.info(f"[老化引擎] 勾选的通道均已测试完成，自动结束老化工步 '{step_name}' 的倒计时。")
+
+        # 正常时间判断逻辑
+        if not step_completed:
+            if test_hours > 0:
+                if self.step_elapsed_sec >= test_hours:
+                    if has_selected_channels and not all_checked_finished:
+                        self._handle_timeout_ng(step_name, test_hours, "测试时间耗尽，但仍有通道未完成测试")
+                        return
+                    else:
+                        step_completed = True
+                        completion_reason = "时间耗尽"
+            elif timeout_hours > 0:
+                if getattr(self, "_is_bypass_chamber", False):
+                    step_completed = True
+                    completion_reason = "温度达标"
+                else:
+                    current_temp = self.chamber.data_store.get("VD720", 25.0) if self.chamber else 25.0
+                    target_temp = step["temp"]
+                    
+                    is_heating_transition = False
+                    is_cooling_transition = False
+                    if "升温" in step_name:
+                        is_heating_transition = True
+                    elif "降温" in step_name:
+                        is_cooling_transition = True
+                    else:
+                        if target_temp > current_temp:
+                            is_heating_transition = True
+                        else:
+                            is_cooling_transition = True
+                    
+                    if is_heating_transition and current_temp >= target_temp:
+                        step_completed = True
+                        completion_reason = "温度达标"
+                        logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达升温目标 {target_temp:.1f} °C，自动切换工步")
+                    elif is_cooling_transition and current_temp <= target_temp:
+                        step_completed = True
+                        completion_reason = "温度达标"
+                        logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达降温目标 {target_temp:.1f} °C，自动切换工步")
+                    
+                    if not step_completed and self.step_elapsed_sec >= timeout_hours:
+                        if is_multi_channel_step and not all_checked_finished:
+                            self._handle_timeout_ng(step_name, timeout_hours, "未收到所有通道测试完成信号")
+                        else:
+                            self._handle_timeout_ng(step_name, timeout_hours, f"实际箱温未达设定温度 ({target_temp:.1f} ℃)")
+                        return
+            else:
+                step_completed = True
+                completion_reason = "即时完成"
+
+
+        if step_completed:
+            status_text = "已完成"
+            self.steps_data[self.active_step_idx]["status"] = status_text
             self.active_step_idx += 1
             self.step_elapsed_sec = 0.0
             
             if self.active_step_idx < len(self.steps_data):
                 # 转换至下一个工步
+                self._sync_table_to_data()
                 self.steps_data[self.active_step_idx]["status"] = "运行中..."
                 self.apply_step_temperatures(self.active_step_idx)
                 self.refresh_steps_table()
-                
-                # 播放语音提醒 (由 overview_tab 中引用的 speak_text 拓展)
                 self.speak_text(f"老化测试切换到第 {self.active_step_idx + 1} 步")
             else:
                 # 所有工步全部执行完成
@@ -1097,12 +1496,20 @@ class ChamberTab(QWidget):
                 self.write_plc_bit("V0.5", False) # 停止系统
                 self.write_plc_bit("V0.6", True)
                 
+                # 保留特异性状态（如“已完成(超时)”或“超时未达标”），只将其他等待中或运行中的改为已完成
                 for s in self.steps_data:
-                    s["status"] = "已完成"
+                    if not s["status"].startswith("已完成") and s["status"] != "超时未达标":
+                        s["status"] = "已完成"
                 self.refresh_steps_table()
                 
                 self.btn_run_seq.setEnabled(True)
                 self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; border-radius: 4px;")
+                
+                # 启用新增和删除工步按钮
+                self.btn_add.setEnabled(True)
+                self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+                self.btn_del.setEnabled(True)
+                self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
                 
                 self.lbl_active_step.setText("当前阶段: 老化测试全部完成！")
                 self.lbl_step_time.setText("工步耗时: 全部结束")
@@ -1111,6 +1518,43 @@ class ChamberTab(QWidget):
                 
                 self.speak_text("恭喜，高低温老化测试工步全部执行完毕")
                 QMessageBox.information(self, "测试结束", "高低温老化箱测试工步已全部成功执行完毕！")
+
+    def _handle_timeout_ng(self, step_name, timeout_hours, reason):
+        logger.warning(f"[老化引擎] 工步 {step_name} 超时/异常终止：{reason}")
+        
+        self.sequence_running = False
+        self.write_plc_bit("V0.5", False, sync=False)
+        self.write_plc_bit("V0.6", True, sync=False)
+        self.sync_plc_data()
+        
+        overview_tab = self.get_overview_tab()
+        if overview_tab and overview_tab.engine:
+            with overview_tab.engine._lock:
+                for worker in overview_tab.engine.workers.values():
+                    worker.is_suspended = False
+                    
+        self.steps_data[self.active_step_idx]["status"] = "异常未达标"
+        for idx in range(self.active_step_idx + 1, len(self.steps_data)):
+            self.steps_data[idx]["status"] = "已停止"
+            
+        self.btn_run_seq.setEnabled(True)
+        self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_bypass_run.setEnabled(True)
+        self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_add.setEnabled(True)
+        self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_del.setEnabled(True)
+        self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        
+        self._is_bypass_chamber = False
+        self.lbl_active_step.setText("当前阶段: 老化测试异常终止")
+        self.lbl_step_time.setText(f"工步耗时: 异常未达标")
+        
+        self.refresh_steps_table()
+        
+        self.speak_text(f"警告：老化测试第 {self.active_step_idx + 1} 步异常终止，原因：{reason}")
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.critical(self, "异常中止测试", f"工步 '{step_name}' 触发异常中止！\n原因：{reason}\n已为您自动停止系统测试。")
 
     def speak_text(self, text):
         import threading

@@ -24,7 +24,7 @@ class Lingtu66100:
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
-            self.sock.settimeout(5.0)
+            self.sock.settimeout(2.0)
             self.sock.connect((self.ip, self.port))
             self.is_connected = True
             print(f"[*] 模拟器 ({self.ip}) TCP 链路已建立")
@@ -53,12 +53,14 @@ class Lingtu66100:
             return True
         return self.connect()
 
-    def _safe_send(self, cmd_bytes: bytes, retries: int = 2) -> bool:
+    def _safe_send(self, cmd_bytes: bytes, retries: int = 2, logger=None) -> bool:
         """带重试的发送逻辑"""
         for i in range(retries + 1):
             try:
                 if not self._ensure_connected(): continue
                 self._clear_buffer()
+                cmd_str = cmd_bytes.decode().strip()
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd_str}")
                 self.sock.send(cmd_bytes)
                 return True
             except Exception as e:
@@ -74,8 +76,8 @@ class Lingtu66100:
                 channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"SOUR{ch}:VOLT {voltage}\n"
-                    if not self._safe_send(cmd.encode()): return False
-                    time.sleep(0.1) 
+                    if not self._safe_send(cmd.encode(), logger=logger): return False
+                    time.sleep(0.02) 
                 
                 if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] 设置所有通道电压: {voltage}V")
                 return True
@@ -94,8 +96,8 @@ class Lingtu66100:
                 channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"SOUR{ch}:CURR {current}\n"
-                    self._safe_send(cmd.encode())
-                    time.sleep(0.1)
+                    self._safe_send(cmd.encode(), logger=logger)
+                    time.sleep(0.02)
                 return True
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
@@ -112,8 +114,8 @@ class Lingtu66100:
                 channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"SOUR{ch}:CURR:RANG {range_str}\n"
-                    self._safe_send(cmd.encode())
-                    time.sleep(0.1)
+                    self._safe_send(cmd.encode(), logger=logger)
+                    time.sleep(0.02)
                 return True
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
@@ -128,8 +130,8 @@ class Lingtu66100:
                 channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"OUTP{ch}:STAT {val}\n"
-                    if not self._safe_send(cmd.encode()): return False
-                    time.sleep(0.2) 
+                    if not self._safe_send(cmd.encode(), logger=logger): return False
+                    time.sleep(0.02) 
                 
                 if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
                 return True

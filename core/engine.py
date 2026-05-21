@@ -2,7 +2,7 @@ from enum import Enum
 import re
 import threading
 from typing import List, Dict, Optional, Any
-from PySide6.QtCore import QObject, Signal, QThread, QTimer
+from PySide6.QtCore import QObject, Signal, QThread, QTimer, Slot
 
 class NGStrategy(Enum):
     STOP_ON_ANY = "任何NG停止"
@@ -976,8 +976,12 @@ class TestEngine(QObject):
         w.step_started.connect(self.channel_step_started)
         w.test_finished.connect(self.channel_test_finished)
         t.started.connect(w.start); from PySide6.QtCore import Qt
-        w.test_finished.connect(lambda *_, _cid=cid: self.stop_channel_test(_cid), Qt.QueuedConnection)
+        w.test_finished.connect(self._on_worker_test_finished, Qt.QueuedConnection)
         self.workers[cid], self.threads[cid] = w, t; t.start()
+
+    @Slot(int, bool)
+    def _on_worker_test_finished(self, cid, success):
+        self.stop_channel_test(cid)
 
     def stop_channel_test(self, cid):
         with self._lock:
