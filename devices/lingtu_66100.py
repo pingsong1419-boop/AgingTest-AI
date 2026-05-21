@@ -8,9 +8,10 @@ class Lingtu66100:
     领图 66100 多通道电池模拟器驱动 (基于 SCPI 协议)
     适配：SOURce[ch]:VOLTage:AMPLitude 指令格式
     """
-    def __init__(self, ip: str, port: int = 5025):
+    def __init__(self, ip: str, port: int = 5025, max_channels: int = 18):
         self.ip = ip
         self.port = port
+        self.max_channels = max_channels
         self.sock = None
         self.is_connected = False
         self._lock = threading.Lock()
@@ -57,6 +58,7 @@ class Lingtu66100:
         for i in range(retries + 1):
             try:
                 if not self._ensure_connected(): continue
+                self._clear_buffer()
                 self.sock.send(cmd_bytes)
                 return True
             except Exception as e:
@@ -69,11 +71,11 @@ class Lingtu66100:
         """设置电压"""
         with self._lock:
             try:
-                channels = range(1, 19) if channel == 0 else [channel]
+                channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"SOUR{ch}:VOLT {voltage}\n"
                     if not self._safe_send(cmd.encode()): return False
-                    time.sleep(0.05) 
+                    time.sleep(0.1) 
                 
                 if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] 设置所有通道电压: {voltage}V")
                 return True
@@ -89,11 +91,11 @@ class Lingtu66100:
             if not self._ensure_connected():
                 return False
             try:
-                channels = range(1, 19) if channel == 0 else [channel]
+                channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"SOUR{ch}:CURR {current}\n"
                     self._safe_send(cmd.encode())
-                    time.sleep(0.05)
+                    time.sleep(0.1)
                 return True
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
@@ -107,11 +109,11 @@ class Lingtu66100:
             if not self._ensure_connected():
                 return False
             try:
-                channels = range(1, 19) if channel == 0 else [channel]
+                channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"SOUR{ch}:CURR:RANG {range_str}\n"
                     self._safe_send(cmd.encode())
-                    time.sleep(0.05)
+                    time.sleep(0.1)
                 return True
             except Exception as e:
                 if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
@@ -123,11 +125,11 @@ class Lingtu66100:
         with self._lock:
             try:
                 val = 1 if state else 0
-                channels = range(1, 19) if channel == 0 else [channel]
+                channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
                 for ch in channels:
                     cmd = f"OUTP{ch}:STAT {val}\n"
                     if not self._safe_send(cmd.encode()): return False
-                    time.sleep(0.1) 
+                    time.sleep(0.2) 
                 
                 if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
                 return True
@@ -136,13 +138,22 @@ class Lingtu66100:
                 return False
 
 
+    def _clear_buffer(self):
+        if not self.sock: return
+        self.sock.setblocking(False)
+        try:
+            while True: self.sock.recv(4096)
+        except: pass
+        self.sock.setblocking(True)
+
     def measure_voltage(self, channel: int, logger=None) -> float:
         """测量/读取通道设定电压: SOURce[ch]:VOLTage?"""
         # BUG-07修复: 加锁，防止多线程并发时响应报文乱序
         with self._lock:
-            if not self.is_connected:
+            if not self._ensure_connected():
                 if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
                 return -1.0
+            self._clear_buffer()
             try:
                 cmd = f"SOUR{channel}:VOLT?\n"
                 if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
@@ -151,6 +162,7 @@ class Lingtu66100:
                 if logger: logger(f"[IP: {self.ip}] [RX] {data} V")
                 return float(data)
             except Exception as e:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] 读取设定电压异常: {e}")
                 return -1.0
 
@@ -158,9 +170,10 @@ class Lingtu66100:
         """测量实时电流: MEASure[ch]:CURRent?"""
         # BUG-07修复: 加锁
         with self._lock:
-            if not self.is_connected:
+            if not self._ensure_connected():
                 if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
                 return -1.0
+            self._clear_buffer()
             try:
                 cmd = f"MEAS{channel}:CURR?\n"
                 if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
@@ -169,5 +182,6 @@ class Lingtu66100:
                 if logger: logger(f"[IP: {self.ip}] [RX] {data} A")
                 return float(data)
             except Exception as e:
-                if logger: logger(f"[IP: {self.ip}] [!] 测量电流异常: {e}")
+                self.is_connected = False
+                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电流异常: {e}")
                 return -1.0

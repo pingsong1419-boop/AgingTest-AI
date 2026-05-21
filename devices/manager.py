@@ -49,9 +49,9 @@ class DeviceManager:
         sim3_port = int(cfg.get("sim3_port", 5025))
         
         self.simulators = [
-            Lingtu66100(sim1_ip, sim1_port),
-            Lingtu66100(sim2_ip, sim2_port),
-            Lingtu66100(sim3_ip, sim3_port)
+            Lingtu66100(sim1_ip, sim1_port, max_channels=18),
+            Lingtu66100(sim2_ip, sim2_port, max_channels=18),
+            Lingtu66100(sim3_ip, sim3_port, max_channels=18)
         ]
         # BUG-11修复: 删除后台线程connect，避免与init_all_devices的串行connect产生竞态
 

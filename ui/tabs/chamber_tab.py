@@ -256,13 +256,23 @@ class ChamberTab(QWidget):
         preset_layout = QHBoxLayout()
         preset_layout.addWidget(QLabel("预设方案:"))
         self.combo_presets = QComboBox()
-        self.combo_presets.addItems(["高温老化方案", "温巡老化方案", "自定义老化方案"])
+        self.refresh_preset_list()
         preset_layout.addWidget(self.combo_presets)
         
-        btn_load_p = QPushButton("加载预设")
+        btn_load_p = QPushButton("加载")
         btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
         btn_load_p.clicked.connect(self.on_load_preset_clicked)
         preset_layout.addWidget(btn_load_p)
+
+        btn_save_p = QPushButton("保存")
+        btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
+        btn_save_p.clicked.connect(self.save_preset)
+        preset_layout.addWidget(btn_save_p)
+
+        btn_del_p = QPushButton("删除")
+        btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
+        btn_del_p.clicked.connect(self.delete_preset)
+        preset_layout.addWidget(btn_del_p)
         
         # 加速比滑块
         preset_layout.addWidget(QLabel("  时间加速比:"))
@@ -282,8 +292,8 @@ class ChamberTab(QWidget):
         steps_layout.addLayout(preset_layout)
         
         # 工步配置表格
-        self.table_steps = QTableWidget(0, 4)
-        self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "时间 (h)", "执行状态"])
+        self.table_steps = QTableWidget(0, 5)
+        self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "目标温度 (℃)", "时间 (h) / 倒计时", "执行状态"])
         self.table_steps.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table_steps.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_steps.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -584,65 +594,88 @@ class ChamberTab(QWidget):
             self.speed_factor = 3600.0  # 3600x 极速 (1秒=1小时)
 
     # --- 4. 老化测试工步配方库设计 ---
+    def refresh_preset_list(self):
+        self.combo_presets.clear()
+        if self.db_manager and hasattr(self.db_manager, "list_recipes"):
+            recipes = self.db_manager.list_recipes()
+            if recipes:
+                self.combo_presets.addItems(recipes)
+            else:
+                self.combo_presets.addItem("无可用预设")
+        else:
+            self.combo_presets.addItem("无可用预设")
+
     def on_load_preset_clicked(self):
         preset_name = self.combo_presets.currentText()
-        self.load_preset_profile(preset_name)
+        if preset_name and preset_name != "无可用预设":
+            self.load_preset_profile(preset_name)
 
     def load_preset_profile(self, profile_name):
-        """
-        根据用户上传的第 3 张图片《老化测试工步》表完全定制预设路径
-        """
         self.stop_aging_sequence()
         self.steps_data.clear()
         
-        if profile_name == "高温老化方案":
-            # 严格依据图片 高温老化 配方
-            presets = [
-                ("上板+扫码", 25.0, 1.0),
-                ("常温25℃-高温85℃", 85.0, 0.5),
-                ("维持85℃ (功能测试1)", 85.0, 0.5),
-                ("维持85℃ (老化测试1)", 85.0, 0.5),
-                ("维持85℃ (功能测试2)", 85.0, 3.0),
-                ("维持85℃ (老化测试2)", 85.0, 0.5),
-                ("维持85℃ (功能测试3)", 85.0, 2.5),
-                ("维持85℃ (老化测试3)", 85.0, 0.5),
-                ("维持85℃ (高温结束)", 85.0, 0.5)
-            ]
-        elif profile_name == "温巡老化方案":
-            # 严格依据图片 温巡老化 配方
-            presets = [
-                ("维持85℃ (功能测试)", 85.0, 0.5),
-                ("维持85℃ (测试时间)", 85.0, 0.5),
-                ("高温85℃-低温-40℃", -40.0, 1.0),
-                ("维持-40℃ (功能测试)", -40.0, 0.5),
-                ("维持-40℃ (测试时间)", -40.0, 0.5),
-                ("低温-40℃-高温85℃", 85.0, 1.0),
-                ("维持85℃ (功能测试)", 85.0, 0.5),
-                ("维持85℃ (测试时间)", 85.0, 0.5),
-                ("高温85℃-低温-40℃", -40.0, 1.0),
-                ("维持-40℃ (功能测试)", -40.0, 0.5),
-                ("维持-40℃ (测试时间)", -40.0, 0.5),
-                ("低温-40℃-高温25℃", 25.0, 0.5),
-                ("下板+收板", 25.0, 0.5)
-            ]
-        else: # 自定义方案
-            presets = [
-                ("常温保持", 25.0, 0.2),
-                ("极速升温", 60.0, 0.1),
-                ("恒温保持", 60.0, 0.2),
-                ("极速降温", -10.0, 0.1),
-                ("恒冷保持", -10.0, 0.2)
-            ]
-            
-        for name, temp, hours in presets:
-            self.steps_data.append({
-                "name": name,
-                "temp": temp,
-                "hours": hours,
-                "status": "等待中"
-            })
-            
+        if self.db_manager and hasattr(self.db_manager, "load_recipe_json"):
+            data = self.db_manager.load_recipe_json(profile_name)
+            if data and "steps" in data:
+                for s in data["steps"]:
+                    self.steps_data.append({
+                        "name": s.get("name", "自定义工步"),
+                        "temp": s.get("temp", 25.0),
+                        "hours": s.get("hours", 1.0),
+                        "status": "等待中"
+                    })
+                self.refresh_steps_table()
+                return
+
+        # 兜底默认方案
+        self.steps_data.append({"name": "常温保持", "temp": 25.0, "hours": 0.2, "status": "等待中"})
         self.refresh_steps_table()
+
+    def save_preset(self):
+        from PySide6.QtWidgets import QInputDialog
+        if not self.steps_data:
+            QMessageBox.warning(self, "警告", "当前没有工步数据可保存！")
+            return
+            
+        # 同步界面上可能未生效的编辑内容
+        self._sync_table_to_data()
+
+        name, ok = QInputDialog.getText(self, "保存老化方案", "请输入新方案名称:")
+        if ok and name:
+            if self.db_manager and hasattr(self.db_manager, "save_recipe_json"):
+                data = {"steps": self.steps_data}
+                if self.db_manager.save_recipe_json(name, data):
+                    QMessageBox.information(self, "成功", f"老化方案 '{name}' 已保存！")
+                    self.refresh_preset_list()
+                    self.combo_presets.setCurrentText(name)
+                else:
+                    QMessageBox.critical(self, "错误", "保存失败，请检查文件权限！")
+
+    def delete_preset(self):
+        name = self.combo_presets.currentText()
+        if not name or name == "无可用预设": return
+        
+        ret = QMessageBox.question(self, "确认删除", f"确定要删除方案 '{name}' 吗？")
+        if ret == QMessageBox.Yes:
+            if self.db_manager and hasattr(self.db_manager, "delete_recipe"):
+                if self.db_manager.delete_recipe(name):
+                    QMessageBox.information(self, "成功", "方案已删除！")
+                    self.refresh_preset_list()
+                else:
+                    QMessageBox.warning(self, "错误", "删除失败或文件不存在。")
+
+    def _sync_table_to_data(self):
+        """将表格中可能正在编辑的数据同步回 steps_data 内存中"""
+        for row in range(self.table_steps.rowCount()):
+            combo = self.table_steps.cellWidget(row, 1)
+            if combo:
+                self.steps_data[row]["name"] = combo.currentText()
+            try:
+                self.steps_data[row]["temp"] = float(self.table_steps.item(row, 2).text())
+                hours_str = self.table_steps.item(row, 3).text()
+                if "h" in hours_str: hours_str = hours_str.split("h")[0]
+                self.steps_data[row]["hours"] = float(hours_str)
+            except: pass
 
     def refresh_steps_table(self):
         self.table_steps.setRowCount(len(self.steps_data))
@@ -652,15 +685,20 @@ class ChamberTab(QWidget):
             item_seq.setTextAlignment(Qt.AlignCenter)
             item_seq.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             
-            # 工步名称
-            item_name = QTableWidgetItem(step["name"])
-            
             # 设定温度
             item_temp = QTableWidgetItem(f"{step['temp']:.1f}")
             item_temp.setTextAlignment(Qt.AlignCenter)
             
             # 恒温时间
-            item_hours = QTableWidgetItem(f"{step['hours']:.2f}")
+            # Issue 3: 显示倒计时
+            if step["status"] == "运行中...":
+                rem = max(0, step['hours'] - self.step_elapsed_sec)
+                h = int(rem)
+                m = int((rem - h) * 60)
+                s = int(((rem - h) * 60 - m) * 60)
+                item_hours = QTableWidgetItem(f"{step['hours']:.2f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+            else:
+                item_hours = QTableWidgetItem(f"{step['hours']:.2f}")
             item_hours.setTextAlignment(Qt.AlignCenter)
             
             # 执行状态
@@ -675,9 +713,21 @@ class ChamberTab(QWidget):
                 item_status.setForeground(QColor("#8A8A9E"))
             
             self.table_steps.setItem(row, 0, item_seq)
-            self.table_steps.setItem(row, 1, item_name)
-            self.table_steps.setItem(row, 2, item_hours)
-            self.table_steps.setItem(row, 3, item_status)
+            
+            # Issue 2: 工步下拉选择
+            combo = QComboBox()
+            combo.addItems(["升温至目标温度", "降温至目标温度", "维持温度", "启动多通道测试", "BMS带载工作", "老化完成取料", step["name"]])
+            combo.setCurrentText(step["name"])
+            combo.setStyleSheet("background-color: #1A1A2E; color: white; border: 1px solid #3E3E5C;")
+            # 绑定下拉框数据到 underlying step list
+            def _update_name(text, r=row):
+                self.steps_data[r]["name"] = text
+            combo.currentTextChanged.connect(_update_name)
+            self.table_steps.setCellWidget(row, 1, combo)
+            
+            self.table_steps.setItem(row, 2, item_temp)
+            self.table_steps.setItem(row, 3, item_hours)
+            self.table_steps.setItem(row, 4, item_status)
 
     def add_blank_step(self):
         row = self.table_steps.rowCount()
@@ -912,9 +962,11 @@ class ChamberTab(QWidget):
         # 从表格抓取实时修改后的温度和时间参数
         try:
             # 允许测试人员在表格上实时编辑修改 (灵活性极高)
-            item_name = self.table_steps.item(self.active_step_idx, 1).text()
+            combo = self.table_steps.cellWidget(self.active_step_idx, 1)
+            item_name = combo.currentText() if combo else self.steps_data[self.active_step_idx]["name"]
             item_temp = float(self.table_steps.item(self.active_step_idx, 2).text())
-            item_hours = float(self.table_steps.item(self.active_step_idx, 3).text())
+            hours_text = self.table_steps.item(self.active_step_idx, 3).text()
+            item_hours = float(hours_text.split("h")[0]) if "h" in hours_text else float(hours_text)
             
             # 更新缓存
             self.steps_data[self.active_step_idx]["name"] = item_name
@@ -934,6 +986,9 @@ class ChamberTab(QWidget):
         # 当前工步进度百分比
         pct = min(100, int((self.step_elapsed_sec / total_hours) * 100))
         self.pbar_step.setValue(pct)
+        
+        # 刷新本行的倒计时显示
+        self.refresh_steps_table()
         
         # 更新工步卡片显示
         self.lbl_active_step.setText(f"当前阶段: {step['name']} (Step {self.active_step_idx + 1}/{len(self.steps_data)})")
@@ -1064,3 +1119,31 @@ class ChamberTab(QWidget):
             cmd = f"Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.Rate = 4; $synth.Speak('{text}')"
             subprocess.run(["powershell", "-Command", cmd], capture_output=True)
         threading.Thread(target=run, daemon=True).start()
+
+if __name__ == "__main__":
+    from PySide6.QtWidgets import QApplication
+    import sys
+    import os
+    
+    # 将当前独立文件夹加入路径
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from data.db_manager import DBManager
+    from devices.chamber_driver import ChamberController
+    
+    class StandaloneDeviceManager:
+        def __init__(self):
+            # 这里默认使用高保真通讯模拟器，如果在车间接真实设备，可将 use_sim 设为 False 并传入真实 IP
+            self.chamber = ChamberController(ip="192.168.2.1", port=102)
+            self.chamber.use_simulation = True # 默认开启仿真模式
+            
+    app = QApplication(sys.argv)
+    
+    # 在当前目录生成独立的测试数据库和配方文件夹
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "standalone_data.db")
+    db = DBManager(db_path)
+    mgr = StandaloneDeviceManager()
+    
+    window = ChamberTab(mgr, db)
+    window.resize(1100, 800)
+    window.show()
+    sys.exit(app.exec())

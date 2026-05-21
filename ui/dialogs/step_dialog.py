@@ -736,6 +736,9 @@ class StepDialog(QDialog):
             if category == "设备操作" and "老化功能板继电器" not in device_text:
                 self.cb_sync.setChecked(True)
                 self.cb_sync.setEnabled(False)
+            elif "等待" in device_text:
+                self.cb_sync.setChecked(False)
+                self.cb_sync.setEnabled(False)
             else:
                 self.cb_sync.setEnabled(True)
 
@@ -959,6 +962,9 @@ class StepDialog(QDialog):
                 is_excluded = "老化功能板继电器" in device_text
                 self.cb_sync.setChecked(not is_excluded)
                 self.cb_sync.setEnabled(is_excluded)
+            elif "等待" in device_text:
+                self.cb_sync.setChecked(False)
+                self.cb_sync.setEnabled(False)
             else:
                 self.cb_sync.setChecked(False)
                 self.cb_sync.setEnabled(True)

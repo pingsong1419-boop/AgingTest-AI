@@ -303,7 +303,7 @@ class ChannelWorker(QObject):
                     import time; time.sleep(delay)
                     if threshold is None: return True # 如果不指定阈值，则仅延时，不校验
                     try:
-                        v_real = dev_obj.measure_voltage(ch) if ch is not None else dev_obj.measure_voltage()
+                        v_real = dev_obj.measure_voltage(ch, logger=hw_logger) if ch is not None else dev_obj.measure_voltage(logger=hw_logger)
                         if v_real is None or v_real < 0: return True 
                         if abs(v_real - target_v) > threshold:
                             hw_logger(f"[!] 电压校验失败: 设定 {target_v:.4f}V, 实测 {v_real:.4f}V, 误差 {abs(v_real-target_v):.4f}V > {threshold}V")
@@ -347,7 +347,7 @@ class ChannelWorker(QObject):
                                 try:
                                     target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
                                     for ch in target_channels:
-                                        if 1 <= ch <= 18:
+                                        if 1 <= ch <= target_sim.max_channels:
                                             target_sim.set_voltage(ch, volt)
                                             target_sim.output_control(ch, output_on)
                                             if output_on: success = success and verify_and_wait(target_sim, volt, ch=ch, threshold=0.002)
@@ -507,14 +507,15 @@ class ChannelWorker(QObject):
                     elif "2#" in device: target_sim = mgr.simulators[1]
                     elif "3#" in device: target_sim = mgr.simulators[2]
                     if target_sim:
+                        physical_ch = (ch - 1) % 18 + 1
                         if is_volt:
                             total_v = 0.0
-                            for i in range(1, 19):
-                                v = target_sim.measure_voltage(i)
+                            for i in range(1, target_sim.max_channels + 1):
+                                v = target_sim.measure_voltage(i, logger=hw_logger)
                                 if v >= 0: total_v += v
+                            hw_logger(f"[1-{target_sim.max_channels}通道总和] 测得电压: {total_v:.2f}V")
                             result_value = total_v
                         else:
-                            physical_ch = (ch - 1) % 18 + 1
                             result_value = target_sim.measure_current(physical_ch)
                     else:
                         result_value = mgr.measure_voltage(ch) if is_volt else mgr.measure_current(ch)
@@ -610,9 +611,9 @@ class ChannelWorker(QObject):
                             i = min(1000, rem); rem -= i; QTimer.singleShot(i, tick)
                     tick()
                 # 触发状态收集和广播，防止前台显示卡死
-                self.current_step_results.append("PASS")
-                self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS", None)
-                return True, None
+                self.current_step_results.append(("OK", bool(sub_step.params.get("is_judgment", False))))
+                self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS", "OK")
+                return True, "OK"
 
         except Exception as e:
             self.log_message.emit(self.channel_id, f"[!] 执行异常: {str(e)}"); success = False
@@ -624,9 +625,9 @@ class ChannelWorker(QObject):
             val = "FAIL"
         
         if sub_step.type == SubStepType.CAN_RECEIVE:
-            val = "PASS" if success else "FAIL"
+            val = "OK" if success else "NG"
             
-        self.current_step_results.append(val)
+        self.current_step_results.append((val, bool(sub_step.params.get("is_judgment", False))))
 
         self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS" if success else "FAIL", result_value)
         return success, result_value
@@ -642,6 +643,8 @@ class ChannelWorker(QObject):
             
         params = sub_step.params
         is_sync = bool(params.get("sync_exec", False))
+        if sub_step.type == SubStepType.WAIT:
+            is_sync = False
         if is_sync and not ignore_sync:
             self.is_waiting_for_sync = True
             self.log_message.emit(self.channel_id, f"      [同步] 等待所有活跃通道集齐...")
@@ -679,34 +682,80 @@ class ChannelWorker(QObject):
         if not self.is_running: return
         step = self.steps[self.current_step_index]
         
-        # 1. 区分标准类型执行判定：只有被勾选了“结果输出并参与最终判定(is_judgment)”的子步骤结果才送入质检合格区间判定！
-        if is_pass and self.current_step_results:
-            for idx, val in enumerate(self.current_step_results):
-                # 安全获取对应的子步骤
-                if idx < len(step.sub_steps):
-                    sub = step.sub_steps[idx]
-                    # 如果子工步没有在配方中勾选参与最终判定，则跳过其范围检查，避免任何辅助动作结果干扰合格判定
-                    if not bool(sub.params.get("is_judgment", False)):
-                        continue
+        # 智能提取层：优先提取在配方中被勾选了“结果输出并参与判定(is_judgment)”的有效物理量结果
+        val = None
+        if self.current_step_results:
+            # 1. 契约优先挑选：寻找被勾选参与判定且结果不为 None 且不为 PASS/FAIL/OK/NG 的真正物理值
+            for r_val, is_judg in self.current_step_results:
+                if is_judg:
+                    if r_val not in (None, "", "PASS", "FAIL", "OK", "NG"):
+                        val = r_val
+                        break
+            
+            # 2. 契约次优挑选：如果勾选了参与判定的子步骤回传的是 PASS/FAIL/OK/NG 控制结论
+            if val is None:
+                for r_val, is_judg in self.current_step_results:
+                    if is_judg:
+                        if r_val not in (None, ""):
+                            val = r_val
+                            break
 
-                if getattr(step, "standard_type", "数值") == "字符串":
-                    # 字符串精确相等比对 (不区分首尾空格)
-                    target = str(step.min_limit or "").strip()
-                    actual = str(val or "").strip()
-                    if target != actual:
+            # 3. 常规降级提取：若全步骤无勾选参与判定的有效数据，则按历史降级提取物理量
+            if val is None:
+                for r_val, is_judg in self.current_step_results:
+                    if r_val not in (None, "", "PASS", "FAIL", "OK", "NG"):
+                        val = r_val
+                        break
+            
+            # 4. 终极控制兜底：若无任何子工步实际数据返回，则使用最后一个非 None 的执行结论作为测量值兜底
+            if val is None:
+                for r_val, is_judg in reversed(self.current_step_results):
+                    if r_val is not None:
+                        val = r_val
+                        break
+
+        # 确定最终记录的值
+        if getattr(step, "standard_type", "数值") == "字符串":
+            val_to_log = val
+        else:
+            # 智能识别非纯数字测量值（包含 PASS, FAIL, 字母等）
+            if isinstance(val, str) and any(c.isalpha() for c in val) and val not in ("OK", "NG"):
+                val_to_log = val
+            elif val in ("OK", "NG"):
+                val_to_log = val
+            else:
+                val_to_log = self._parse_numeric(val) if val is not None else None
+
+        # 核心判定逻辑：如果前期执行正常 (is_pass == True)，则使用提取到的最终值进行范围判定
+        if is_pass:
+            if getattr(step, "standard_type", "数值") == "字符串":
+                # 字符串精确相等比对 (不区分首尾空格)
+                target = str(step.min_limit or "").strip()
+                actual = str(val_to_log or "").strip()
+                # 只有当配方中填写了非空的目标值才进行比对
+                if target != "" and target != actual:
+                    is_pass = False
+            else:
+                # 数值范围判定
+                # 修复BUG：如果获取到的值是控制结论 "PASS" 或 "FAIL"，但测试项确实配置了上下限要求，应该判定为 NG，因为没有取到有效数值
+                has_limits = step.min_limit is not None or step.max_limit is not None
+                # 若提取的是纯控制字，但在配方中却配了具体的物理上下限，则视为错误，强制NG
+                # 除非配方中明确填写的下限就是这个控制字（例如明确要等 OK）
+                if val_to_log in ("PASS", "FAIL", "OK") and has_limits:
+                    if str(step.min_limit).strip().upper() != str(val_to_log).upper():
                         is_pass = False
-                else:
-                    # 数值范围判定：跳过单纯的 PASS/FAIL 辅助控制结论，防止其被解析为 0.0 引发 NG 误判
-                    if val in ("PASS", "FAIL"):
-                        continue
-                    f_val = self._parse_numeric(val)
+                elif val_to_log in ("FAIL", "NG"):
+                    is_pass = False
+                elif val_to_log not in ("PASS", "FAIL", "OK", "NG") and val_to_log is not None:
+                    # 使用 _parse_numeric 提取出纯数字进行比较，忽略单位字符（如 kΩ、V 等）
+                    f_val = self._parse_numeric(val_to_log)
                     try:
-                        if step.min_limit is not None and f_val < float(step.min_limit): is_pass = False
-                    except: pass
+                        if step.min_limit is not None and str(step.min_limit).strip() != "" and f_val < float(step.min_limit): is_pass = False
+                    except ValueError: pass
                     try:
-                        if step.max_limit is not None and f_val > float(step.max_limit): is_pass = False
-                    except: pass
-                    
+                        if step.max_limit is not None and str(step.max_limit).strip() != "" and f_val > float(step.max_limit): is_pass = False
+                    except ValueError: pass
+
         # 2. 检查 NG 复测策略
         import time
         max_retries = 0
@@ -731,51 +780,6 @@ class ChannelWorker(QObject):
         # 计算用时
         start_time = getattr(self, "step_start_times", {}).get(step.name, time.time())
         duration = round(time.time() - start_time, 2)
-        
-        # 智能提取层：优先提取在配方中被勾选了“结果输出并参与判定(is_judgment)”的有效物理量结果
-        val = None
-        if self.current_step_results:
-            # 1. 契约优先挑选：寻找被勾选参与判定且结果不为 None 且不为 PASS/FAIL 的真正物理值
-            for idx, r in enumerate(self.current_step_results):
-                if idx < len(step.sub_steps):
-                    sub = step.sub_steps[idx]
-                    if bool(sub.params.get("is_judgment", False)):
-                        if r is not None and r != "" and r != "PASS" and r != "FAIL":
-                            val = r
-                            break
-            
-            # 2. 契约次优挑选：如果勾选了参与判定的子步骤回传的是 PASS/FAIL 控制结论
-            if val is None:
-                for idx, r in enumerate(self.current_step_results):
-                    if idx < len(step.sub_steps):
-                        sub = step.sub_steps[idx]
-                        if bool(sub.params.get("is_judgment", False)):
-                            if r is not None and r != "":
-                                val = r
-                                break
-
-            # 3. 常规降级提取：若全步骤无勾选参与判定的有效数据，则按历史降级提取物理量
-            if val is None:
-                for r in self.current_step_results:
-                    if r is not None and r != "" and r != "PASS" and r != "FAIL":
-                        val = r
-                        break
-            
-            # 4. 终极控制兜底：若无任何子工步实际数据返回，则使用最后一个非 None 的执行结论作为测量值兜底
-            if val is None:
-                for r in reversed(self.current_step_results):
-                    if r is not None:
-                        val = r
-                        break
-
-        if getattr(step, "standard_type", "数值") == "字符串":
-            val_to_log = val
-        else:
-            # 智能识别非纯数字测量值（包含 PASS, FAIL, 字母等）
-            if isinstance(val, str) and any(c.isalpha() for c in val):
-                val_to_log = val
-            else:
-                val_to_log = self._parse_numeric(val) if val is not None else None
 
         # 3. 始终将测试项判定记录写入数据库，以供报告生成使用
         if self.db_manager and self.test_id != -1:
@@ -896,7 +900,7 @@ class TestEngine(QObject):
                                                 val = "PASS" if success else "FAIL"
                                                 if res is not None and res != "":
                                                     val = res
-                                                target_w.current_step_results.append(val)
+                                                target_w.current_step_results.append((val, bool(sub.params.get("is_judgment", False))))
                                                 target_w.sub_step_finished.emit(target_w.channel_id, target_w.current_step_index, target_w.current_sub_step_index, "PASS" if success else "FAIL", res)
                                             target_w.resume_from_sync()
                                             self.channel_sync_status_changed.emit(target_w.channel_id, False)

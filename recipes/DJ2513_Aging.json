@@ -3,9 +3,111 @@
     "topology": "1主3从",
     "items": [
         {
+            "name": "设备初始化",
+            "mode": "字符串比对",
+            "min": "OK",
+            "max": "--",
+            "strategy": "任何NG停止",
+            "standard_type": "字符串",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "sub_steps": [
+                {
+                    "name": "NGI 高压源 (HV Source)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "0.0V / 0.0A / 关闭输出",
+                    "device": "NGI 高压源 (HV Source)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "1# 电池模拟器 (Simulator 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "3# 电池模拟器 (Simulator 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (1000ms)",
+                    "action": "固定延时",
+                    "params": "1000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "CA550 校准仪 (CA550)-参数设置 (Type:V / Val:0.0 / Range:Auto / Output:关闭输出) [同步]",
+                    "action": "参数设置",
+                    "params": "Type:V / Val:0.0 / Range:Auto / Output:关闭输出",
+                    "device": "CA550 校准仪 (CA550)",
+                    "type": "校准仪设置",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "0.0V / 0.0A / 关闭输出",
+                    "device": "1# AFE 电源 (AFE 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "0.0V / 0.0A / 关闭输出",
+                    "device": "2# AFE 电源 (AFE 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "0.0V / 0.0A / 关闭输出",
+                    "device": "3# AFE 电源 (AFE 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
             "name": "BMS板工作唤醒",
             "mode": "字符串比对",
-            "min": "PASS",
+            "min": "OK",
             "max": "--",
             "strategy": "任何NG停止",
             "standard_type": "字符串",
@@ -111,7 +213,7 @@
         {
             "name": "CAN2通讯测试",
             "mode": "字符串比对",
-            "min": "PASS",
+            "min": "OK",
             "max": "--",
             "strategy": "NG继续",
             "standard_type": "字符串",
@@ -173,7 +275,7 @@
         {
             "name": "CAN4通讯测试",
             "mode": "字符串比对",
-            "min": "PASS",
+            "min": "OK",
             "max": "--",
             "strategy": "NG继续",
             "standard_type": "字符串",
@@ -235,7 +337,7 @@
         {
             "name": "CAN1通讯测试",
             "mode": "字符串比对",
-            "min": "PASS",
+            "min": "OK",
             "max": "--",
             "strategy": "NG继续",
             "standard_type": "字符串",
@@ -1001,19 +1103,19 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (500ms)",
+                    "name": "等待 (Wait)-固定延时 (1000ms)",
                     "action": "固定延时",
-                    "params": "500ms",
+                    "params": "1000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "3.5HEOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / PARAM1:42 / PARAM2:VALUE / ADC:42 / MODE:VALUE / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / PARAM1:41 / PARAM2:VALUE / ADC:41 / MODE:VALUE / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x06 ADC读取",
-                    "params": "EOL:0x06 ADC读取 / PARAM1:42 / PARAM2:VALUE / ADC:42 / MODE:VALUE / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x06 ADC读取 / PARAM1:41 / PARAM2:VALUE / ADC:41 / MODE:VALUE / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -3958,7 +4060,7 @@
                     "type": "3.5HEOL协议",
                     "is_judgment": false,
                     "sync_exec": false,
-                    "fail_strategy": "失败停止"
+                    "fail_strategy": "重试3次"
                 },
                 {
                     "name": "变量操作 (Variable)-读取变量 (VAR:正极绝缘)",
@@ -4122,7 +4224,7 @@
                     "type": "3.5HEOL协议",
                     "is_judgment": false,
                     "sync_exec": false,
-                    "fail_strategy": "失败停止"
+                    "fail_strategy": "重试3次"
                 },
                 {
                     "name": "变量操作 (Variable)-读取变量 (VAR:正极绝缘)",
@@ -4527,6 +4629,16 @@
                     "fail_strategy": "失败停止"
                 },
                 {
+                    "name": "3.5HEOL协议-0x04 GPIO控制读取 (EOL:0x04 GPIO控制读取 / PARAM1:0x12 / PARAM2:WRITE_HIGH / INDEX:0x12 / LEVEL:WRITE_HIGH / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "action": "0x04 GPIO控制读取",
+                    "params": "EOL:0x04 GPIO控制读取 / PARAM1:0x12 / PARAM2:WRITE_HIGH / INDEX:0x12 / LEVEL:WRITE_HIGH / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
                     "name": "等待 (Wait)-固定延时 (3000ms)",
                     "action": "固定延时",
                     "params": "3000ms",
@@ -4552,6 +4664,16 @@
                     "params": "18",
                     "device": "老化功能板继电器 (Aging Board)",
                     "type": "继电器控制",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "3.5HEOL协议-0x04 GPIO控制读取 (EOL:0x04 GPIO控制读取 / PARAM1:0x12 / PARAM2:WRITE_LOW / INDEX:0x12 / LEVEL:WRITE_LOW / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "action": "0x04 GPIO控制读取",
+                    "params": "EOL:0x04 GPIO控制读取 / PARAM1:0x12 / PARAM2:WRITE_LOW / INDEX:0x12 / LEVEL:WRITE_LOW / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
                     "is_judgment": false,
                     "sync_exec": false,
                     "fail_strategy": "失败停止"
@@ -4631,6 +4753,16 @@
                     "fail_strategy": "失败停止"
                 },
                 {
+                    "name": "3.5HEOL协议-0x04 GPIO控制读取 (EOL:0x04 GPIO控制读取 / PARAM1:0x13 / PARAM2:WRITE_HIGH / INDEX:0x13 / LEVEL:WRITE_HIGH / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "action": "0x04 GPIO控制读取",
+                    "params": "EOL:0x04 GPIO控制读取 / PARAM1:0x13 / PARAM2:WRITE_HIGH / INDEX:0x13 / LEVEL:WRITE_HIGH / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
                     "name": "等待 (Wait)-固定延时 (3000ms)",
                     "action": "固定延时",
                     "params": "3000ms",
@@ -4656,6 +4788,16 @@
                     "params": "18,19",
                     "device": "老化功能板继电器 (Aging Board)",
                     "type": "继电器控制",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "3.5HEOL协议-0x04 GPIO控制读取 (EOL:0x04 GPIO控制读取 / PARAM1:0x13 / PARAM2:WRITE_LOW / INDEX:0x13 / LEVEL:WRITE_LOW / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "action": "0x04 GPIO控制读取",
+                    "params": "EOL:0x04 GPIO控制读取 / PARAM1:0x13 / PARAM2:WRITE_LOW / INDEX:0x13 / LEVEL:WRITE_LOW / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
                     "is_judgment": false,
                     "sync_exec": false,
                     "fail_strategy": "失败停止"
@@ -5242,12 +5384,12 @@
         },
         {
             "name": "节点配置-主机MCU重启",
-            "mode": "范围判定",
-            "min": "--",
+            "mode": "字符串比对",
+            "min": "OK",
             "max": "--",
-            "strategy": "任何NG停止",
-            "standard_type": "数值",
-            "retry_count": "不复测",
+            "strategy": "NG继续",
+            "standard_type": "字符串",
+            "retry_count": "复测3次",
             "unit": "NULL",
             "sub_steps": [
                 {
@@ -5256,7 +5398,7 @@
                     "params": "ID:0x7F0 / DATA:10 FF 12 00 00 00 00 00 / TYPE:0 / DLC:8 / CH:0",
                     "device": "CAN 交互",
                     "type": "CAN发送",
-                    "is_judgment": true,
+                    "is_judgment": false,
                     "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
@@ -5306,7 +5448,7 @@
                     "params": "5000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
-                    "is_judgment": false,
+                    "is_judgment": true,
                     "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
@@ -10346,11 +10488,11 @@
         },
         {
             "name": "#节点配置-主机MCU重启",
-            "mode": "范围判定",
-            "min": "--",
+            "mode": "字符串比对",
+            "min": "OK",
             "max": "--",
             "strategy": "任何NG停止",
-            "standard_type": "数值",
+            "standard_type": "字符串",
             "retry_count": "不复测",
             "unit": "NULL",
             "sub_steps": [
@@ -10360,8 +10502,8 @@
                     "params": "ID:0x7F0 / DATA:10 FF 12 00 00 00 00 00 / TYPE:0 / DLC:8 / CH:0",
                     "device": "CAN 交互",
                     "type": "CAN发送",
-                    "is_judgment": true,
-                    "sync_exec": null,
+                    "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -10410,8 +10552,8 @@
                     "params": "5000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
-                    "is_judgment": false,
-                    "sync_exec": null,
+                    "is_judgment": true,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]

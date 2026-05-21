@@ -45,7 +45,7 @@ class SimulatorTab(QWidget):
         net_layout = QHBoxLayout()
         net_layout.addWidget(QLabel("设备:"))
         self.combo_unit = QComboBox()
-        self.combo_unit.addItems(["设备 #1 (CH 1-18)", "设备 #2 (CH 19-36)", "设备 #3 (CH 37-54)", "设备 #4 (CH 55-60)"])
+        self.combo_unit.addItems(["设备 #1 (CH 1-18)", "设备 #2 (CH 19-36)", "设备 #3 (CH 37-54)"])
         self.combo_unit.currentIndexChanged.connect(self.update_net_info)
         net_layout.addWidget(self.combo_unit)
         
