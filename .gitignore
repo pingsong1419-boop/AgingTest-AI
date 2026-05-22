@@ -13,3 +13,5 @@ env/
 *.pen
 scratch/
 dist/
+build/
+*.spec
