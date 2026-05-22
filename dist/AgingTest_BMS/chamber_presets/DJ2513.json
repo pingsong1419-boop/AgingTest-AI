@@ -1,0 +1,25 @@
+{
+    "steps": [
+        {
+            "name": "BMS带载工作",
+            "temp": 25.0,
+            "hours": 0.2,
+            "timeout": 0.0,
+            "status": "等待中"
+        },
+        {
+            "name": "启动多通道测试",
+            "temp": 25.0,
+            "hours": 0.5,
+            "timeout": 0.0,
+            "status": "等待中"
+        },
+        {
+            "name": "老化完成取料",
+            "temp": 25.0,
+            "hours": 0.1,
+            "timeout": 0.0,
+            "status": "等待中"
+        }
+    ]
+}

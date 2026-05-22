@@ -414,7 +414,7 @@ class DBManager:
                     <td class="text-center">{item[2] if item[2] is not None else "--"}</td>
                     <td class="text-center">{item[3] if item[3] is not None else "--"}</td>
                     <td class="text-center"><span class="result-badge {res_class}">{item[4]}</span></td>
-                    <td class="text-center">{item[5]:.2f if item[5] is not None else 0.00}</td>
+                    <td class="text-center">{f"{item[5]:.2f}" if item[5] is not None else "0.00"}</td>
                     <td>{item[6]}</td>
                 </tr>""")
                     

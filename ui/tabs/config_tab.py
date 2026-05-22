@@ -1089,7 +1089,15 @@ class ConfigTab(QWidget):
             font = QFont()
             font.setBold(True)
             item.setFont(0, font)
-            self.step_tree.addTopLevelItem(item)
+            
+            current = self.step_tree.currentItem()
+            if current:
+                top_level_item = current if not current.parent() else current.parent()
+                idx = self.step_tree.indexOfTopLevelItem(top_level_item)
+                self.step_tree.insertTopLevelItem(idx + 1, item)
+            else:
+                self.step_tree.addTopLevelItem(item)
+                
             self.step_tree.setCurrentItem(item)
 
     def add_step(self):

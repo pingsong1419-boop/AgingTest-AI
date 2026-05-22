@@ -37,7 +37,7 @@ class ChamberTab(QWidget):
         self.timer.start(1000)
 
         # 默认加载高温老化方案
-        self.load_preset_profile("高温老化方案")
+        # self.load_preset_profile("高温老化方案")
 
         # 同步初始联机状态，防止启动已连上但 UI 显示离线
         if self.chamber and self.chamber.is_connected:
