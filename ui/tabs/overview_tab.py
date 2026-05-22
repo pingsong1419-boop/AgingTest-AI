@@ -186,6 +186,12 @@ class OverviewTab(QWidget):
         
         main_layout.addLayout(control_panel)
         
+        # 定时器：轮询测试引擎状态以更新按钮可用性
+        from PySide6.QtCore import QTimer
+        self.status_timer = QTimer(self)
+        self.status_timer.timeout.connect(self._update_buttons_state)
+        self.status_timer.start(500)
+        
         # 连接引擎信号
         if self.engine:
             self.engine.barrier_status_changed.connect(self.update_sync_status)
@@ -618,10 +624,33 @@ class OverviewTab(QWidget):
         if 0 <= idx < len(self.channel_widgets):
             widget = self.channel_widgets[idx]
             if is_waiting:
-                widget.set_status("WAIT_SYNC", "#FFD700") # 金黄色
+                widget.set_status("等待同步", "#FFD700") # 金黄色
             else:
                 # 恢复为测试中状态
-                widget.set_status("TESTING", "green")
+                if self.engine and channel_id in self.engine.workers:
+                    widget.set_status("测试中", "#28A745")
+
+    def _update_buttons_state(self):
+        """如果引擎中有通道正在测试，则禁用部分操作按钮"""
+        is_testing = False
+        if self.engine and len(self.engine.workers) > 0:
+            is_testing = True
+            
+        self.btn_apply.setEnabled(not is_testing)
+        self.btn_start.setEnabled(not is_testing)
+        self.btn_run_test.setEnabled(not is_testing)
+        
+        # 灰色样式以便更明显地看出被禁用
+        disabled_style = "background-color: #444444; color: #888888; border-color: #333333;"
+        
+        if is_testing:
+            self.btn_apply.setStyleSheet(disabled_style)
+            self.btn_start.setStyleSheet(disabled_style)
+            self.btn_run_test.setStyleSheet(disabled_style)
+        else:
+            self.btn_apply.setStyleSheet("background-color: #007BFF; border-color: #0056b3;")
+            self.btn_start.setStyleSheet("background-color: #17A2B8; border-color: #117A8B;")
+            self.btn_run_test.setStyleSheet("background-color: #28A745; border-color: #1e7e34;")
             
     def update_recipes(self, recipe_list):
         """当别的界面新建了配方后，同步更新到本界面的下拉框里"""

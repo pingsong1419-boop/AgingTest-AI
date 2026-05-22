@@ -381,6 +381,12 @@ class StepDialog(QDialog):
         eol_form.addRow(self.eol_param1_label, self.eol_param1)
         eol_form.addRow(self.eol_param3_label, self.eol_param3)
         eol_form.addRow(self.eol_param4_label, self.eol_param4)
+        
+        self.eol_diff_ambient = QCheckBox("计算与环境温度差")
+        self.eol_diff_ambient.setStyleSheet("color: #00E5FF;")
+        self.eol_diff_ambient.setVisible(False)
+        eol_form.addRow("", self.eol_diff_ambient)
+        
         eol_form.addRow("超时时间:", self.eol_timeout)
         eol_form.addRow(self.eol_hv1_label, self.eol_hv1)
         eol_form.addRow(self.eol_r0_label, self.eol_r0)
@@ -429,8 +435,8 @@ class StepDialog(QDialog):
         self.page_variable = QWidget()
         var_form = QFormLayout(self.page_variable)
         self.var_name = QComboBox()
-        self.var_name.setEditable(True)
-        self.var_name.addItems(["正极绝缘", "负极绝缘"])
+        self.var_name.setEditable(False)
+        self.var_name.addItems(["正极绝缘", "负极绝缘", "环境温度"])
         var_form.addRow("变量名称:", self.var_name)
         self.param_stack.addWidget(self.page_variable) # 9
 
@@ -475,6 +481,7 @@ class StepDialog(QDialog):
         self.device_combo.currentIndexChanged.connect(self.on_device_changed)
         self.action_combo.currentIndexChanged.connect(self.on_action_changed)
         self.eol_op.currentTextChanged.connect(self.on_eol_op_changed)
+        self.var_name.currentTextChanged.connect(self.on_var_changed)
         
         # 初始状态：如果有传入数据则执行加载，否则执行默认初始化
         if step_data:
@@ -551,13 +558,16 @@ class StepDialog(QDialog):
         self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
         self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
         
-        # 默认隐藏参数3和参数4
+        # 默认隐藏参数3和参数4及其他特殊选项
         if hasattr(self, "eol_param3"):
             self.eol_param3.setVisible(False)
             self.eol_param3_label.setVisible(False)
         if hasattr(self, "eol_param4"):
             self.eol_param4.setVisible(False)
             self.eol_param4_label.setVisible(False)
+        if hasattr(self, "eol_diff_ambient"):
+            self.eol_diff_ambient.setVisible(False)
+            self.eol_diff_ambient.setChecked(False)
 
         # 默认隐藏绝缘测试专用参数
         if hasattr(self, "eol_hv1"):
@@ -638,6 +648,8 @@ class StepDialog(QDialog):
                 ("5 FPCB_NTC", "FPCB_NTC")
             ])
             self.eol_args.setPlaceholderText("无需额外参数")
+            if hasattr(self, "eol_diff_ambient"):
+                self.eol_diff_ambient.setVisible(True)
         elif "0x08" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "模式参数:", [("0x01 占空比", "0x01"), ("0x02 频率", "0x02"), ("0x03 阻抗", "0x03"), ("0x04 脉宽", "0x04")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "索引:", [("sig1", "0"), ("sig3", "1")])
@@ -853,6 +865,9 @@ class StepDialog(QDialog):
                             self.eol_param3.setValue(int(float(kv["PARAM3"])))
                         if "PARAM4" in kv:
                             self.eol_param4.setValue(int(float(kv["PARAM4"])))
+                        if "DIFF_AMBIENT" in kv:
+                            if hasattr(self, "eol_diff_ambient"):
+                                self.eol_diff_ambient.setChecked(kv["DIFF_AMBIENT"] == "1")
                         
                     # 2. 兼容映射还原（包括 ADC, MODE, STATE, INDEX, LEVEL, PWM, NTC, HALL, OP, VAL 等历史字段）
                     p1_keys = ["ADC", "STATE", "INDEX", "PWM", "NTC", "HALL", "OP", "GPIO"]
@@ -875,7 +890,15 @@ class StepDialog(QDialog):
             print(f"Error in _load_data: {e}")
         finally:
             self.is_loading = False
+            self.on_var_changed()
             self.update()
+
+    def on_var_changed(self):
+        if "变量操作" in self.device_combo.currentText() and self.var_name.currentText() == "环境温度":
+            self.cb_sync.setChecked(True)
+            self.cb_sync.setEnabled(False)
+        elif not self.is_loading and "变量操作" in self.device_combo.currentText():
+            self.cb_sync.setEnabled(True)
 
     def on_category_changed(self, index=0):
         category = self.category_combo.currentText()
@@ -1052,6 +1075,8 @@ class StepDialog(QDialog):
             self.param_stack.setCurrentIndex(3)
         else: # 全局操作等
             self.param_stack.setCurrentIndex(-1) # 隐藏参数区
+            
+        self.on_var_changed()
 
     def get_data(self):
         device = self.device_combo.currentText()
@@ -1120,6 +1145,8 @@ class StepDialog(QDialog):
                 if "0x07" in eol_action:
                     params.append(f"PARAM3:{self.eol_param3.value()}")
                     params.append(f"PARAM4:{self.eol_param4.value()}")
+                if "0x10" in eol_action and hasattr(self, "eol_diff_ambient") and self.eol_diff_ambient.isChecked():
+                    params.append(f"DIFF_AMBIENT:1")
                 if args_val: params.append(f"ARGS:{args_val}")
                 
                 # 兼容老版本历史配方的字段格式，额外写入特定键名，确保老引擎读取无误

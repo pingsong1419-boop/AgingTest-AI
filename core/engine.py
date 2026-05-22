@@ -268,6 +268,15 @@ class ChannelWorker(QObject):
         if result.success and eol_cfg["op_name"] == "绝缘测试":
             self.variables["正极绝缘"] = getattr(result, "rp", 0.0)
             self.variables["负极绝缘"] = getattr(result, "rn", 0.0)
+        elif result.success and "0x10" in eol_cfg["op_name"] and eol_cfg["kwargs"].get("DIFF_AMBIENT") == "1":
+            try:
+                ambient = mgr.chamber.data_store.get("VD720", 25.0) if (mgr and mgr.chamber) else 25.0
+                f_val = float(result_value)
+                result_value = f"{f_val - ambient:.2f}"
+                hw_logger(f"[NTC温差计算] NTC读取值: {f_val} ℃, 环境温度: {ambient} ℃, 温差: {result_value} ℃")
+            except Exception as e:
+                hw_logger(f"[NTC温差计算] 异常: {e}")
+
         hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
         return result.success, result_value
 
@@ -585,7 +594,16 @@ class ChannelWorker(QObject):
                 params_str = params.get("params", "")
                 kv = self._parse_key_values(params_str)
                 var_name = kv.get("VAR", "").strip()
-                val = self.variables.get(var_name, None)
+                
+                # 新增逻辑：读取环境温度时直接从老化箱获取实时温度
+                if var_name == "环境温度":
+                    if mgr and mgr.chamber:
+                        val = mgr.chamber.data_store.get("VD720", 25.0)
+                    else:
+                        val = 25.0
+                else:
+                    val = self.variables.get(var_name, None)
+                    
                 if val is not None:
                     if isinstance(val, (int, float)):
                         result_value = f"{val:.1f}kΩ" if "绝缘" in var_name else f"{val:.2f}"

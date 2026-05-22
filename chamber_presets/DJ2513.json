@@ -5,19 +5,19 @@
             "temp": 25.0,
             "hours": 0.2,
             "timeout": 0.0,
-            "status": "已完成"
+            "status": "等待中"
         },
         {
             "name": "启动多通道测试",
             "temp": 25.0,
-            "hours": 0.2,
+            "hours": 0.5,
             "timeout": 0.0,
             "status": "等待中"
         },
         {
             "name": "老化完成取料",
             "temp": 25.0,
-            "hours": 0.0,
+            "hours": 0.1,
             "timeout": 0.0,
             "status": "等待中"
         }

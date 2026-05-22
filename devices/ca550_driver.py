@@ -20,6 +20,11 @@ class CA550Controller:
         
         self.ser = None
         self.is_connected = False
+        
+        import threading
+        self._lock = threading.Lock()
+        self._last_connect_attempt = 0.0
+        self._cooldown_time = 5.0  # 5秒冷却时间
 
     def connect(self) -> bool:
         """建立串口连接并执行握手验证"""
@@ -27,82 +32,106 @@ class CA550Controller:
             logger.warning("CA550 串口未配置，跳过连接。")
             return False
             
-        try:
-            # 物理层连接
-            self.ser = serial.Serial(
-                port=self.port,
-                baudrate=self.baudrate,
-                bytesize=self.bytesize,
-                parity=self.parity,
-                stopbits=self.stopbits,
-                timeout=1.0  # 稍微缩短超时
-            )
-            # 激活 DTR/RTS 信号
-            self.ser.dtr = True
-            self.ser.rts = True
+        import time
+        with self._lock:
+            # 连接冷却机制：如果刚尝试过且失败，短时间内不再反复尝试，避免UI卡死
+            if time.time() - self._last_connect_attempt < self._cooldown_time:
+                return False
+                
+            self._last_connect_attempt = time.time()
             
-            self.is_connected = self.ser.is_open
-            if self.is_connected:
-                # 强制等待硬件就绪并执行握手验证
-                time.sleep(0.3)
-                idn = self.get_idn()
-                if idn and "ERROR" not in idn:
-                    logger.info(f"成功连接并验证 CA550: {self.port} (IDN: {idn})")
-                    return True
-                else:
-                    self.ser.close()
-                    self.is_connected = False
-                    logger.error(f"CA550 握手失败 (无响应或响应错误): {self.port}")
-                    return False
-            return False
-        except Exception as e:
-            self.is_connected = False
-            logger.error(f"CA550 连接异常: {e}")
-            return False
+            try:
+                # 物理层连接
+                self.ser = serial.Serial(
+                    port=self.port,
+                    baudrate=self.baudrate,
+                    bytesize=self.bytesize,
+                    parity=self.parity,
+                    stopbits=self.stopbits,
+                    timeout=0.5  # 进一步缩短超时，避免长时间阻塞
+                )
+                # 激活 DTR/RTS 信号
+                self.ser.dtr = True
+                self.ser.rts = True
+                
+                self.is_connected = self.ser.is_open
+                if self.is_connected:
+                    # 强制等待硬件就绪并执行握手验证
+                    time.sleep(0.3)
+                    
+                    # 内部发送指令，避免死锁
+                    self.ser.reset_input_buffer()
+                    self.ser.write(b"*IDN?\r\n")
+                    self.ser.flush()
+                    time.sleep(0.08)
+                    response = self.ser.readline().decode("ascii", errors="ignore").strip()
+                    if not response:
+                        time.sleep(0.1)
+                        response = self.ser.read_all().decode("ascii", errors="ignore").strip()
+                    
+                    idn = response
+                    
+                    if idn and "ERROR" not in idn:
+                        logger.info(f"成功连接并验证 CA550: {self.port} (IDN: {idn})")
+                        self._last_connect_attempt = 0.0 # 成功则重置冷却
+                        return True
+                    else:
+                        self.ser.close()
+                        self.is_connected = False
+                        logger.error(f"CA550 握手失败 (无响应或响应错误): {self.port}")
+                        return False
+                return False
+            except Exception as e:
+                self.is_connected = False
+                logger.error(f"CA550 连接异常: {e}")
+                return False
 
     def disconnect(self):
         """断开连接"""
-        if self.ser and self.ser.is_open:
-            self.ser.close()
-        self.is_connected = False
-        logger.info(f"已断开物理连接: {self.port}")
+        with self._lock:
+            if self.ser and self.ser.is_open:
+                self.ser.close()
+            self.is_connected = False
+            logger.info(f"已断开物理连接: {self.port}")
 
     def _send_command(self, cmd: str) -> str:
-        if not self.is_connected:
-            return "ERROR: Not Connected"
-        
-        try:
-            self.ser.reset_input_buffer()
-            # 根据参考项目建议，使用 \r\n (CRLF) 结束符
-            full_cmd = f"{cmd}\r\n".encode("ascii")
-            self.ser.write(full_cmd)
-            self.ser.flush()
+        with self._lock:
+            if not self.is_connected:
+                return "ERROR: Not Connected"
             
-            # 给予响应缓冲区填充时间
-            time.sleep(0.08)
-            response = self.ser.readline().decode("ascii", errors="ignore").strip()
-            
-            # 二次读取尝试
-            if not response:
-                time.sleep(0.1)
-                response = self.ser.read_all().decode("ascii", errors="ignore").strip()
-            
-            if not response:
-                return ""
-            
-            # 更加通用和健壮的回显与头部剥离逻辑
-            cleaned_cmd = cmd.replace("?", "").strip()
-            if response.startswith(cleaned_cmd):
-                response = response[len(cleaned_cmd):].strip()
-                if response.startswith("OD"):
+            try:
+                self.ser.reset_input_buffer()
+                # 根据参考项目建议，使用 \r\n (CRLF) 结束符
+                full_cmd = f"{cmd}\r\n".encode("ascii")
+                self.ser.write(full_cmd)
+                self.ser.flush()
+                
+                # 给予响应缓冲区填充时间
+                time.sleep(0.08)
+                response = self.ser.readline().decode("ascii", errors="ignore").strip()
+                
+                # 二次读取尝试
+                if not response:
+                    time.sleep(0.1)
+                    response = self.ser.read_all().decode("ascii", errors="ignore").strip()
+                
+                if not response:
+                    return ""
+                
+                # 更加通用和健壮的回显与头部剥离逻辑
+                cleaned_cmd = cmd.replace("?", "").strip()
+                if response.startswith(cleaned_cmd):
+                    response = response[len(cleaned_cmd):].strip()
+                    if response.startswith("OD"):
+                        response = response[2:].strip()
+                elif response.startswith("OD"):
                     response = response[2:].strip()
-            elif response.startswith("OD"):
-                response = response[2:].strip()
-            
-            return response.strip()
-        except Exception as e:
-            logger.error(f"CA550 通讯错误: {e}")
-            return f"ERROR: {e}"
+                
+                return response.strip()
+            except Exception as e:
+                logger.error(f"CA550 通讯错误: {e}")
+                self.is_connected = False # 发生异常时断开连接，以便重连
+                return f"ERROR: {e}"
 
     # --- 指令集 ---
     def get_idn(self): return self._send_command("*IDN?")

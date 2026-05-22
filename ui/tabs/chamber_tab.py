@@ -495,6 +495,30 @@ class ChamberTab(QWidget):
         
         # 自动触发一次 PLC 探测连接
         self.connect_device()
+        
+        # 定时器：监控是否有配方正在测试，如果有，则禁用启动按钮
+        self.status_timer = QTimer(self)
+        self.status_timer.timeout.connect(self._update_buttons_state)
+        self.status_timer.start(500)
+
+    def _update_buttons_state(self):
+        """如果引擎中有通道正在测试，则禁用启动老化工步等按钮"""
+        is_testing = False
+        overview = self.get_overview_tab()
+        if overview and overview.engine and len(overview.engine.workers) > 0:
+            is_testing = True
+            
+        self.btn_run_seq.setEnabled(not is_testing)
+        self.btn_bypass_run.setEnabled(not is_testing)
+        
+        disabled_style = "background-color: #444444; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;"
+        
+        if is_testing:
+            self.btn_run_seq.setStyleSheet(disabled_style)
+            self.btn_bypass_run.setStyleSheet(disabled_style)
+        else:
+            self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px;")
+            self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
 
     def get_overview_tab(self):
         parent = self.parent()
