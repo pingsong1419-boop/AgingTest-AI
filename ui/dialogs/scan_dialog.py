@@ -451,5 +451,5 @@ class ScanDialog(QDialog):
         import subprocess
         def run():
             cmd = f"Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.Rate = 4; $synth.Speak('{text}')"
-            subprocess.run(["powershell", "-Command", cmd], capture_output=True)
+            subprocess.run(["powershell", "-Command", cmd], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
         threading.Thread(target=run, daemon=True).start()

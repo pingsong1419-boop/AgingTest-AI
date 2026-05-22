@@ -111,15 +111,31 @@ class ChannelWorker(QObject):
         if self.engine:
             self.engine.release_resource("ca550", self.channel_id)
         self.log_message.emit(self.channel_id, "[!] 收到停止指令")
+        
+        # 立即关闭相关硬件输出
+        try:
+            if self.device_manager:
+                sim, ch = self.device_manager._get_sim_and_ch(self.channel_id)
+                if sim:
+                    sim.output_control(ch, False)
+                board = self.device_manager.boards.get(self.channel_id)
+                if board:
+                    board.relays.all_off()
+        except Exception:
+            pass
+
         if self.db_manager and self.test_id != -1:
             self.db_manager.finish_test(self.test_id, "STOPPED")
             self.test_id = -1
 
-    def resume_from_sync(self):
+    def resume_from_sync(self, advance=True):
         if self.is_waiting_for_sync:
             self.is_waiting_for_sync = False
-            self.log_message.emit(self.channel_id, "[*] 资源/同步释放，继续执行下一步")
-            self.on_sub_step_complete()
+            self.log_message.emit(self.channel_id, "[*] 资源/同步释放，继续执行" + ("下一步" if advance else "当前步"))
+            if advance:
+                self.on_sub_step_complete()
+            else:
+                self.run_next_sub_step()
 
     def run_next_step(self):
         if not self.is_running or self.is_waiting_for_sync:
@@ -698,6 +714,12 @@ class ChannelWorker(QObject):
 
     def on_step_complete(self, is_pass: bool = True):
         if not self.is_running: return
+        
+        # 强制在每次工步结束时释放可能持有的 CA550 锁，防止子工步提前报错跳出导致的死锁
+        if self.engine:
+            try: self.engine.release_resource("ca550", self.channel_id)
+            except: pass
+            
         step = self.steps[self.current_step_index]
         
         # 智能提取层：优先提取在配方中被勾选了“结果输出并参与判定(is_judgment)”的有效物理量结果
@@ -851,9 +873,19 @@ class TestEngine(QObject):
         self.sync_groups = {}
         self.resource_locks = {"ca550": None}
         self.resource_queues = {"ca550": []}
+        self.batch_starting = False
+
+    def begin_batch_start(self):
+        with self._lock: self.batch_starting = True
+        
+    def end_batch_start(self):
+        with self._lock: 
+            self.batch_starting = False
+            self._check_and_release_barrier()
 
     def request_resource(self, name, cid) -> bool:
         with self._lock:
+            if self.resource_locks.get(name) == cid: return True
             if self.resource_locks.get(name) is None: self.resource_locks[name] = cid; return True
             if cid not in self.resource_queues[name]: self.resource_queues[name].append(cid)
             return False
@@ -865,7 +897,7 @@ class TestEngine(QObject):
                 if self.resource_queues[name]:
                     next_ch = self.resource_queues[name].pop(0)
                     self.resource_locks[name] = next_ch
-                    if next_ch in self.workers: self.workers[next_ch].resume_from_sync()
+                    if next_ch in self.workers: self.workers[next_ch].resume_from_sync(advance=False)
 
     def handle_barrier_reached(self, cid, sub_step=None):
         with self._lock:
@@ -877,7 +909,7 @@ class TestEngine(QObject):
     def _check_and_release_barrier(self):
         """BUG-04修复: 按同步组分组判定，防止不同组通道互相绑定导致死锁"""
         with self._lock:
-            if not self.sync_barrier_channels:
+            if not self.sync_barrier_channels or self.batch_starting:
                 return
 
             # 将屏障中的通道按其同步组分组
@@ -1014,7 +1046,6 @@ class TestEngine(QObject):
                 try: w.test_finished.disconnect()
                 except: pass
                 w.stop(); t.quit()
-                if QThread.currentThread() != t: t.wait(500)
                 del self.workers[cid]; del self.threads[cid]; self.zombie_threads.append(t)
                 if cid in self.sync_groups: del self.sync_groups[cid]
                 t.finished.connect(t.deleteLater); t.finished.connect(lambda tt=t: self._cleanup_zombie(tt)); w.deleteLater()

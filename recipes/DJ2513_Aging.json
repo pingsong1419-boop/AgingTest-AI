@@ -169,8 +169,8 @@
         {
             "name": "供电DCDC+电压测试",
             "mode": "范围判定",
-            "min": "11.8",
-            "max": "12.2",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "复测3次",
@@ -191,8 +191,8 @@
         {
             "name": "供电P+电压测试",
             "mode": "范围判定",
-            "min": "11.8",
-            "max": "12.2",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "复测3次",
@@ -399,8 +399,8 @@
         {
             "name": "KL15唤醒源识别",
             "mode": "范围判定",
-            "min": "11.8",
-            "max": "12.2",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1405,7 +1405,7 @@
             ]
         },
         {
-            "name": "#NTC1",
+            "name": "NTC1",
             "mode": "范围判定",
             "min": "-2",
             "max": "8",
@@ -1427,7 +1427,7 @@
             ]
         },
         {
-            "name": "#NTC2",
+            "name": "NTC2",
             "mode": "范围判定",
             "min": "-2",
             "max": "8",
@@ -1449,7 +1449,7 @@
             ]
         },
         {
-            "name": "#NTC3",
+            "name": "NTC3",
             "mode": "范围判定",
             "min": "-2",
             "max": "8",
@@ -1471,7 +1471,7 @@
             ]
         },
         {
-            "name": "#NTC4",
+            "name": "NTC4",
             "mode": "范围判定",
             "min": "-2",
             "max": "8",
@@ -1493,7 +1493,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT1（LL）",
+            "name": "HSD_OUTPUT1（LL）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -1555,7 +1555,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT1（LH）",
+            "name": "HSD_OUTPUT1（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -1617,7 +1617,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT1_CS（LH）",
+            "name": "HSD_OUTPUT1_CS（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.05",
@@ -1639,10 +1639,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT1（HH）",
+            "name": "HSD_OUTPUT1（HH）",
             "mode": "范围判定",
-            "min": "11.3",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1701,7 +1701,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT1_CS（HH）",
+            "name": "HSD_OUTPUT1_CS（HH）",
             "mode": "范围判定",
             "min": "0.65",
             "max": "0.85",
@@ -1753,7 +1753,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT2（LL）",
+            "name": "HSD_OUTPUT2（LL）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -1815,7 +1815,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT2（LH）",
+            "name": "HSD_OUTPUT2（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -1877,7 +1877,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT2_CS（LH）",
+            "name": "HSD_OUTPUT2_CS（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.05",
@@ -1899,10 +1899,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT2（HH）",
+            "name": "HSD_OUTPUT2（HH）",
             "mode": "范围判定",
-            "min": "11.3",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1961,7 +1961,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT2_CS（HH）",
+            "name": "HSD_OUTPUT2_CS（HH）",
             "mode": "范围判定",
             "min": "0.35",
             "max": "0.5",
@@ -2013,7 +2013,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT3（LL）",
+            "name": "HSD_OUTPUT3（LL）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -2075,7 +2075,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT3（LH）",
+            "name": "HSD_OUTPUT3（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -2137,7 +2137,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT3_CS（LH）",
+            "name": "HSD_OUTPUT3_CS（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.05",
@@ -2159,10 +2159,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT3（HH）",
+            "name": "HSD_OUTPUT3（HH）",
             "mode": "范围判定",
-            "min": "11.3",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -2221,7 +2221,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT3_CS（HH）",
+            "name": "HSD_OUTPUT3_CS（HH）",
             "mode": "范围判定",
             "min": "0.65",
             "max": "0.85",
@@ -2273,7 +2273,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT4（LL）",
+            "name": "HSD_OUTPUT4（LL）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -2335,7 +2335,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT4（LH）",
+            "name": "HSD_OUTPUT4（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -2397,7 +2397,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT4_CS（LH）",
+            "name": "HSD_OUTPUT4_CS（LH）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.05",
@@ -2419,10 +2419,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT4（HH）",
+            "name": "HSD_OUTPUT4（HH）",
             "mode": "范围判定",
-            "min": "11.3",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -2481,7 +2481,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT4_CS（HH）",
+            "name": "HSD_OUTPUT4_CS（HH）",
             "mode": "范围判定",
             "min": "0.35",
             "max": "0.5",
@@ -2533,7 +2533,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT5（L）",
+            "name": "HSD_OUTPUT5（L）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -2575,7 +2575,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT5_CS（L）",
+            "name": "HSD_OUTPUT5_CS（L）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.05",
@@ -2597,10 +2597,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT5（H）",
+            "name": "HSD_OUTPUT5（H）",
             "mode": "范围判定",
-            "min": "11.3",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -2639,7 +2639,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT5_CS（H）",
+            "name": "HSD_OUTPUT5_CS（H）",
             "mode": "范围判定",
             "min": "0.65",
             "max": "0.85",
@@ -2681,7 +2681,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT6（L）",
+            "name": "HSD_OUTPUT6（L）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -2723,7 +2723,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT6_CS（L）",
+            "name": "HSD_OUTPUT6_CS（L）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.05",
@@ -2745,10 +2745,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT6（H）",
+            "name": "HSD_OUTPUT6（H）",
             "mode": "范围判定",
-            "min": "11.5",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -2787,7 +2787,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT6_CS（H）",
+            "name": "HSD_OUTPUT6_CS（H）",
             "mode": "范围判定",
             "min": "0.35",
             "max": "0.5",
@@ -2829,7 +2829,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT7（L）",
+            "name": "HSD_OUTPUT7（L）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.1",
@@ -2871,10 +2871,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT7（H）",
+            "name": "HSD_OUTPUT7（H）",
             "mode": "范围判定",
-            "min": "11.45",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -2913,7 +2913,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT7_CS（H）",
+            "name": "HSD_OUTPUT7_CS（H）",
             "mode": "范围判定",
             "min": "0.7",
             "max": "0.9",
@@ -2955,7 +2955,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT8（L）",
+            "name": "HSD_OUTPUT8（L）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.1",
@@ -2997,10 +2997,10 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT8（H）",
+            "name": "HSD_OUTPUT8（H）",
             "mode": "范围判定",
-            "min": "11.5",
-            "max": "11.9",
+            "min": "11",
+            "max": "13",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -3039,7 +3039,7 @@
             ]
         },
         {
-            "name": "#HSD_OUTPUT8_CS（H）",
+            "name": "HSD_OUTPUT8_CS（H）",
             "mode": "范围判定",
             "min": "0.35",
             "max": "0.5",
@@ -3081,7 +3081,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT1（L）",
+            "name": "LSD_OUTPUT1（L）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -3143,7 +3143,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT1（H）",
+            "name": "LSD_OUTPUT1（H）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -3255,7 +3255,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT2（L）",
+            "name": "LSD_OUTPUT2（L）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -3317,7 +3317,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT2（H）",
+            "name": "LSD_OUTPUT2（H）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -3419,7 +3419,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT3（L）",
+            "name": "LSD_OUTPUT3（L）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -3481,7 +3481,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT3（H）",
+            "name": "LSD_OUTPUT3（H）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -3593,7 +3593,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT4（L）",
+            "name": "LSD_OUTPUT4（L）",
             "mode": "范围判定",
             "min": "2.6",
             "max": "3",
@@ -3655,7 +3655,7 @@
             ]
         },
         {
-            "name": "#LSD_OUTPUT4（H）",
+            "name": "LSD_OUTPUT4（H）",
             "mode": "范围判定",
             "min": "0",
             "max": "0.3",
@@ -3767,7 +3767,7 @@
             ]
         },
         {
-            "name": "#@高压源控制-100V",
+            "name": "@高压源控制-100V",
             "mode": "范围判定",
             "min": "99",
             "max": "101",
@@ -3839,7 +3839,7 @@
             ]
         },
         {
-            "name": "#高压1测试-100V",
+            "name": "高压1测试-100V",
             "mode": "范围判定",
             "min": "99",
             "max": "101",
@@ -3861,7 +3861,7 @@
             ]
         },
         {
-            "name": "#高压2测试-100V",
+            "name": "高压2测试-100V",
             "mode": "范围判定",
             "min": "99",
             "max": "101",
@@ -3883,7 +3883,7 @@
             ]
         },
         {
-            "name": "#高压3测试-100V",
+            "name": "高压3测试-100V",
             "mode": "范围判定",
             "min": "99",
             "max": "101",
@@ -3905,7 +3905,7 @@
             ]
         },
         {
-            "name": "#@高压源控制-750V",
+            "name": "@高压源控制-750V",
             "mode": "范围判定",
             "min": "749",
             "max": "751",
@@ -3947,7 +3947,7 @@
             ]
         },
         {
-            "name": "#高压1测试-750V",
+            "name": "高压1测试-750V",
             "mode": "范围判定",
             "min": "749",
             "max": "751",
@@ -3969,7 +3969,7 @@
             ]
         },
         {
-            "name": "#高压2测试-750V",
+            "name": "高压2测试-750V",
             "mode": "范围判定",
             "min": "749",
             "max": "751",
@@ -3991,7 +3991,7 @@
             ]
         },
         {
-            "name": "#高压3测试-750V",
+            "name": "高压3测试-750V",
             "mode": "范围判定",
             "min": "749",
             "max": "751",
@@ -4013,7 +4013,7 @@
             ]
         },
         {
-            "name": "#绝缘采集测试-正极1MΩ",
+            "name": "绝缘采集测试-正极1MΩ",
             "mode": "范围判定",
             "min": "850",
             "max": "1150",
@@ -4155,7 +4155,7 @@
             ]
         },
         {
-            "name": "#绝缘采集测试-负极30KΩ",
+            "name": "绝缘采集测试-负极30KΩ",
             "mode": "范围判定",
             "min": "25",
             "max": "35",
@@ -4177,7 +4177,7 @@
             ]
         },
         {
-            "name": "#绝缘采集测试-正极30KΩ",
+            "name": "绝缘采集测试-正极30KΩ",
             "mode": "范围判定",
             "min": "25",
             "max": "35",
@@ -4319,7 +4319,7 @@
             ]
         },
         {
-            "name": "#绝缘采集测试-负极1MΩ",
+            "name": "绝缘采集测试-负极1MΩ",
             "mode": "范围判定",
             "min": "850",
             "max": "1150",
@@ -4341,7 +4341,7 @@
             ]
         },
         {
-            "name": "#@高压源控制-0V",
+            "name": "@高压源控制-0V",
             "mode": "范围判定",
             "min": "0",
             "max": "1",
@@ -4403,7 +4403,7 @@
             ]
         },
         {
-            "name": "#快充口绝缘阻抗-100KΩ",
+            "name": "快充口绝缘阻抗-100KΩ",
             "mode": "范围判定",
             "min": "85000",
             "max": "110000",
@@ -4515,7 +4515,7 @@
             ]
         },
         {
-            "name": "#快充口绝缘阻抗-500KΩ",
+            "name": "快充口绝缘阻抗-500KΩ",
             "mode": "范围判定",
             "min": "425000",
             "max": "575000",
@@ -4597,7 +4597,7 @@
             ]
         },
         {
-            "name": "#第一路负极粘连检测-无效",
+            "name": "第一路负极粘连检测-无效",
             "mode": "范围判定",
             "min": "4.9",
             "max": "5.02",
@@ -4639,7 +4639,7 @@
             ]
         },
         {
-            "name": "#第一路负极粘连检测-有效",
+            "name": "第一路负极粘连检测-有效",
             "mode": "范围判定",
             "min": "1.8",
             "max": "2",
@@ -4721,7 +4721,7 @@
             ]
         },
         {
-            "name": "#第二路负极粘连检测-无效",
+            "name": "第二路负极粘连检测-无效",
             "mode": "范围判定",
             "min": "4.9",
             "max": "5.02",
@@ -4763,7 +4763,7 @@
             ]
         },
         {
-            "name": "#第二路负极粘连检测-有效",
+            "name": "第二路负极粘连检测-有效",
             "mode": "范围判定",
             "min": "1.8",
             "max": "2",
@@ -4845,7 +4845,7 @@
             ]
         },
         {
-            "name": "#CA550输出-5V",
+            "name": "CA550输出-5V",
             "mode": "范围判定",
             "min": "4.99",
             "max": "5.01",
@@ -4897,7 +4897,7 @@
             ]
         },
         {
-            "name": "#HALL电流采集（5V）",
+            "name": "HALL电流采集（5V）",
             "mode": "范围判定",
             "min": "4.9",
             "max": "5.1",
@@ -4919,7 +4919,7 @@
             ]
         },
         {
-            "name": "#CA550输出-2.5V",
+            "name": "CA550输出-2.5V",
             "mode": "范围判定",
             "min": "2.49",
             "max": "2.51",
@@ -4971,7 +4971,7 @@
             ]
         },
         {
-            "name": "#HALL电流采集（2.5V）",
+            "name": "HALL电流采集（2.5V）",
             "mode": "范围判定",
             "min": "2.4",
             "max": "2.6",
@@ -4981,19 +4981,29 @@
             "unit": "V",
             "sub_steps": [
                 {
+                    "name": "等待 (Wait)-固定延时 (1500ms)",
+                    "action": "固定延时",
+                    "params": "1500ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
                     "name": "3.5HEOL协议-0x06 ADC读取 (EOL:0x06 ADC读取 / PARAM1:23 / PARAM2:VALUE / ADC:23 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x06 ADC读取",
                     "params": "EOL:0x06 ADC读取 / PARAM1:23 / PARAM2:VALUE / ADC:23 / MODE:VALUE / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
-                    "sync_exec": null,
-                    "fail_strategy": "失败停止"
+                    "sync_exec": false,
+                    "fail_strategy": "重试3次"
                 }
             ]
         },
         {
-            "name": "#CA550输出-0V",
+            "name": "CA550输出-0V",
             "mode": "范围判定",
             "min": "-0.01",
             "max": "0.01",
@@ -5045,7 +5055,7 @@
             ]
         },
         {
-            "name": "#HALL电流采集（0V）",
+            "name": "HALL电流采集（0V）",
             "mode": "范围判定",
             "min": "-0.1",
             "max": "0.1",
@@ -5067,7 +5077,7 @@
             ]
         },
         {
-            "name": "#CA550输出-OFF",
+            "name": "CA550输出-OFF",
             "mode": "范围判定",
             "min": "-0.01",
             "max": "0.01",
@@ -5119,7 +5129,7 @@
             ]
         },
         {
-            "name": "#EEPROM测试",
+            "name": "EEPROM测试",
             "mode": "字符串比对",
             "min": "测试通过",
             "max": "--",

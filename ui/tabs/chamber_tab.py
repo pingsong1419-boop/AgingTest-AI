@@ -518,6 +518,10 @@ class ChamberTab(QWidget):
         if overview and overview.engine and len(overview.engine.workers) > 0:
             is_testing = True
             
+        if getattr(self, '_last_is_testing', None) == is_testing:
+            return
+        self._last_is_testing = is_testing
+            
         self.btn_run_seq.setEnabled(not is_testing)
         self.btn_bypass_run.setEnabled(not is_testing)
         
@@ -1100,12 +1104,19 @@ class ChamberTab(QWidget):
         self.write_plc_bit("V0.6", True, sync=False)
         self.sync_plc_data()
         
-        # 联动复位：解除所有 worker 的挂起状态
+        # 联动复位：解除所有 worker 的挂起状态并停止通道测试
         overview_tab = self.get_overview_tab()
         if overview_tab and overview_tab.engine:
             with overview_tab.engine._lock:
                 for worker in overview_tab.engine.workers.values():
                     worker.is_suspended = False
+            # 停止多通道测试
+            if getattr(self, "chk_linkage", None) and self.chk_linkage.isChecked():
+                for cid in list(overview_tab.engine.workers.keys()):
+                    overview_tab.engine.stop_channel_test(cid)
+                    idx = cid - 1
+                    if 0 <= idx < len(overview_tab.channel_widgets):
+                        overview_tab.channel_widgets[idx].set_status("已停止", "#DC3545")
         
         # 复位状态
         for step in self.steps_data:
@@ -1496,11 +1507,12 @@ class ChamberTab(QWidget):
                     if int(self.step_elapsed_sec * 3600) % 5 == 0:
                         print(f"[Aging Debug] Step '{step_name}': test_hours={test_hours}, selected_cids={selected_cids}, workers={workers_keys}, all_checked_finished={all_checked_finished}")
 
-        # 如果当前是一个倒计时测试工步，且所有勾选通道已经测试完成，直接结束倒计时
-        if test_hours > 0 and has_selected_channels and all_checked_finished:
+        # 如果当前是一个测试类工步，且所有勾选通道已经测试完成，直接结束工步
+        is_multi_channel_step = "测试" in step_name or "功能测试" in step_name
+        if is_multi_channel_step and has_selected_channels and all_checked_finished:
             step_completed = True
             completion_reason = "全部通道测试完成"
-            logger.info(f"[老化引擎] 勾选的通道均已测试完成，自动结束老化工步 '{step_name}' 的倒计时。")
+            logger.info(f"[老化引擎] 勾选的通道均已测试完成，自动结束老化工步 '{step_name}'。")
 
         # 正常时间判断逻辑
         if not step_completed:
@@ -1637,7 +1649,7 @@ class ChamberTab(QWidget):
         import subprocess
         def run():
             cmd = f"Add-Type -AssemblyName System.Speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.Rate = 4; $synth.Speak('{text}')"
-            subprocess.run(["powershell", "-Command", cmd], capture_output=True)
+            subprocess.run(["powershell", "-Command", cmd], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
         threading.Thread(target=run, daemon=True).start()
 
 if __name__ == "__main__":

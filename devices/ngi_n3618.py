@@ -59,7 +59,7 @@ class NGIN3618:
                     self.sock.recv(1024)
                 except:
                     pass
-                self.sock.setblocking(True)
+                self.sock.settimeout(1.5)
                 
                 full_cmd = f"{cmd}{self.TERMINATOR}"
                 if logger: logger(f"[IP: {self.ip}] [TX] {cmd}")

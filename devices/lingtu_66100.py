@@ -146,7 +146,7 @@ class Lingtu66100:
         try:
             while True: self.sock.recv(4096)
         except: pass
-        self.sock.setblocking(True)
+        self.sock.settimeout(2.0)
 
     def measure_voltage(self, channel: int, logger=None) -> float:
         """测量/读取通道设定电压: SOURce[ch]:VOLTage?"""
