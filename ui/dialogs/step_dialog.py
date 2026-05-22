@@ -453,6 +453,12 @@ class StepDialog(QDialog):
         policy_layout.addRow("", self.cb_judgment)
         
         self.cb_sync = QCheckBox("同步执行 (多通道集齐后执行一次)")
+        self.cb_seq = QCheckBox("顺序执行 (多通道集齐后排队逐个执行)")
+        self.cb_seq.setToolTip("开启后，所有勾选的测试通道将在此处等待集齐，然后按通道顺序（如1->2->3）依次排队执行动作，避免共享设备冲突或干扰。")
+        self.cb_seq.setStyleSheet("color: #FFA500;") # 橙色突出
+        policy_layout.addRow("", self.cb_seq)
+        self.cb_sync.toggled.connect(lambda checked: checked and self.cb_seq.setChecked(False))
+        self.cb_seq.toggled.connect(lambda checked: checked and self.cb_sync.setChecked(False))
         self.cb_sync.setToolTip("开启后，所有勾选的测试通道将在此处等待集齐，然后由其中一个通道代表全体执行控制指令，避免共享设备重复操作。")
         self.cb_sync.setStyleSheet("color: #FFD700;") # 金色突出显示
         policy_layout.addRow("", self.cb_sync)
@@ -741,6 +747,7 @@ class StepDialog(QDialog):
             # 5. 还原执行指令策略
             self.cb_judgment.setChecked(data.get('is_judgment', False))
             self.cb_sync.setChecked(data.get('sync_exec', False))
+            self.cb_seq.setChecked(data.get('seq_exec', False))
             self.fail_strategy_combo.setCurrentText(data.get('fail_strategy', "失败停止"))
             
             category = self.category_combo.currentText()
@@ -748,11 +755,16 @@ class StepDialog(QDialog):
             if category == "设备操作" and "老化功能板继电器" not in device_text:
                 self.cb_sync.setChecked(True)
                 self.cb_sync.setEnabled(False)
+                self.cb_seq.setChecked(False)
+                self.cb_seq.setEnabled(False)
             elif "等待" in device_text:
                 self.cb_sync.setChecked(False)
                 self.cb_sync.setEnabled(False)
+                self.cb_seq.setChecked(False)
+                self.cb_seq.setEnabled(False)
             else:
                 self.cb_sync.setEnabled(True)
+                self.cb_seq.setEnabled(True)
 
             # 6. 还原具体业务参数 (特征匹配法 + 异常隔离)
             import re
@@ -988,6 +1000,8 @@ class StepDialog(QDialog):
             elif "等待" in device_text:
                 self.cb_sync.setChecked(False)
                 self.cb_sync.setEnabled(False)
+                self.cb_seq.setChecked(False)
+                self.cb_seq.setEnabled(False)
             else:
                 self.cb_sync.setChecked(False)
                 self.cb_sync.setEnabled(True)

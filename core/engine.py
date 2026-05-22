@@ -102,6 +102,7 @@ class ChannelWorker(QObject):
         self.is_running = True
         self.is_waiting_for_sync = False
         self.current_step_index = 0
+        self.progress_updated.emit(self.channel_id, 0.0, {})
         self.log_message.emit(self.channel_id, f"[*] 测试开始，数据库ID: {self.test_id}")
         self.run_next_step()
 
@@ -142,6 +143,7 @@ class ChannelWorker(QObject):
             return
 
         if self.current_step_index >= len(self.steps):
+            self.progress_updated.emit(self.channel_id, 100.0, {})
             # 判定是否有任何一个测试项是不合格的 (is_pass == False)
             has_ng = False
             for step_name, is_pass in self.step_statuses.items():
@@ -173,6 +175,7 @@ class ChannelWorker(QObject):
                 self.sub_step_finished.emit(self.channel_id, self.current_step_index, sub_idx, "跳过", None)
             
             self.current_step_index += 1
+            self.progress_updated.emit(self.channel_id, (self.current_step_index / max(1, len(self.steps))) * 100.0, {})
 
         # 若已完成全部测试项，直接进入 run_next_step 的正常收尾落库结算分支！
         if self.current_step_index >= len(self.steps):
@@ -677,11 +680,12 @@ class ChannelWorker(QObject):
             
         params = sub_step.params
         is_sync = bool(params.get("sync_exec", False))
+        is_seq = bool(params.get("seq_exec", False))
         if sub_step.type == SubStepType.WAIT:
             is_sync = False
-        if is_sync and not ignore_sync:
+        if (is_sync or is_seq) and not ignore_sync:
             self.is_waiting_for_sync = True
-            self.log_message.emit(self.channel_id, f"      [同步] 等待所有活跃通道集齐...")
+            self.log_message.emit(self.channel_id, f"      [{'同步' if is_sync else '顺序'}] 等待所有活跃通道集齐...")
             # 提前发射“同步等待中”的状态广播，防止前台显示待命/卡死
             self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "同步等待", None)
             self.reached_barrier.emit(self.channel_id, sub_step)
@@ -856,7 +860,9 @@ class ChannelWorker(QObject):
             self.test_finished.emit(self.channel_id, False)
             self.is_running = False
             return
-        self.current_step_index += 1; self.run_next_step()
+        self.current_step_index += 1
+        self.progress_updated.emit(self.channel_id, (self.current_step_index / max(1, len(self.steps))) * 100.0, {})
+        self.run_next_step()
 
 class TestEngine(QObject):
     all_channels_finished = Signal()
