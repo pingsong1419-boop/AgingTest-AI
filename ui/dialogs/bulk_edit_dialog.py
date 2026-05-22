@@ -45,7 +45,7 @@ class BulkEditDialog(QDialog):
         h_type = QHBoxLayout()
         h_type.addWidget(QLabel("标准类型:"))
         self.type_combo = QComboBox()
-        self.type_combo.addItems(["数值", "字符串"])
+        self.type_combo.addItems(["数值", "字符串", "不判断"])
         h_type.addWidget(self.type_combo)
         range_layout.addLayout(h_type)
         
@@ -121,23 +121,37 @@ class BulkEditDialog(QDialog):
         if text == "字符串":
             self.lbl_min.setText("期望值 (精确匹配):")
             self.min_edit.setPlaceholderText("请输入期待的字符串，例如 PASS...")
+            self.lbl_min.show()
+            self.min_edit.show()
+            self.lbl_max.hide()
+            self.max_edit.hide()
+        elif text == "不判断":
+            self.lbl_min.hide()
+            self.min_edit.hide()
             self.lbl_max.hide()
             self.max_edit.hide()
         else:
             self.lbl_min.setText("下限 (Min):")
             self.min_edit.setPlaceholderText("请输入下限数值...")
+            self.lbl_min.show()
+            self.min_edit.show()
             self.lbl_max.show()
             self.max_edit.show()
 
     def get_config(self):
+        is_str = self.type_combo.currentText() == "字符串"
+        is_none = self.type_combo.currentText() == "不判断"
+        mn = "" if is_none else self.min_edit.text().strip()
+        mx = "" if (is_str or is_none) else self.max_edit.text().strip()
+        
         return {
             "change_name": self.cb_name.isChecked(),
             "name_prefix": self.name_edit.text().strip(),
             "name_inc": self.cb_name_inc.isChecked(),
             "change_range": self.cb_range.isChecked(),
             "standard_type": self.type_combo.currentText(),
-            "min": self.min_edit.text().strip(),
-            "max": self.max_edit.text().strip(),
+            "min": mn,
+            "max": mx,
             "change_unit": self.cb_unit.isChecked(),
             "unit": self.unit_edit.text().strip(),
             "change_retry": self.cb_retry.isChecked(),

@@ -33,7 +33,7 @@ class TestItemDialog(QDialog):
         # 1. 增加标准类型判定
         layout.addWidget(QLabel("标准类型:"))
         self.type_combo = QComboBox()
-        self.type_combo.addItems(["数值", "字符串"])
+        self.type_combo.addItems(["数值", "字符串", "不判断"])
         layout.addWidget(self.type_combo)
         
         # 2. 判定下限/期望值
@@ -107,18 +107,28 @@ class TestItemDialog(QDialog):
         if text == "字符串":
             self.lbl_min.setText("期望字符串 (精确匹配):")
             self.min_edit.setPlaceholderText("请输入期待的精确匹配字符串，例如 PASS...")
+            self.lbl_min.show()
+            self.min_edit.show()
+            self.lbl_max.hide()
+            self.max_edit.hide()
+        elif text == "不判断":
+            self.lbl_min.hide()
+            self.min_edit.hide()
             self.lbl_max.hide()
             self.max_edit.hide()
         else:
             self.lbl_min.setText("判定下限 (Min):")
             self.min_edit.setPlaceholderText("请输入下限数值...")
+            self.lbl_min.show()
+            self.min_edit.show()
             self.lbl_max.show()
             self.max_edit.show()
 
     def get_data(self):
         is_str = self.type_combo.currentText() == "字符串"
-        mn = self.min_edit.text().strip()
-        mx = "" if is_str else self.max_edit.text().strip()
+        is_none = self.type_combo.currentText() == "不判断"
+        mn = "" if is_none else self.min_edit.text().strip()
+        mx = "" if (is_str or is_none) else self.max_edit.text().strip()
         unit_val = self.unit_edit.text().strip()
         
         return {

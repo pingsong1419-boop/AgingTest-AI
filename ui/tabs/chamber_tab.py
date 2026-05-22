@@ -353,6 +353,16 @@ class ChamberTab(QWidget):
         self.btn_del.clicked.connect(self.delete_selected_step)
         actions_layout.addWidget(self.btn_del)
         
+        self.btn_up = QPushButton("⬆ 上移")
+        self.btn_up.setStyleSheet("background-color: #17A2B8; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_up.clicked.connect(self.move_step_up)
+        actions_layout.addWidget(self.btn_up)
+        
+        self.btn_down = QPushButton("⬇ 下移")
+        self.btn_down.setStyleSheet("background-color: #17A2B8; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_down.clicked.connect(self.move_step_down)
+        actions_layout.addWidget(self.btn_down)
+        
         actions_layout.addStretch()
         
         self.btn_bypass_run = QPushButton("🔕 屏蔽老化箱调试启动")
@@ -956,6 +966,48 @@ class ChamberTab(QWidget):
             self.refresh_steps_table()
         else:
             QMessageBox.warning(self, "提示", "请先在表格中点击选择您要删除的工步行！")
+
+    def move_step_up(self):
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "当前老化测试正在运行，不允许移动工步！")
+            return
+            
+        idx = self.table_steps.currentRow()
+        if idx < 0:
+            selected_items = self.table_steps.selectedItems()
+            if selected_items:
+                idx = selected_items[0].row()
+                
+        if idx <= 0:
+            return  # Already at top or none selected
+            
+        self._sync_table_to_data()
+        
+        # Swap
+        self.steps_data[idx], self.steps_data[idx-1] = self.steps_data[idx-1], self.steps_data[idx]
+        self.refresh_steps_table()
+        self.table_steps.selectRow(idx - 1)
+
+    def move_step_down(self):
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "当前老化测试正在运行，不允许移动工步！")
+            return
+            
+        idx = self.table_steps.currentRow()
+        if idx < 0:
+            selected_items = self.table_steps.selectedItems()
+            if selected_items:
+                idx = selected_items[0].row()
+                
+        if idx < 0 or idx >= len(self.steps_data) - 1:
+            return  # Already at bottom or none selected
+            
+        self._sync_table_to_data()
+        
+        # Swap
+        self.steps_data[idx], self.steps_data[idx+1] = self.steps_data[idx+1], self.steps_data[idx]
+        self.refresh_steps_table()
+        self.table_steps.selectRow(idx + 1)
 
     def start_aging_bypass_chamber(self):
         """屏蔽老化箱，强制放行多通道测试（直接唤醒所有由于挂起导致暂停的通道，不下发PLC指令）"""

@@ -746,7 +746,10 @@ class ChannelWorker(QObject):
 
         # 核心判定逻辑：如果前期执行正常 (is_pass == True)，则使用提取到的最终值进行范围判定
         if is_pass:
-            if getattr(step, "standard_type", "数值") == "字符串":
+            std_type = getattr(step, "standard_type", "数值")
+            if std_type == "不判断":
+                pass  # 强制不判断，保留 is_pass = True
+            elif std_type == "字符串":
                 # 字符串精确相等比对 (不区分首尾空格)
                 target = str(step.min_limit or "").strip()
                 actual = str(val_to_log or "").strip()
@@ -801,7 +804,8 @@ class ChannelWorker(QObject):
 
         # 3. 始终将测试项判定记录写入数据库，以供报告生成使用
         if self.db_manager and self.test_id != -1:
-            if getattr(step, "standard_type", "数值") == "字符串":
+            std_type = getattr(step, "standard_type", "数值")
+            if std_type == "字符串" or std_type == "不判断":
                 min_lim = step.min_limit
                 max_lim = step.max_limit
             else:

@@ -5,10 +5,10 @@
         {
             "name": "设备初始化",
             "mode": "字符串比对",
-            "min": "OK",
+            "min": "--",
             "max": "--",
             "strategy": "任何NG停止",
-            "standard_type": "字符串",
+            "standard_type": "不判断",
             "retry_count": "不复测",
             "unit": "NULL",
             "sub_steps": [
@@ -58,7 +58,7 @@
                     "params": "1000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
-                    "is_judgment": true,
+                    "is_judgment": false,
                     "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
@@ -107,10 +107,10 @@
         {
             "name": "BMS板工作唤醒",
             "mode": "字符串比对",
-            "min": "OK",
+            "min": "--",
             "max": "--",
             "strategy": "任何NG停止",
-            "standard_type": "字符串",
+            "standard_type": "不判断",
             "retry_count": "不复测",
             "unit": "NULL",
             "sub_steps": [
@@ -150,8 +150,8 @@
                     "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
-                    "is_judgment": true,
-                    "sync_exec": null,
+                    "is_judgment": false,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
