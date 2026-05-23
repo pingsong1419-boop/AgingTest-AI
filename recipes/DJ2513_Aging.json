@@ -1438,8 +1438,8 @@
         {
             "name": "NTC1",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1447,9 +1447,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -1461,8 +1461,8 @@
         {
             "name": "NTC2",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1470,9 +1470,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:1 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:1 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:1 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:1 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -1484,8 +1484,8 @@
         {
             "name": "NTC3",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1493,9 +1493,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:2 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:2 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:2 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:2 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -1507,8 +1507,8 @@
         {
             "name": "NTC4",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -1516,9 +1516,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:3 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:3 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:NTCF / DIFF_AMBIENT:1 / NTC:3 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:NTCF / DIFF_AMBIENT:0 / NTC:3 / NTC_TYPE:NTCF / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15614,8 +15614,8 @@
         {
             "name": "#板载温度测试1",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15623,9 +15623,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15637,8 +15637,8 @@
         {
             "name": "#板载温度测试2",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15646,9 +15646,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:1 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:1 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15660,8 +15660,8 @@
         {
             "name": "#板载温度测试3",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15669,9 +15669,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:2 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:2 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15683,8 +15683,8 @@
         {
             "name": "#板载温度测试4",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15692,9 +15692,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:3 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:3 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15706,8 +15706,8 @@
         {
             "name": "#板载温度测试5",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15715,9 +15715,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:4 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:4 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:4 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:4 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15729,8 +15729,8 @@
         {
             "name": "#板载温度测试6",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15738,9 +15738,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:5 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:5 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:5 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:5 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15752,8 +15752,8 @@
         {
             "name": "#板载温度测试7",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15761,9 +15761,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:6 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:6 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:6 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:6 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15775,8 +15775,8 @@
         {
             "name": "#板载温度测试8",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15784,9 +15784,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:7 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:7 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:7 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:7 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15798,8 +15798,8 @@
         {
             "name": "#板载温度测试9",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15807,9 +15807,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:8 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:8 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:8 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:8 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15821,8 +15821,8 @@
         {
             "name": "#板载温度测试10",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15830,9 +15830,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:9 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:9 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:9 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:9 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15844,8 +15844,8 @@
         {
             "name": "#板载温度测试11",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15853,9 +15853,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:10 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:10 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:10 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:10 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15867,8 +15867,8 @@
         {
             "name": "#板载温度测试12",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15876,9 +15876,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:11 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:11 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:11 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:11 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15890,8 +15890,8 @@
         {
             "name": "#板载温度测试13",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15899,9 +15899,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:12 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:12 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:12 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:12 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15913,8 +15913,8 @@
         {
             "name": "#板载温度测试14",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15922,9 +15922,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:13 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:13 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:13 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:13 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15936,8 +15936,8 @@
         {
             "name": "#板载温度测试15",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15945,9 +15945,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:14 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:14 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:14 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:14 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15959,8 +15959,8 @@
         {
             "name": "#板载温度测试16",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15968,9 +15968,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:15 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:15 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:15 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:15 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -15982,8 +15982,8 @@
         {
             "name": "#板载温度测试17",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -15991,9 +15991,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:16 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:16 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:16 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:16 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16005,8 +16005,8 @@
         {
             "name": "#板载温度测试18",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16014,9 +16014,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:17 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:17 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:17 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:17 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16028,8 +16028,8 @@
         {
             "name": "#板载温度测试19",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16037,9 +16037,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:18 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:18 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:18 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:18 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16051,8 +16051,8 @@
         {
             "name": "#板载温度测试20",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16060,9 +16060,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:19 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:19 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:19 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:19 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16074,8 +16074,8 @@
         {
             "name": "#板载温度测试21",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16083,9 +16083,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:20 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:20 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:20 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:20 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16097,8 +16097,8 @@
         {
             "name": "#板载温度测试22",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16106,9 +16106,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:21 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:21 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:21 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:21 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16120,8 +16120,8 @@
         {
             "name": "#板载温度测试23",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16129,9 +16129,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:22 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:22 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:22 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:22 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16143,8 +16143,8 @@
         {
             "name": "#板载温度测试24",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16152,9 +16152,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:23 / PARAM2:FPCB_NTC / DIFF_AMBIENT:1 / NTC:23 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:23 / PARAM2:FPCB_NTC / DIFF_AMBIENT:0 / NTC:23 / NTC_TYPE:FPCB_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16166,8 +16166,8 @@
         {
             "name": "#单体温感测试1",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16175,9 +16175,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16189,8 +16189,8 @@
         {
             "name": "#单体温感测试2",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16198,9 +16198,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:1 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:1 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:1 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16212,8 +16212,8 @@
         {
             "name": "#单体温感测试3",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16221,9 +16221,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:2 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:2 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:2 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16235,8 +16235,8 @@
         {
             "name": "#单体温感测试4",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16244,9 +16244,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "#3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "#3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:3 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:3 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:3 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16258,8 +16258,8 @@
         {
             "name": "#单体温感测试5",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16267,9 +16267,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:4 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:4 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:4 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:4 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16281,8 +16281,8 @@
         {
             "name": "#单体温感测试6",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16290,9 +16290,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:5 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:5 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:5 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:5 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16304,8 +16304,8 @@
         {
             "name": "#单体温感测试7",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16313,9 +16313,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:6 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:6 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:6 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:6 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16327,8 +16327,8 @@
         {
             "name": "#单体温感测试8",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16336,9 +16336,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:7 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:7 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:7 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:7 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16350,8 +16350,8 @@
         {
             "name": "#单体温感测试9",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16359,9 +16359,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:8 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:8 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:8 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:8 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16373,8 +16373,8 @@
         {
             "name": "#单体温感测试10",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16382,9 +16382,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:9 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:9 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:9 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:9 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16396,8 +16396,8 @@
         {
             "name": "#单体温感测试11",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16405,9 +16405,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:10 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:10 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:10 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:10 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16419,8 +16419,8 @@
         {
             "name": "#单体温感测试12",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16428,9 +16428,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:11 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:11 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:11 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:11 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16442,8 +16442,8 @@
         {
             "name": "#单体温感测试13",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16451,9 +16451,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:12 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:12 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:12 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:12 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16465,8 +16465,8 @@
         {
             "name": "#单体温感测试14",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16474,9 +16474,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:13 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:13 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:13 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:13 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16488,8 +16488,8 @@
         {
             "name": "#单体温感测试15",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16497,9 +16497,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:14 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:14 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:14 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:14 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16511,8 +16511,8 @@
         {
             "name": "#单体温感测试16",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16520,9 +16520,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:15 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:15 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:15 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:15 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16534,8 +16534,8 @@
         {
             "name": "#单体温感测试17",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16543,9 +16543,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:16 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:16 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:16 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:16 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16557,8 +16557,8 @@
         {
             "name": "#单体温感测试18",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16566,9 +16566,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:17 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:17 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:17 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:17 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16580,8 +16580,8 @@
         {
             "name": "#单体温感测试19",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16589,9 +16589,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:18 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:18 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:18 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:18 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16603,8 +16603,8 @@
         {
             "name": "#单体温感测试20",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16612,9 +16612,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:19 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:19 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:19 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:19 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16626,8 +16626,8 @@
         {
             "name": "#单体温感测试21",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16635,9 +16635,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:20 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:20 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:20 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:20 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16649,8 +16649,8 @@
         {
             "name": "#单体温感测试22",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16658,9 +16658,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:21 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:21 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:21 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:21 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16672,8 +16672,8 @@
         {
             "name": "#单体温感测试23",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16681,9 +16681,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:22 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:22 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:22 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:22 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
@@ -16695,8 +16695,8 @@
         {
             "name": "#单体温感测试24",
             "mode": "范围判定",
-            "min": "-2",
-            "max": "8",
+            "min": "-45",
+            "max": "90",
             "strategy": "NG继续",
             "standard_type": "数值",
             "retry_count": "不复测",
@@ -16704,9 +16704,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "name": "3.5HEOL协议-0x10 NTC读取 (EOL:0x10 NTC读取 / PARAM1:0 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:0 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
                     "action": "0x10 NTC读取",
-                    "params": "EOL:0x10 NTC读取 / PARAM1:23 / PARAM2:CELL_NTC / DIFF_AMBIENT:1 / NTC:23 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "params": "EOL:0x10 NTC读取 / PARAM1:23 / PARAM2:CELL_NTC / DIFF_AMBIENT:0 / NTC:23 / NTC_TYPE:CELL_NTC / TIMEOUT:500 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
                     "device": "3.5HEOL协议",
                     "type": "3.5HEOL协议",
                     "is_judgment": true,
