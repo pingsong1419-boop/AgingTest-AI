@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BMS 测试报告 - 1</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #1a1a2e;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 10px;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f3460;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecca3;
+            padding-left: 10px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-item {
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-right: 10px;
+        }
+        .result-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .result-pass { background-color: #d4edda; color: #155724; }
+        .result-ng { background-color: #f8d7da; color: #721c24; }
+        .result-running { background-color: #fff3cd; color: #856404; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+        th {
+            background-color: #0f3460;
+            color: #fff;
+            font-weight: 600;
+        }
+        tr:hover { background-color: #f8f9fa; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BMS 老化测试详细判定报告</h1>
+        
+        <div class="section-title">基本信息</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">通道号:</span>CH-01</div>
+            <div class="info-item"><span class="info-label">货架号:</span>01-A01</div>
+            <div class="info-item"><span class="info-label">主机条码:</span>1</div>
+            <div class="info-item"><span class="info-label">从机1条码:</span>1</div>
+            <div class="info-item"><span class="info-label">从机2条码:</span>1</div>
+            <div class="info-item"><span class="info-label">从机3条码:</span>1</div>
+            <div class="info-item"><span class="info-label">测试配方:</span>DJ2513_Aging</div>
+            <div class="info-item"><span class="info-label">测试总判定:</span>
+                <span class="result-badge result-running">STOPPED</span>
+            </div>
+            <div class="info-item"><span class="info-label">测试开始时间:</span>2026-05-23 22:59:56</div>
+            <div class="info-item"><span class="info-label">测试结束时间:</span>2026-05-23 22:59:57</div>
+        </div>
+        
+        <div class="section-title">详细判定数据</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>测试项名称</th>
+                    <th class="text-center">单位</th>
+                    <th class="text-center">下限</th>
+                    <th class="text-center">上限</th>
+                    <th class="text-center">测量值</th>
+                    <th class="text-center">判定结果</th>
+                    <th class="text-center">执行用时(秒)</th>
+                    <th>记录时间</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

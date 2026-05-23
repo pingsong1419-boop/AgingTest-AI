@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                                QLineEdit, QPushButton, QComboBox)
+                                QLineEdit, QPushButton, QComboBox, QCheckBox)
 from PySide6.QtCore import Qt
 
 class TestItemDialog(QDialog):
@@ -74,6 +74,12 @@ class TestItemDialog(QDialog):
         self.exec_mode_combo.addItems(["并行执行", "顺序执行"])
         layout.addWidget(self.exec_mode_combo)
 
+        # 增加通道独占块设置
+        self.cb_block_start = QCheckBox("设为独占块起点 (同步等待集齐后开始独占)")
+        self.cb_block_end = QCheckBox("设为独占块终点 (释放独占权并再次同步)")
+        layout.addWidget(self.cb_block_start)
+        layout.addWidget(self.cb_block_end)
+
         # 5. NG 停止策略
         layout.addWidget(QLabel("NG 停止策略:"))
         self.strategy_combo = QComboBox()
@@ -92,6 +98,8 @@ class TestItemDialog(QDialog):
             self.unit_edit.setText(data.get('unit', '') if data.get('unit') is not None and data.get('unit') != "NULL" else '')
             self.retry_combo.setCurrentText(data.get('retry_count', '不复测'))
             self.exec_mode_combo.setCurrentText(data.get('exec_mode', '并行执行'))
+            self.cb_block_start.setChecked(data.get('is_block_start', False))
+            self.cb_block_end.setChecked(data.get('is_block_end', False))
             self.target_combo.setCurrentText(data.get('target_board', '主机'))
             self.strategy_combo.setCurrentText(data.get('strategy', '任何NG停止'))
             
@@ -152,6 +160,8 @@ class TestItemDialog(QDialog):
             'standard_type': self.type_combo.currentText(),
             'retry_count': self.retry_combo.currentText(),
             'exec_mode': self.exec_mode_combo.currentText(),
+            'is_block_start': self.cb_block_start.isChecked(),
+            'is_block_end': self.cb_block_end.isChecked(),
             'strategy': self.strategy_combo.currentText(),
             'unit': unit_val if unit_val else "NULL",
             'target_board': self.target_combo.currentText()

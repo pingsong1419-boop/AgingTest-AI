@@ -1,0 +1,51 @@
+<TestReport id='196'>
+  <BasicInfo>
+    <Channel>1</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-23 19:40:04</StartTime>
+    <EndTime>2026-05-23 19:41:25</EndTime>
+    <TotalResult>NG</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.005</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.011</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='1AFE供电输出-40V'>
+      <Limit>39.5 ~ 40.5</Limit>
+      <Measured>40.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='2AFE供电输出-40V'>
+      <Limit>39.5 ~ 40.5</Limit>
+      <Measured>40.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='3AFE供电输出-40V'>
+      <Limit>39.5 ~ 40.5</Limit>
+      <Measured>40.1</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='1模拟电池输出-2.5V'>
+      <Limit>44.946 ~ 45.054</Limit>
+      <Measured>0.0</Measured>
+      <Result>NG</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

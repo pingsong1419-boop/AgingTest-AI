@@ -12,6 +12,5 @@
     "sim3_ip": "192.168.1.212",
     "ctrl_pwr_ip": "192.168.1.202",
     "easy320_ip": "192.168.1.88",
-    "ca550_com": "COM42",
-    "report_root_path": "E:/Report"
+    "ca550_com": "COM42"
 }

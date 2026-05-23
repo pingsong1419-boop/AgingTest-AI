@@ -246,6 +246,12 @@ class ConfigTab(QWidget):
             standard_type = item.data(0, Qt.UserRole) or "数值"
             retry_count = item.data(1, Qt.UserRole) or "不复测"
             unit = item.data(2, Qt.UserRole) or "NULL"
+            is_block_start = item.data(4, Qt.UserRole) or False
+            is_block_end = item.data(5, Qt.UserRole) or False
+            
+            block_status = "否"
+            if is_block_start: block_status = "块起点"
+            elif is_block_end: block_status = "块终点"
             
             self.preview_panel.setVisible(True)
             self.lbl_preview_action.setText(f"测试项: {name}")
@@ -271,7 +277,7 @@ class ConfigTab(QWidget):
                 <tr>
                     <td class='label'>NG 策略</td><td class='value'>{strategy}</td>
                     <td class='label'>测试模式</td><td class='value'>{exec_mode}</td>
-                    <td class='label' style='background: transparent; border: none;'></td><td class='value' style='background: transparent; border: none;'></td>
+                    <td class='label'>通道独占块</td><td class='value'>{block_status}</td>
                 </tr>
             </table>
             """
@@ -522,6 +528,10 @@ class ConfigTab(QWidget):
         self.topology_combo.setCurrentText(data.get("topology", "1主3从"))
         
         for item_data in data.get("items", []):
+            sync_text = "--"
+            if item_data.get("is_block_start"): sync_text = "块起点"
+            elif item_data.get("is_block_end"): sync_text = "块终点"
+
             parent = QTreeWidgetItem([
                 item_data['name'],
                 item_data.get('mode', '范围判定') if item_data.get('standard_type', '数值') == '数值' else '字符串比对',
@@ -529,7 +539,7 @@ class ConfigTab(QWidget):
                 item_data['max'],
                 item_data['strategy'],
                 item_data.get('exec_mode', '并行执行'),
-                "--",
+                sync_text,
                 item_data.get('target_board', '主机')
             ])
             # 存储新字段元数据到 UserRole
@@ -537,6 +547,8 @@ class ConfigTab(QWidget):
             parent.setData(1, Qt.UserRole, item_data.get("retry_count", "不复测"))
             parent.setData(2, Qt.UserRole, item_data.get("unit", "NULL"))
             parent.setData(3, Qt.UserRole, item_data.get("exec_mode", "并行执行"))
+            parent.setData(4, Qt.UserRole, item_data.get("is_block_start", False))
+            parent.setData(5, Qt.UserRole, item_data.get("is_block_end", False))
             
             if item_data['name'].strip().startswith("#"):
                 parent.setForeground(0, QColor("#808080"))
@@ -723,6 +735,8 @@ class ConfigTab(QWidget):
                 "retry_count": item.data(1, Qt.UserRole) or "不复测",
                 "unit": item.data(2, Qt.UserRole) or "NULL",
                 "exec_mode": item.data(3, Qt.UserRole) or "并行执行",
+                "is_block_start": item.data(4, Qt.UserRole) or False,
+                "is_block_end": item.data(5, Qt.UserRole) or False,
                 "target_board": item.text(7) if item.text(7) else "主机",
                 "sub_steps": []
             }
@@ -789,13 +803,19 @@ class ConfigTab(QWidget):
         for data in nodes_to_paste:
             if data["type"] == "item":
                 # 粘贴为顶层测试项
+                sync_text = "--"
+                if data.get('is_block_start'): sync_text = "块起点"
+                elif data.get('is_block_end'): sync_text = "块终点"
+
                 new_item = QTreeWidgetItem([
-                    data['name'], data['mode'], data['min'], data['max'], data['strategy'], data.get('exec_mode', '并行执行'), "--", data.get('target_board', '主机')
+                    data['name'], data['mode'], data['min'], data['max'], data['strategy'], data.get('exec_mode', '并行执行'), sync_text, data.get('target_board', '主机')
                 ])
                 new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
                 new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
                 new_item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
                 new_item.setData(3, Qt.UserRole, data.get('exec_mode', '并行执行'))
+                new_item.setData(4, Qt.UserRole, data.get('is_block_start', False))
+                new_item.setData(5, Qt.UserRole, data.get('is_block_end', False))
                 
                 # 保留屏蔽或正常的高保真色彩
                 if data['name'].strip().startswith("#"):
@@ -1050,6 +1070,8 @@ class ConfigTab(QWidget):
                 "retry_count": item_node.data(1, Qt.UserRole) or "不复测",
                 "unit": item_node.data(2, Qt.UserRole) or "NULL",
                 "exec_mode": item_node.data(3, Qt.UserRole) or "并行执行",
+                "is_block_start": item_node.data(4, Qt.UserRole) or False,
+                "is_block_end": item_node.data(5, Qt.UserRole) or False,
                 "target_board": item_node.text(7) if item_node.text(7) else "主机",
                 "sub_steps": []
             }
@@ -1093,6 +1115,10 @@ class ConfigTab(QWidget):
         if dialog.exec():
             data = dialog.get_data()
             mode_text = "范围判定" if data['standard_type'] == "数值" else "字符串比对"
+            sync_text = "--"
+            if data.get('is_block_start'): sync_text = "块起点"
+            elif data.get('is_block_end'): sync_text = "块终点"
+
             item = QTreeWidgetItem([
                 data['name'], 
                 mode_text, 
@@ -1100,7 +1126,7 @@ class ConfigTab(QWidget):
                 str(data['max']), 
                 data['strategy'],
                 data.get('exec_mode', '并行执行'),
-                "--",
+                sync_text,
                 data.get('target_board', '主机')
             ])
             # 存储新字段元数据
@@ -1108,6 +1134,8 @@ class ConfigTab(QWidget):
             item.setData(1, Qt.UserRole, data['retry_count'])
             item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
             item.setData(3, Qt.UserRole, data.get('exec_mode', '并行执行'))
+            item.setData(4, Qt.UserRole, data.get('is_block_start', False))
+            item.setData(5, Qt.UserRole, data.get('is_block_end', False))
             
             item.setForeground(0, QColor("#00E5FF"))
             font = QFont()
@@ -1192,18 +1220,25 @@ class ConfigTab(QWidget):
                 'retry_count': item.data(1, Qt.UserRole) or '不复测',
                 'unit': item.data(2, Qt.UserRole) or 'NULL',
                 'exec_mode': item.data(3, Qt.UserRole) or '并行执行',
+                'is_block_start': item.data(4, Qt.UserRole) or False,
+                'is_block_end': item.data(5, Qt.UserRole) or False,
                 'target_board': item.text(7) if item.text(7) else '主机',
                 'has_sync_step': has_sync
             }
             dialog = TestItemDialog(self, data=data)
             if dialog.exec():
                 new_data = dialog.get_data()
+                sync_text = "--"
+                if new_data.get('is_block_start'): sync_text = "块起点"
+                elif new_data.get('is_block_end'): sync_text = "块终点"
+
                 item.setText(0, new_data['name'])
                 item.setText(1, "范围判定" if new_data['standard_type'] == "数值" else "字符串比对")
                 item.setText(2, str(new_data['min']))
                 item.setText(3, str(new_data['max']))
                 item.setText(4, new_data['strategy'])
                 item.setText(5, new_data.get('exec_mode', '并行执行'))
+                item.setText(6, sync_text)
                 item.setText(7, new_data.get('target_board', '主机'))
                 
                 # 保存新字段元数据
@@ -1211,6 +1246,8 @@ class ConfigTab(QWidget):
                 item.setData(1, Qt.UserRole, new_data['retry_count'])
                 item.setData(2, Qt.UserRole, new_data.get('unit', 'NULL'))
                 item.setData(3, Qt.UserRole, new_data.get('exec_mode', '并行执行'))
+                item.setData(4, Qt.UserRole, new_data.get('is_block_start', False))
+                item.setData(5, Qt.UserRole, new_data.get('is_block_end', False))
         else:
             # 这是一个『子工步』(Child)
             from ui.dialogs.step_dialog import StepDialog
