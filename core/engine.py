@@ -26,6 +26,8 @@ class SubStepType(Enum):
     WAIT = "等待"
     BARRIER = "同步屏障"
     READ_VAR = "读取变量"
+    ACQUIRE_SEQ_LOCK = "申请顺序锁"
+    RELEASE_SEQ_LOCK = "释放顺序锁"
 
 class SubStepFailStrategy(Enum):
     STOP = "失败停止"
@@ -51,6 +53,7 @@ class TestStep:
         self.retry_count = "不复测"
         self.unit = "NULL"
         self.skip_runtime = False
+        self.exec_mode = "并行执行"
 
     def add_sub_step(self, sub_step: SubStep):
         self.sub_steps.append(sub_step)
@@ -634,6 +637,19 @@ class ChannelWorker(QObject):
                     success = False
                 hw_logger(f"读取变量 [{var_name}] => {result_value}")
 
+            elif sub_step.type == SubStepType.ACQUIRE_SEQ_LOCK:
+                if self.engine:
+                    if not self.engine.request_resource("seq_step_lock", self.channel_id):
+                        self.is_waiting_for_sync = True
+                        self.log_message.emit(self.channel_id, "[#] 正在按顺序排队执行测试项...")
+                        return True, None
+                return True, "OK"
+
+            elif sub_step.type == SubStepType.RELEASE_SEQ_LOCK:
+                if self.engine:
+                    self.engine.release_resource("seq_step_lock", self.channel_id)
+                return True, "OK"
+
             elif sub_step.type == SubStepType.WAIT:
                 ms = int(self._parse_numeric(params.get("params", 1000)))
                 if ms < 2000: QTimer.singleShot(ms, self.on_sub_step_complete)
@@ -719,9 +735,11 @@ class ChannelWorker(QObject):
     def on_step_complete(self, is_pass: bool = True):
         if not self.is_running: return
         
-        # 强制在每次工步结束时释放可能持有的 CA550 锁，防止子工步提前报错跳出导致的死锁
+        # 强制在每次工步结束时释放可能持有的互斥锁，防止子工步提前报错跳出导致的死锁
         if self.engine:
-            try: self.engine.release_resource("ca550", self.channel_id)
+            try: 
+                self.engine.release_resource("ca550", self.channel_id)
+                self.engine.release_resource("seq_step_lock", self.channel_id)
             except: pass
             
         step = self.steps[self.current_step_index]
@@ -868,6 +886,7 @@ class TestEngine(QObject):
     all_channels_finished = Signal()
     barrier_status_changed = Signal(int, int)
     channel_sync_status_changed = Signal(int, bool)
+    seq_status_changed = Signal(int, int)
     channel_step_started = Signal(int, str)
     channel_test_finished = Signal(int, bool)
     def __init__(self, device_manager=None, db_manager=None):
@@ -877,8 +896,8 @@ class TestEngine(QObject):
         self._lock = threading.RLock()
         self.sync_barrier_channels = set()
         self.sync_groups = {}
-        self.resource_locks = {"ca550": None}
-        self.resource_queues = {"ca550": []}
+        self.resource_locks = {"ca550": None, "seq_step_lock": None}
+        self.resource_queues = {"ca550": [], "seq_step_lock": []}
         self.batch_starting = False
 
     def begin_batch_start(self):
@@ -892,8 +911,13 @@ class TestEngine(QObject):
     def request_resource(self, name, cid) -> bool:
         with self._lock:
             if self.resource_locks.get(name) == cid: return True
-            if self.resource_locks.get(name) is None: self.resource_locks[name] = cid; return True
-            if cid not in self.resource_queues[name]: self.resource_queues[name].append(cid)
+            if self.resource_locks.get(name) is None: 
+                self.resource_locks[name] = cid
+                if name == "seq_step_lock": self._emit_seq_queue_status()
+                return True
+            if cid not in self.resource_queues[name]: 
+                self.resource_queues[name].append(cid)
+                if name == "seq_step_lock": self._emit_seq_queue_status()
             return False
 
     def release_resource(self, name, cid):
@@ -904,6 +928,16 @@ class TestEngine(QObject):
                     next_ch = self.resource_queues[name].pop(0)
                     self.resource_locks[name] = next_ch
                     if next_ch in self.workers: self.workers[next_ch].resume_from_sync(advance=False)
+                if name == "seq_step_lock": self._emit_seq_queue_status()
+
+    def _emit_seq_queue_status(self):
+        # 计算当前的顺序排队状态并发出信号
+        executing_cid = self.resource_locks.get("seq_step_lock")
+        queue_len = len(self.resource_queues.get("seq_step_lock", []))
+        if executing_cid is None:
+            self.seq_status_changed.emit(-1, 0)
+        else:
+            self.seq_status_changed.emit(executing_cid, queue_len)
 
     def handle_barrier_reached(self, cid, sub_step=None):
         with self._lock:
@@ -1013,6 +1047,13 @@ class TestEngine(QObject):
             step.standard_type = item.get('standard_type', "数值")
             step.retry_count = item.get('retry_count', "不复测")
             step.unit = item.get('unit', "NULL")
+            step.exec_mode = item.get('exec_mode', "并行执行")
+            
+            # 顺序执行的头部注入
+            if step.exec_mode == "顺序执行":
+                step.add_sub_step(SubStep(SubStepType.BARRIER, {"sync_exec": False}))
+                step.add_sub_step(SubStep(SubStepType.ACQUIRE_SEQ_LOCK, {}))
+
             for sub in item.get('sub_steps', []):
                 stype, t_str, p_str = SubStepType.SET_INSTRUMENT, sub.get('type', ""), str(sub.get('params', ""))
                 dev_str, act_str = sub.get('device', ""), sub.get('action', "")
@@ -1024,10 +1065,23 @@ class TestEngine(QObject):
                 elif "CAN交互" in t_str or "报文交互" in t_str: stype = SubStepType.EOL_PROTOCOL if "EOL:" in p_str.upper() else SubStepType.CAN_INTERACT
                 elif "等待" in t_str: stype = SubStepType.WAIT
                 elif "同步屏障" in t_str: stype = SubStepType.BARRIER
+                
                 fs_str, fs = sub.get('fail_strategy', "失败停止"), SubStepFailStrategy.STOP
                 for f in SubStepFailStrategy:
                     if f.value == fs_str: fs = f; break
-                step.add_sub_step(SubStep(stype, sub.copy(), fail_strategy=fs))
+                    
+                sub_params = sub.copy()
+                # 防死锁：外层既然要求顺序执行，内部子工步强行剥离所有同步执行属性，避免互相干涉卡死
+                if step.exec_mode == "顺序执行" and sub_params.get("sync_exec", False):
+                    sub_params["sync_exec"] = False
+                    
+                step.add_sub_step(SubStep(stype, sub_params, fail_strategy=fs))
+                
+            # 顺序执行的尾部注入
+            if step.exec_mode == "顺序执行":
+                step.add_sub_step(SubStep(SubStepType.RELEASE_SEQ_LOCK, {}))
+                step.add_sub_step(SubStep(SubStepType.BARRIER, {"sync_exec": False}))
+                
             steps.append(step)
         with self._lock:
             if cid in self.workers: self.stop_channel_test(cid)

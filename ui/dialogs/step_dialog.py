@@ -5,9 +5,10 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt
 
 class StepDialog(QDialog):
-    def __init__(self, parent=None, step_data=None):
+    def __init__(self, parent=None, step_data=None, parent_exec_mode="并行执行"):
         super().__init__(parent)
         self.is_loading = False # 状态位：标记是否处于数据加载还原中
+        self.parent_exec_mode = parent_exec_mode
         self.setWindowTitle("编辑指令 (子工步)")
         self.resize(620, 550)
         self.setStyleSheet("""
@@ -463,6 +464,15 @@ class StepDialog(QDialog):
         self.cb_sync.setStyleSheet("color: #FFD700;") # 金色突出显示
         policy_layout.addRow("", self.cb_sync)
         
+        # 根据父级执行模式强制限制
+        if parent_exec_mode == "顺序执行":
+            self.cb_sync.setEnabled(False)
+            self.cb_sync.setChecked(False)
+            self.cb_sync.setToolTip("当前所属测试项已设置为【顺序执行】，为防止死锁，内部子工步禁止启用同步。")
+            self.cb_seq.setEnabled(False)
+            self.cb_seq.setChecked(False)
+            self.cb_seq.setToolTip("当前所属测试项已设置为【顺序执行】，无需在子工步重复设置。")
+        
         self.scroll_layout.addWidget(policy_frame)
         
         self.main_scroll.setWidget(self.main_scroll_content)
@@ -763,8 +773,12 @@ class StepDialog(QDialog):
                 self.cb_seq.setChecked(False)
                 self.cb_seq.setEnabled(False)
             else:
-                self.cb_sync.setEnabled(True)
-                self.cb_seq.setEnabled(True)
+                if self.parent_exec_mode == "顺序执行":
+                    self.cb_sync.setEnabled(False)
+                    self.cb_seq.setEnabled(False)
+                else:
+                    self.cb_sync.setEnabled(True)
+                    self.cb_seq.setEnabled(True)
 
             # 6. 还原具体业务参数 (特征匹配法 + 异常隔离)
             import re

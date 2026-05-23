@@ -369,6 +369,20 @@ class OverviewTab(QWidget):
 
         
 
+        # 新增：顺序排队状态指示
+        self.lbl_seq_status = QLabel("顺序排队: 空闲")
+        self.lbl_seq_status.setStyleSheet("""
+            QLabel {
+                background-color: #1A1A2E;
+                color: #808080;
+                border: 1px solid #4ECCA3;
+                border-radius: 4px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+        """)
+        control_panel.addWidget(self.lbl_seq_status)
+
         main_layout.addLayout(control_panel)
 
         
@@ -390,6 +404,8 @@ class OverviewTab(QWidget):
         if self.engine:
 
             self.engine.barrier_status_changed.connect(self.update_sync_status)
+
+            self.engine.seq_status_changed.connect(self.update_seq_status)
 
             self.engine.channel_sync_status_changed.connect(self.on_channel_sync_changed)
 
@@ -1305,8 +1321,33 @@ class OverviewTab(QWidget):
 
             """)
 
+    def update_seq_status(self, executing_cid, queue_len):
+        """更新顺序排队状态指示器"""
+        if executing_cid != -1:
+            self.lbl_seq_status.setText(f"顺序排队: CH{executing_cid} 执行, {queue_len} 人排队")
+            self.lbl_seq_status.setStyleSheet("""
+                QLabel {
+                    background-color: #6a0572;
+                    color: #FF8C00;
+                    border: 1px solid #FF8C00;
+                    border-radius: 4px;
+                    padding: 5px 15px;
+                    font-weight: bold;
+                }
+            """)
+        else:
+            self.lbl_seq_status.setText("顺序排队: 空闲")
+            self.lbl_seq_status.setStyleSheet("""
+                QLabel {
+                    background-color: #1A1A2E;
+                    color: #4ECCA3;
+                    border: 1px solid #4ECCA3;
+                    border-radius: 4px;
+                    padding: 5px 15px;
+                    font-weight: bold;
+                }
+            """)
             
-
     def on_channel_sync_changed(self, channel_id, is_waiting):
 
         """处理单个通道的同步状态变化"""

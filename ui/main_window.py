@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QTabWidget, QStatusBar
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QTabWidget, QStatusBar, QHBoxLayout, QPushButton
 from PySide6.QtCore import Qt
 
 from ui.tabs.overview_tab import OverviewTab

@@ -63,7 +63,7 @@ class ConfigTab(QWidget):
         
         self.edit_layout.addWidget(QLabel("测试项目与工步流 (树状结构):"))
         self.step_tree = QTreeWidget()
-        self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略"])
+        self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略", "测试模式", "同步"])
         self.step_tree.setColumnWidth(0, 250)
         
         # 启用拖拽排序
@@ -242,6 +242,7 @@ class ConfigTab(QWidget):
             min_val = item.text(2)
             max_val = item.text(3)
             strategy = item.text(4)
+            exec_mode = item.text(5)
             standard_type = item.data(0, Qt.UserRole) or "数值"
             retry_count = item.data(1, Qt.UserRole) or "不复测"
             unit = item.data(2, Qt.UserRole) or "NULL"
@@ -269,7 +270,7 @@ class ConfigTab(QWidget):
                 </tr>
                 <tr>
                     <td class='label'>NG 策略</td><td class='value'>{strategy}</td>
-                    <td class='label' style='background: transparent; border: none;'></td><td class='value' style='background: transparent; border: none;'></td>
+                    <td class='label'>测试模式</td><td class='value'>{exec_mode}</td>
                     <td class='label' style='background: transparent; border: none;'></td><td class='value' style='background: transparent; border: none;'></td>
                 </tr>
             </table>
@@ -526,12 +527,15 @@ class ConfigTab(QWidget):
                 item_data.get('mode', '范围判定') if item_data.get('standard_type', '数值') == '数值' else '字符串比对',
                 item_data['min'],
                 item_data['max'],
-                item_data['strategy']
+                item_data['strategy'],
+                item_data.get('exec_mode', '并行执行'),
+                "--"
             ])
             # 存储新字段元数据到 UserRole
             parent.setData(0, Qt.UserRole, item_data.get("standard_type", "数值"))
             parent.setData(1, Qt.UserRole, item_data.get("retry_count", "不复测"))
             parent.setData(2, Qt.UserRole, item_data.get("unit", "NULL"))
+            parent.setData(3, Qt.UserRole, item_data.get("exec_mode", "并行执行"))
             
             if item_data['name'].strip().startswith("#"):
                 parent.setForeground(0, QColor("#808080"))
@@ -548,7 +552,9 @@ class ConfigTab(QWidget):
                     sub_data['action'],
                     sub_data['params'],
                     "参与判定" if sub_data.get("is_judgment") else "--",
-                    sub_data.get("fail_strategy", "失败停止")
+                    sub_data.get("fail_strategy", "失败停止"),
+                    "--",
+                    "是" if sub_data.get("sync_exec") else "否"
                 ])
                 # 恢复元数据
                 child.setData(0, Qt.UserRole, sub_data.get("device"))
@@ -715,6 +721,7 @@ class ConfigTab(QWidget):
                 "standard_type": item.data(0, Qt.UserRole) or "数值",
                 "retry_count": item.data(1, Qt.UserRole) or "不复测",
                 "unit": item.data(2, Qt.UserRole) or "NULL",
+                "exec_mode": item.data(3, Qt.UserRole) or "并行执行",
                 "sub_steps": []
             }
             for i in range(item.childCount()):
@@ -781,11 +788,12 @@ class ConfigTab(QWidget):
             if data["type"] == "item":
                 # 粘贴为顶层测试项
                 new_item = QTreeWidgetItem([
-                    data['name'], data['mode'], data['min'], data['max'], data['strategy']
+                    data['name'], data['mode'], data['min'], data['max'], data['strategy'], data.get('exec_mode', '并行执行'), "--"
                 ])
                 new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
                 new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
                 new_item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
+                new_item.setData(3, Qt.UserRole, data.get('exec_mode', '并行执行'))
                 
                 # 保留屏蔽或正常的高保真色彩
                 if data['name'].strip().startswith("#"):
@@ -801,7 +809,9 @@ class ConfigTab(QWidget):
                     child = QTreeWidgetItem([
                         f"  └─ {sub['name']}", sub['action'], sub['params'],
                         "参与判定" if sub.get("is_judgment") else "--",
-                        sub.get("fail_strategy", "失败停止")
+                        sub.get("fail_strategy", "失败停止"),
+                        "--",
+                        "是" if sub.get("sync_exec") else "否"
                     ])
                     child.setData(0, Qt.UserRole, sub.get("device"))
                     child.setData(1, Qt.UserRole, sub.get("stype"))
@@ -832,7 +842,9 @@ class ConfigTab(QWidget):
                 child = QTreeWidgetItem([
                     f"  └─ {data['name']}", data['action'], data['params'],
                     "参与判定" if data.get("is_judgment") else "--",
-                    data.get("fail_strategy", "失败停止")
+                    data.get("fail_strategy", "失败停止"),
+                    "--",
+                    "是" if data.get("sync_exec") else "否"
                 ])
                 child.setData(0, Qt.UserRole, data.get("device"))
                 child.setData(1, Qt.UserRole, data.get("stype"))
@@ -1031,6 +1043,7 @@ class ConfigTab(QWidget):
                 "standard_type": item_node.data(0, Qt.UserRole) or "数值",
                 "retry_count": item_node.data(1, Qt.UserRole) or "不复测",
                 "unit": item_node.data(2, Qt.UserRole) or "NULL",
+                "exec_mode": item_node.data(3, Qt.UserRole) or "并行执行",
                 "sub_steps": []
             }
             
@@ -1078,12 +1091,15 @@ class ConfigTab(QWidget):
                 mode_text, 
                 str(data['min']), 
                 str(data['max']), 
-                data['strategy']
+                data['strategy'],
+                data.get('exec_mode', '并行执行'),
+                "--"
             ])
             # 存储新字段元数据
             item.setData(0, Qt.UserRole, data['standard_type'])
             item.setData(1, Qt.UserRole, data['retry_count'])
             item.setData(2, Qt.UserRole, data.get('unit', 'NULL'))
+            item.setData(3, Qt.UserRole, data.get('exec_mode', '并行执行'))
             
             item.setForeground(0, QColor("#00E5FF"))
             font = QFont()
@@ -1114,7 +1130,8 @@ class ConfigTab(QWidget):
             parent = parent.parent()
 
         from ui.dialogs.step_dialog import StepDialog
-        dialog = StepDialog(self)
+        parent_exec_mode = parent.data(3, Qt.UserRole) or "并行执行"
+        dialog = StepDialog(self, parent_exec_mode=parent_exec_mode)
         if dialog.exec():
             data = dialog.get_data()
             item = QTreeWidgetItem([
@@ -1122,7 +1139,9 @@ class ConfigTab(QWidget):
                 data['action'], 
                 data['params'], 
                 "参与判定" if data['is_judgment'] else "--", 
-                data['fail_strategy']
+                data['fail_strategy'],
+                "--",
+                "是" if data.get('sync_exec') else "否"
             ])
             # 存储元数据
             item.setData(0, Qt.UserRole, data['device'])
@@ -1164,6 +1183,7 @@ class ConfigTab(QWidget):
                 'standard_type': item.data(0, Qt.UserRole) or '数值',
                 'retry_count': item.data(1, Qt.UserRole) or '不复测',
                 'unit': item.data(2, Qt.UserRole) or 'NULL',
+                'exec_mode': item.data(3, Qt.UserRole) or '并行执行',
                 'has_sync_step': has_sync
             }
             dialog = TestItemDialog(self, data=data)
@@ -1174,11 +1194,13 @@ class ConfigTab(QWidget):
                 item.setText(2, str(new_data['min']))
                 item.setText(3, str(new_data['max']))
                 item.setText(4, new_data['strategy'])
+                item.setText(5, new_data.get('exec_mode', '并行执行'))
                 
                 # 保存新字段元数据
                 item.setData(0, Qt.UserRole, new_data['standard_type'])
                 item.setData(1, Qt.UserRole, new_data['retry_count'])
                 item.setData(2, Qt.UserRole, new_data.get('unit', 'NULL'))
+                item.setData(3, Qt.UserRole, new_data.get('exec_mode', '并行执行'))
         else:
             # 这是一个『子工步』(Child)
             from ui.dialogs.step_dialog import StepDialog
@@ -1193,7 +1215,9 @@ class ConfigTab(QWidget):
                 'sync_exec': item.data(3, Qt.UserRole) or False,
                 'fail_strategy': item.text(4)
             }
-            dialog = StepDialog(self, step_data=data)
+            parent = item.parent()
+            parent_exec_mode = parent.data(3, Qt.UserRole) or "并行执行" if parent else "并行执行"
+            dialog = StepDialog(self, step_data=data, parent_exec_mode=parent_exec_mode)
             if dialog.exec():
                 new_data = dialog.get_data()
                 item.setText(0, f"  └─ {new_data['name']}")
@@ -1201,6 +1225,8 @@ class ConfigTab(QWidget):
                 item.setText(2, new_data['params'])
                 item.setText(3, "参与判定" if new_data['is_judgment'] else "--")
                 item.setText(4, new_data['fail_strategy'])
+                item.setText(5, "--")
+                item.setText(6, "是" if new_data.get('sync_exec') else "否")
                 
                 # 更新元数据
                 item.setData(0, Qt.UserRole, new_data['device'])

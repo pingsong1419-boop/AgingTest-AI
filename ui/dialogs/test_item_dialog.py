@@ -62,6 +62,12 @@ class TestItemDialog(QDialog):
         self.retry_combo.addItems(["不复测", "复测1次", "复测3次"])
         layout.addWidget(self.retry_combo)
 
+        # 增加执行模式选择
+        layout.addWidget(QLabel("执行模式:"))
+        self.exec_mode_combo = QComboBox()
+        self.exec_mode_combo.addItems(["并行执行", "顺序执行"])
+        layout.addWidget(self.exec_mode_combo)
+
         # 5. NG 停止策略
         layout.addWidget(QLabel("NG 停止策略:"))
         self.strategy_combo = QComboBox()
@@ -79,6 +85,7 @@ class TestItemDialog(QDialog):
             self.max_edit.setText(str(data.get('max', '') if data.get('max') is not None and data.get('max') != "--" else ''))
             self.unit_edit.setText(data.get('unit', '') if data.get('unit') is not None and data.get('unit') != "NULL" else '')
             self.retry_combo.setCurrentText(data.get('retry_count', '不复测'))
+            self.exec_mode_combo.setCurrentText(data.get('exec_mode', '并行执行'))
             self.strategy_combo.setCurrentText(data.get('strategy', '任何NG停止'))
             
             if data.get('has_sync_step', False):
@@ -137,6 +144,7 @@ class TestItemDialog(QDialog):
             'max': mx if mx else "--",
             'standard_type': self.type_combo.currentText(),
             'retry_count': self.retry_combo.currentText(),
+            'exec_mode': self.exec_mode_combo.currentText(),
             'strategy': self.strategy_combo.currentText(),
             'unit': unit_val if unit_val else "NULL"
         }
