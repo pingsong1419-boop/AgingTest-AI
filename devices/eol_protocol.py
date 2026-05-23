@@ -1002,6 +1002,10 @@ class EOLProtocol:
                 logger=logger
             )
         except Exception as e:
+            import traceback
+            traceback_str = traceback.format_exc()
+            if logger: logger(f"[CRITICAL EOL EXCEPTION] {traceback_str}")
+            else: print(f"[CRITICAL EOL EXCEPTION] {traceback_str}")
             return EOLResult(False, error=f"EOL参数错误: {e}")
 
     def _build_operations(self) -> Dict[str, Dict[str, Any]]:

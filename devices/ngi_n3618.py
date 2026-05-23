@@ -75,50 +75,58 @@ class NGIN3618:
                 # 标准响应是 '0,"No error"' 或 '+0,"No error"'
                 return "0," in res or "No error" in res
             except:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] Check Success Exception")
                 return False
 
     def set_voltage(self, voltage: float, logger=None) -> bool:
         if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
-            return False
+            if not self.connect():
+                if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
+                return False
         with self.lock:
             try:
                 self.send_cmd(f"VOLT {voltage:.3f}", logger)
                 return self.check_success(logger)
             except Exception as e:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] 设置电压异常: {e}")
                 return False
 
     def set_current(self, current: float, logger=None) -> bool:
         if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
-            return False
+            if not self.connect():
+                if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
+                return False
         with self.lock:
             try:
                 self.send_cmd(f"CURR {current:.3f}", logger)
                 return self.check_success(logger)
             except Exception as e:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
                 return False
 
     def output_control(self, state: bool, logger=None) -> bool:
         if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
-            return False
+            if not self.connect():
+                if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
+                return False
         with self.lock:
             try:
                 cmd = "OUTP ON" if state else "OUTP OFF"
                 self.send_cmd(cmd, logger)
                 return self.check_success(logger)
             except Exception as e:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
                 return False
 
     def measure_voltage(self, logger=None) -> float:
         if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
-            return -1.0
+            if not self.connect():
+                if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
+                return -1.0
         with self.lock:
             try:
                 self.send_cmd("MEAS:VOLT?", logger)
@@ -128,13 +136,15 @@ class NGIN3618:
                 clean_data = "".join(c for c in data if c in "0123456789.eE-+")
                 return float(clean_data)
             except Exception as e:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] 测量电压异常: {e}")
                 return -1.0
 
     def measure_current(self, logger=None) -> float:
         if not self.is_connected:
-            if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
-            return -1.0
+            if not self.connect():
+                if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
+                return -1.0
         with self.lock:
             try:
                 self.send_cmd("MEAS:CURR?", logger)
@@ -143,6 +153,7 @@ class NGIN3618:
                 clean_data = "".join(c for c in data if c in "0123456789.eE-+")
                 return float(clean_data)
             except Exception as e:
+                self.is_connected = False
                 if logger: logger(f"[IP: {self.ip}] [!] 测量电流异常: {e}")
                 return -1.0
 

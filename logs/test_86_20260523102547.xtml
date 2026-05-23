@@ -1,0 +1,16 @@
+<TestReport id='86'>
+  <BasicInfo>
+    <Channel>2</Channel>
+    <Recipe>BMS1</Recipe>
+    <StartTime>2026-05-23 10:25:42</StartTime>
+    <EndTime>2026-05-23 10:25:47</EndTime>
+    <TotalResult>NG</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='1#模拟电池输出'>
+      <Limit>3.7 ~ 3.9</Limit>
+      <Measured>OK</Measured>
+      <Result>NG</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

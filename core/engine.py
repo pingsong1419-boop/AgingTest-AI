@@ -768,7 +768,9 @@ class ChannelWorker(QObject):
     def on_sub_step_complete(self):
         if not self.is_running: return
         self.current_sub_step_index += 1
-        self.run_next_sub_step()
+        # 使用 QTimer.singleShot(0) 将下一个子工步推迟到事件循环的下一次迭代，
+        # 从而断开同步调用的栈堆积，彻底解决 maximum recursion depth exceeded
+        QTimer.singleShot(0, self.run_next_sub_step)
 
     def on_step_complete(self, is_pass: bool = True):
         if not self.is_running: return
@@ -919,7 +921,7 @@ class ChannelWorker(QObject):
             return
         self.current_step_index += 1
         self.progress_updated.emit(self.channel_id, (self.current_step_index / max(1, len(self.steps))) * 100.0, {})
-        self.run_next_step()
+        QTimer.singleShot(0, self.run_next_step)
 
 class TestEngine(QObject):
     all_channels_finished = Signal()

@@ -1,0 +1,446 @@
+<TestReport id='91'>
+  <BasicInfo>
+    <Channel>1</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-23 10:41:23</StartTime>
+    <EndTime>2026-05-23 10:44:48</EndTime>
+    <TotalResult>NG</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.991</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.991</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN2通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN4通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN1通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='KL15唤醒源识别'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.128</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL 5V供电回采电压'>
+      <Limit>4.95 ~ 5.05</Limit>
+      <Measured>4.991</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG1脉冲阻抗'>
+      <Limit>45000.0 ~ 55000.0</Limit>
+      <Measured>49650.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG3脉冲阻抗'>
+      <Limit>90000.0 ~ 110000.0</Limit>
+      <Measured>98398.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.599</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.402</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.586</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.349</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.593</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.586</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1无效测试'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1有效测试'>
+      <Limit>3.9 ~ 4.1</Limit>
+      <Measured>4.024</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1有效测试(闭合CC1_2015+_S2)'>
+      <Limit>9.5 ~ 10.5</Limit>
+      <Measured>10.053</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2无效测试'>
+      <Limit>1.0 ~ 1.5</Limit>
+      <Measured>1.363</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2有效测试'>
+      <Limit>0.5 ~ 0.8</Limit>
+      <Measured>0.661</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2有效测试(闭合CC2_SW3)'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2-PE断线模拟'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='环境温度测试'>
+      <Limit>0.0 ~ 85.0</Limit>
+      <Measured>24.9</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC1'>
+      <Limit>-2.0 ~ 8.0</Limit>
+      <Measured>2.1</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC2'>
+      <Limit>-2.0 ~ 8.0</Limit>
+      <Measured>2.1</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC3'>
+      <Limit>-2.0 ~ 8.0</Limit>
+      <Measured>2.1</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC4'>
+      <Limit>-2.0 ~ 8.0</Limit>
+      <Measured>2.1</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.945</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.077</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1_CS（HH）'>
+      <Limit>0.65 ~ 0.85</Limit>
+      <Measured>0.803</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.945</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.003</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.483</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2_CS（HH）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.434</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.938</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.003</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.05</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3_CS（HH）'>
+      <Limit>0.65 ~ 0.85</Limit>
+      <Measured>0.798</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.952</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.51</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4_CS（HH）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.427</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5（L）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5_CS（L）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.057</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5_CS（H）'>
+      <Limit>0.65 ~ 0.85</Limit>
+      <Measured>0.8</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6（L）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6_CS（L）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.003</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.456</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6_CS（H）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.431</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT7（L）'>
+      <Limit>0.0 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT7（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.097</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT7_CS（H）'>
+      <Limit>0.7 ~ 0.9</Limit>
+      <Measured>0.798</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT8（L）'>
+      <Limit>0.0 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT8（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.544</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT8_CS（H）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.426</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT1（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.96</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT1（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.039</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT2（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.953</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT2（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.026</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT3（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.96</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT3（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.046</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT4（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.94</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT4（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.026</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>100.0421</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压1测试-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>100.153</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压2测试-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>99.735</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压3测试-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>99.393</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>750.0651</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压1测试-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.971</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压2测试-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.591</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压3测试-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.135</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-650V'>
+      <Limit>649.0 ~ 651.0</Limit>
+      <Measured>650.0127</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='绝缘采集测试-正极1MΩ'>
+      <Limit>850.0 ~ 1150.0</Limit>
+      <Measured>844.9kΩ</Measured>
+      <Result>NG</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>
