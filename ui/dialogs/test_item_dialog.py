@@ -9,7 +9,7 @@ class TestItemDialog(QDialog):
     def __init__(self, parent=None, data=None):
         super().__init__(parent)
         self.setWindowTitle("编辑测试项 (判定条件)")
-        self.setFixedSize(380, 530)
+        self.setFixedSize(380, 600)
         self.setStyleSheet("""
             QDialog { background-color: #1F1F35; color: white; }
             QLabel { font-size: 13px; color: #B0B0B0; margin-top: 5px; }
@@ -62,6 +62,12 @@ class TestItemDialog(QDialog):
         self.retry_combo.addItems(["不复测", "复测1次", "复测3次"])
         layout.addWidget(self.retry_combo)
 
+        # 新增: 目标被测物选择
+        layout.addWidget(QLabel("目标被测物:"))
+        self.target_combo = QComboBox()
+        self.target_combo.addItems(["主机", "从机1", "从机2", "从机3"])
+        layout.addWidget(self.target_combo)
+
         # 增加执行模式选择
         layout.addWidget(QLabel("执行模式:"))
         self.exec_mode_combo = QComboBox()
@@ -86,6 +92,7 @@ class TestItemDialog(QDialog):
             self.unit_edit.setText(data.get('unit', '') if data.get('unit') is not None and data.get('unit') != "NULL" else '')
             self.retry_combo.setCurrentText(data.get('retry_count', '不复测'))
             self.exec_mode_combo.setCurrentText(data.get('exec_mode', '并行执行'))
+            self.target_combo.setCurrentText(data.get('target_board', '主机'))
             self.strategy_combo.setCurrentText(data.get('strategy', '任何NG停止'))
             
             if data.get('has_sync_step', False):
@@ -146,5 +153,6 @@ class TestItemDialog(QDialog):
             'retry_count': self.retry_combo.currentText(),
             'exec_mode': self.exec_mode_combo.currentText(),
             'strategy': self.strategy_combo.currentText(),
-            'unit': unit_val if unit_val else "NULL"
+            'unit': unit_val if unit_val else "NULL",
+            'target_board': self.target_combo.currentText()
         }

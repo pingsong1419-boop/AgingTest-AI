@@ -63,7 +63,7 @@ class ConfigTab(QWidget):
         
         self.edit_layout.addWidget(QLabel("测试项目与工步流 (树状结构):"))
         self.step_tree = QTreeWidget()
-        self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略", "测试模式", "同步"])
+        self.step_tree.setHeaderLabels(["名称/工步", "模式/范围", "目标值/下限", "截止时间/上限", "NG 策略", "测试模式", "同步", "目标被测物"])
         self.step_tree.setColumnWidth(0, 250)
         
         # 启用拖拽排序
@@ -529,7 +529,8 @@ class ConfigTab(QWidget):
                 item_data['max'],
                 item_data['strategy'],
                 item_data.get('exec_mode', '并行执行'),
-                "--"
+                "--",
+                item_data.get('target_board', '主机')
             ])
             # 存储新字段元数据到 UserRole
             parent.setData(0, Qt.UserRole, item_data.get("standard_type", "数值"))
@@ -722,6 +723,7 @@ class ConfigTab(QWidget):
                 "retry_count": item.data(1, Qt.UserRole) or "不复测",
                 "unit": item.data(2, Qt.UserRole) or "NULL",
                 "exec_mode": item.data(3, Qt.UserRole) or "并行执行",
+                "target_board": item.text(7) if item.text(7) else "主机",
                 "sub_steps": []
             }
             for i in range(item.childCount()):
@@ -788,7 +790,7 @@ class ConfigTab(QWidget):
             if data["type"] == "item":
                 # 粘贴为顶层测试项
                 new_item = QTreeWidgetItem([
-                    data['name'], data['mode'], data['min'], data['max'], data['strategy'], data.get('exec_mode', '并行执行'), "--"
+                    data['name'], data['mode'], data['min'], data['max'], data['strategy'], data.get('exec_mode', '并行执行'), "--", data.get('target_board', '主机')
                 ])
                 new_item.setData(0, Qt.UserRole, data.get('standard_type', '数值'))
                 new_item.setData(1, Qt.UserRole, data.get('retry_count', '不复测'))
@@ -926,6 +928,10 @@ class ConfigTab(QWidget):
                 if cfg["change_strategy"]:
                     item.setText(4, "任何NG停止" if has_sync else cfg['strategy'])
                     
+                # 统一修改目标被测物
+                if cfg.get("change_target"):
+                    item.setText(7, cfg['target_board'])
+                    
                 count += 1
                 
             QMessageBox.information(self, "完成", f"批量修改完成，共影响 {count} 个测试项。子工步保持不动。")
@@ -1044,6 +1050,7 @@ class ConfigTab(QWidget):
                 "retry_count": item_node.data(1, Qt.UserRole) or "不复测",
                 "unit": item_node.data(2, Qt.UserRole) or "NULL",
                 "exec_mode": item_node.data(3, Qt.UserRole) or "并行执行",
+                "target_board": item_node.text(7) if item_node.text(7) else "主机",
                 "sub_steps": []
             }
             
@@ -1093,7 +1100,8 @@ class ConfigTab(QWidget):
                 str(data['max']), 
                 data['strategy'],
                 data.get('exec_mode', '并行执行'),
-                "--"
+                "--",
+                data.get('target_board', '主机')
             ])
             # 存储新字段元数据
             item.setData(0, Qt.UserRole, data['standard_type'])
@@ -1184,6 +1192,7 @@ class ConfigTab(QWidget):
                 'retry_count': item.data(1, Qt.UserRole) or '不复测',
                 'unit': item.data(2, Qt.UserRole) or 'NULL',
                 'exec_mode': item.data(3, Qt.UserRole) or '并行执行',
+                'target_board': item.text(7) if item.text(7) else '主机',
                 'has_sync_step': has_sync
             }
             dialog = TestItemDialog(self, data=data)
@@ -1195,6 +1204,7 @@ class ConfigTab(QWidget):
                 item.setText(3, str(new_data['max']))
                 item.setText(4, new_data['strategy'])
                 item.setText(5, new_data.get('exec_mode', '并行执行'))
+                item.setText(7, new_data.get('target_board', '主机'))
                 
                 # 保存新字段元数据
                 item.setData(0, Qt.UserRole, new_data['standard_type'])

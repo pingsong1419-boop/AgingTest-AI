@@ -100,6 +100,16 @@ class BulkEditDialog(QDialog):
         self.cb_strategy.toggled.connect(self.strategy_combo.setEnabled)
         layout.addWidget(self.strategy_combo)
         
+        # 5. 目标被测物
+        self.cb_target = QCheckBox("统一修改目标被测物")
+        layout.addWidget(self.cb_target)
+        
+        self.target_combo = QComboBox()
+        self.target_combo.addItems(["主机", "从机1", "从机2", "从机3"])
+        self.target_combo.setEnabled(False)
+        self.cb_target.toggled.connect(self.target_combo.setEnabled)
+        layout.addWidget(self.target_combo)
+        
         layout.addSpacing(10)
         
         # 按钮
@@ -157,5 +167,7 @@ class BulkEditDialog(QDialog):
             "change_retry": self.cb_retry.isChecked(),
             "retry_count": self.retry_combo.currentText(),
             "change_strategy": self.cb_strategy.isChecked(),
-            "strategy": self.strategy_combo.currentText()
+            "strategy": self.strategy_combo.currentText(),
+            "change_target": self.cb_target.isChecked(),
+            "target_board": self.target_combo.currentText()
         }
