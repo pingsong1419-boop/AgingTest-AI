@@ -5236,9 +5236,9 @@
             "exec_mode": "并行执行",
             "sub_steps": [
                 {
-                    "name": "等待 (Wait)-固定延时 (500ms)",
+                    "name": "等待 (Wait)-固定延时 (1500ms)",
                     "action": "固定延时",
-                    "params": "500ms",
+                    "params": "1500ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -5253,7 +5253,7 @@
                     "type": "3.5HEOL协议",
                     "is_judgment": false,
                     "sync_exec": false,
-                    "fail_strategy": "失败停止"
+                    "fail_strategy": "重试3次"
                 }
             ]
         },
