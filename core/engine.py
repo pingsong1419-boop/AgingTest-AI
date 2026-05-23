@@ -75,7 +75,8 @@ class ChannelWorker(QObject):
         self.db_manager = db_manager
         self.engine = engine
         self.is_running = False
-        self.is_waiting_for_sync = False
+        self._sync_timer_id = None
+        self._is_waiting_for_sync = False
         self.current_step_index = 0
         self.current_sub_step_index = 0
         self.current_step_results = []
@@ -129,8 +130,45 @@ class ChannelWorker(QObject):
             pass
 
         if self.db_manager and self.test_id != -1:
-            self.db_manager.finish_test(self.test_id, "STOPPED")
+            tid = self.test_id
             self.test_id = -1
+            self.db_manager.finish_test(tid, "STOPPED")
+
+    @property
+    def is_waiting_for_sync(self) -> bool:
+        return getattr(self, "_is_waiting_for_sync", False)
+
+    @is_waiting_for_sync.setter
+    def is_waiting_for_sync(self, value: bool):
+        self._is_waiting_for_sync = value
+        if value:
+            self.start_sync_timeout(60000)
+        else:
+            self.stop_sync_timeout()
+
+    def start_sync_timeout(self, timeout_ms=60000):
+        if getattr(self, "_sync_timer_id", None) is not None:
+            try:
+                self.killTimer(self._sync_timer_id)
+            except Exception:
+                pass
+            self._sync_timer_id = None
+        self._sync_timer_id = self.startTimer(timeout_ms)
+
+    def stop_sync_timeout(self):
+        if getattr(self, "_sync_timer_id", None) is not None:
+            try:
+                self.killTimer(self._sync_timer_id)
+            except Exception:
+                pass
+            self._sync_timer_id = None
+
+    def timerEvent(self, event):
+        if getattr(self, "_sync_timer_id", None) is not None and event.timerId() == self._sync_timer_id:
+            self.stop_sync_timeout()
+            if self.is_waiting_for_sync:
+                self.log_message.emit(self.channel_id, "[!] 同步/顺序执行等待超时！看门狗强制释放通道，防止整机卡死。")
+                self.resume_from_sync(advance=True)
 
     def resume_from_sync(self, advance=True):
         if self.is_waiting_for_sync:
@@ -154,13 +192,13 @@ class ChannelWorker(QObject):
                     has_ng = True
                     break
             
-            final_success = not has_ng
-            self.test_finished.emit(self.channel_id, final_success)
-            
             if self.db_manager and self.test_id != -1:
-                final_status = "FAIL" if has_ng else "PASS"
-                self.db_manager.finish_test(self.test_id, final_status if self.is_running else "STOPPED")
+                tid = self.test_id
                 self.test_id = -1
+                final_status = "FAIL" if has_ng else "PASS"
+                self.db_manager.finish_test(tid, final_status if self.is_running else "STOPPED")
+                
+            self.test_finished.emit(self.channel_id, final_success)
             return
 
         # 极速闪电跳过循环 (Lightning Skip Loop)：遇到带 "#" 的被屏蔽项，一瞬间登记并广播跳过，0ms 极速奔向下一个勾选项！
@@ -320,7 +358,7 @@ class ChannelWorker(QObject):
                 self.reached_barrier.emit(self.channel_id, sub_step)
                 self.log_message.emit(self.channel_id, "[#] 进入同步屏障，等待其他通道...")
                 # 触发状态收集和广播，防止前台显示卡死
-                self.current_step_results.append("PASS")
+                self.current_step_results.append(("PASS", False))
                 self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS", None)
                 return True, None
 
@@ -873,8 +911,9 @@ class ChannelWorker(QObject):
         if not is_pass and step.ng_strategy == NGStrategy.STOP_ON_ANY:
             self.log_message.emit(self.channel_id, f"[!] 触发NG停止策略: {step.name}")
             if self.db_manager and self.test_id != -1:
-                self.db_manager.finish_test(self.test_id, "NG")
+                tid = self.test_id
                 self.test_id = -1
+                self.db_manager.finish_test(tid, "NG")
             self.test_finished.emit(self.channel_id, False)
             self.is_running = False
             return
@@ -899,6 +938,7 @@ class TestEngine(QObject):
         self.resource_locks = {"ca550": None, "seq_step_lock": None}
         self.resource_queues = {"ca550": [], "seq_step_lock": []}
         self.batch_starting = False
+        self._current_barrier_sub_step = {}
 
     def begin_batch_start(self):
         with self._lock: self.batch_starting = True
@@ -927,7 +967,9 @@ class TestEngine(QObject):
                 if self.resource_queues[name]:
                     next_ch = self.resource_queues[name].pop(0)
                     self.resource_locks[name] = next_ch
-                    if next_ch in self.workers: self.workers[next_ch].resume_from_sync(advance=False)
+                    if next_ch in self.workers:
+                        w = self.workers[next_ch]
+                        QTimer.singleShot(0, w, lambda w=w: w.resume_from_sync(advance=False))
                 if name == "seq_step_lock": self._emit_seq_queue_status()
 
     def _emit_seq_queue_status(self):
@@ -941,7 +983,10 @@ class TestEngine(QObject):
 
     def handle_barrier_reached(self, cid, sub_step=None):
         with self._lock:
-            if not self.sync_barrier_channels: self._current_barrier_sub_step = sub_step
+            group = self.sync_groups.get(cid)
+            group_key = frozenset(group) if group else frozenset({cid})
+            if group_key not in self._current_barrier_sub_step:
+                self._current_barrier_sub_step[group_key] = sub_step
             self.sync_barrier_channels.add(cid)
             self.channel_sync_status_changed.emit(cid, True)
             self._check_and_release_barrier()
@@ -963,6 +1008,14 @@ class TestEngine(QObject):
                 active_in_group = [cid for cid in group_key if cid in self.workers]
                 total = len(active_in_group)
                 waiting = len(waiting_set)
+                
+                # 诊断日志：打印各组屏障等待状态，精确定位未到达的通道
+                not_reached = [cid for cid in active_in_group if cid not in waiting_set]
+                if not_reached:
+                    sub_obj = self._current_barrier_sub_step.get(group_key)
+                    sub_name = sub_obj.params.get("name", sub_obj.type.value) if (sub_obj and hasattr(sub_obj, "params")) else "未知屏障"
+                    print(f"[TestEngine 诊断] 同步组 {list(group_key)} 正在等待屏障 '{sub_name}'。已到达: {list(waiting_set)}, 未到达: {not_reached}")
+                
                 self.barrier_status_changed.emit(waiting, total)
 
                 if waiting >= total > 0:
@@ -971,14 +1024,13 @@ class TestEngine(QObject):
                     for cid in channels_to_release:
                         self.sync_barrier_channels.discard(cid)
                     exec_cid = channels_to_release[0]  # 取最小 cid 为执行主体
-                    sub = self._current_barrier_sub_step
-                    self._current_barrier_sub_step = None
+                    sub = self._current_barrier_sub_step.pop(group_key, None)
 
                     def run_sync_op(exec_cid=exec_cid, channels_to_release=channels_to_release,
                                    sub=sub, total=total):
                         try:
                             master_success, master_result = True, None
-                            if sub and sub.params.get("sync_exec"):
+                            if sub and hasattr(sub, "params") and sub.params.get("sync_exec"):
                                 if exec_cid in self.workers:
                                     worker = self.workers[exec_cid]
                                     worker.log_message.emit(exec_cid, f"[*] 同步集齐 ({channels_to_release})，开始执行共享控制...")
@@ -994,7 +1046,10 @@ class TestEngine(QObject):
                                                 val = "PASS" if success else "FAIL"
                                                 if res is not None and res != "":
                                                     val = res
-                                                target_w.current_step_results.append((val, bool(sub.params.get("is_judgment", False))))
+                                                is_judg = False
+                                                if sub and hasattr(sub, "params"):
+                                                    is_judg = bool(sub.params.get("is_judgment", False))
+                                                target_w.current_step_results.append((val, is_judg))
                                                 target_w.sub_step_finished.emit(target_w.channel_id, target_w.current_step_index, target_w.current_sub_step_index, "PASS" if success else "FAIL", res)
                                             target_w.resume_from_sync()
                                             self.channel_sync_status_changed.emit(target_w.channel_id, False)
@@ -1056,6 +1111,13 @@ class TestEngine(QObject):
 
             for sub in item.get('sub_steps', []):
                 stype, t_str, p_str = SubStepType.SET_INSTRUMENT, sub.get('type', ""), str(sub.get('params', ""))
+                
+                # 过滤掉缓存中因上次运行而自动注入的幽灵工步（屏障、顺序锁），防止多次点击运行后出现重复或变异（变成"设置仪表"）
+                if t_str in (SubStepType.ACQUIRE_SEQ_LOCK.value, SubStepType.RELEASE_SEQ_LOCK.value):
+                    continue
+                if t_str == SubStepType.BARRIER.value and not sub.get('params', {}).get("sync_exec", False):
+                    continue
+                    
                 dev_str, act_str = sub.get('device', ""), sub.get('action', "")
                 if "3.5HEOL" in t_str or "EOL协议" in t_str: stype = SubStepType.EOL_PROTOCOL
                 elif "读取变量" in t_str or "变量操作" in dev_str or "读取变量" in act_str or "VAR:" in p_str: stype = SubStepType.READ_VAR

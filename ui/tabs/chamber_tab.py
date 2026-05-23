@@ -1309,8 +1309,8 @@ class ChamberTab(QWidget):
                 lamp.setStyleSheet("color: #777777; font-size: 9px; background-color: #1A121A; border: 1px solid #2D1B2D; border-radius: 4px; padding: 4px;")
                 lamp.setText(f"⚪ {point}\n{desc}")
                 
-        # 如系统触发急停或重大报警，强制自动终止老化测试工步 (保障物理实验安全)
-        if has_any_alarm and self.sequence_running:
+        # 如系统触发急停或重大报警，且未开启屏蔽模式，强制自动终止老化测试工步 (保障物理实验安全)
+        if has_any_alarm and self.sequence_running and not getattr(self, "_is_bypass_chamber", False):
             self.stop_aging_sequence()
             QMessageBox.critical(self, "安全报警拦截", "PLC 底层自检监测到严重安全故障警报！老化测试工步已自动触发紧急安全中止！")
 
@@ -1508,7 +1508,7 @@ class ChamberTab(QWidget):
                         print(f"[Aging Debug] Step '{step_name}': test_hours={test_hours}, selected_cids={selected_cids}, workers={workers_keys}, all_checked_finished={all_checked_finished}")
 
         # 如果当前是一个测试类工步，且所有勾选通道已经测试完成，直接结束工步
-        is_multi_channel_step = "测试" in step_name or "功能测试" in step_name
+        is_multi_channel_step = "测试" in step_name or "功能测试" in step_name or "带载" in step_name
         if is_multi_channel_step and has_selected_channels and all_checked_finished:
             step_completed = True
             completion_reason = "全部通道测试完成"
