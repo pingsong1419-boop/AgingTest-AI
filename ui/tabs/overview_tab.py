@@ -672,20 +672,28 @@ class OverviewTab(QWidget):
         print(f"[DEBUG] Target Channel: {target_channel}, Shelf: {shelf}, Master: {master}, Slaves: {slaves}")
 
         # 找到对应的通道 UI 并更新数据 (target_channel 是 1-60)
-
         idx = target_channel - 1
-
         if 0 <= idx < len(self.channel_widgets):
-
             ch_widget = self.channel_widgets[idx]
-
             ch_widget.set_barcodes(shelf, master, slaves)
-
             ch_widget.set_status("就绪(可测试)", "#00E5FF")
-
             print(f"[DEBUG] Channel {target_channel} barcodes and status updated successfully.")
-
             self.speak_text(f"通道 {target_channel} 扫码完成")
+
+            # 异步上报绑定条码信息至大屏 (prepare)
+            if self.engine and self.engine.api_client:
+                s1 = slaves[0] if len(slaves) > 0 else None
+                s2 = slaves[1] if len(slaves) > 1 else None
+                s3 = slaves[2] if len(slaves) > 2 else None
+                
+                def run_prepare():
+                    print(f"[API Action] Asynchronously calling prepare for ch={target_channel}")
+                    res = self.engine.api_client.prepare(target_channel, master, s1, s2, s3)
+                    if not res:
+                        print(f"[API Action] Warning: Failed to connect to server for ch={target_channel} prepare.")
+                
+                import threading
+                threading.Thread(target=run_prepare, daemon=True).start()
 
         else:
 
@@ -945,7 +953,7 @@ class OverviewTab(QWidget):
 
                     
 
-                self.engine.start_channel_test(cid, recipe_items, test_id=test_id, sync_group=selected_cids)
+                self.engine.start_channel_test(cid, recipe_items, test_id=test_id, sync_group=selected_cids, master_barcode=master, slaves=slaves)
 
                 self.channel_widgets[cid - 1].set_status("测试中", "#28A745")
 

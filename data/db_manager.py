@@ -560,8 +560,16 @@ class DBManager:
         try:
             import json
             file_path = os.path.join(self.get_config_dir(), "sys_config.json")
+            existing = {}
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        existing = json.load(f)
+                except:
+                    pass
+            existing.update(data)
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+                json.dump(existing, f, indent=4, ensure_ascii=False)
             return True
         except: return False
 

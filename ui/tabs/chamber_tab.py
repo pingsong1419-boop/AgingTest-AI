@@ -1198,21 +1198,21 @@ class ChamberTab(QWidget):
                 self.lbl_mode.setText("通讯模式: 物理 S7-Smart TCP")
                 self.lbl_mode.setStyleSheet("background-color: #1A1A2E; color: #00E5FF; border: 1px solid #00E5FF; border-radius: 4px; padding: 4px 10px; font-weight: bold;")
         else:
-            self.lbl_status.setText("PLC 状态: 离线 (正在自动重连...)")
+            self.lbl_status.setText("PLC 状态: 离线")
             self.lbl_status.setStyleSheet("color: #DC3545; font-weight: bold;")
             self.lbl_mode.setText("通讯模式: 未连接")
             self.lbl_mode.setStyleSheet("background-color: #1A1A2E; color: #A0A0B0; border: 1px solid #3E3E5C; border-radius: 4px; padding: 4px 10px; font-weight: bold;")
             
-            # 后台静默自动重连
-            if not getattr(self, "is_reconnecting", False):
-                self.is_reconnecting = True
-                import threading
-                def reconnect_task():
-                    try:
-                        self.chamber.connect()
-                    finally:
-                        self.is_reconnecting = False
-                threading.Thread(target=reconnect_task, daemon=True).start()
+            # 关闭了后台静默自动重连功能，避免后台抢占句柄或引发其他异常
+            # if not getattr(self, "is_reconnecting", False):
+            #     self.is_reconnecting = True
+            #     import threading
+            #     def reconnect_task():
+            #         try:
+            #             self.chamber.connect()
+            #         finally:
+            #             self.is_reconnecting = False
+            #     threading.Thread(target=reconnect_task, daemon=True).start()
             return  # 离线状态下直接返回，不拉取数据
 
         data = self.chamber.get_all_data()
@@ -1356,7 +1356,8 @@ class ChamberTab(QWidget):
                         self.mgr.dut_power.output_control(False)
                     if hasattr(self.mgr, "boards"):
                         for cid, board in self.mgr.boards.items():
-                            board.relays.write_all_off()
+                            if board.is_connected:
+                                board.relays.write_all_off()
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0

@@ -17,6 +17,7 @@ from ui.tabs.ca550_tab_standalone import CA550StandaloneTab
 from ui.tabs.rn_can_tab import RNCANTab
 from ui.tabs.power_board_tab import PowerBoardTab
 from ui.tabs.chamber_tab import ChamberTab
+from ui.tabs.api_tab import ApiTab
 
 
 
@@ -34,6 +35,20 @@ class MainWindow(QMainWindow):
         
         self.db_manager = DBManager()
         self.device_manager = DeviceManager(self.db_manager)
+        
+        # 启动自检弹窗阻塞主进程
+        from ui.dialogs.startup_dialog import StartupCheckDialog
+        from PySide6.QtWidgets import QDialog
+        import sys
+        
+        dialog = StartupCheckDialog(self.device_manager, self)
+        if dialog.exec() != QDialog.Accepted:
+            # 用户选择退出程序或强制关闭弹窗
+            self.device_manager.disconnect_all()
+            if hasattr(self, 'db_manager'):
+                self.db_manager.close()
+            sys.exit(0)
+            
         self.engine = TestEngine(self.device_manager, self.db_manager)
         
         self._init_ui()
@@ -67,23 +82,10 @@ class MainWindow(QMainWindow):
         self.tab_hardware = HardwareTab(self.db_manager)
         self.tab_hardware.set_device_manager(self.device_manager)
         self.tabs.addTab(self.tab_hardware, "硬件管理中心")
-        
-        # 启动时自动初始化硬件 (多线程异步执行，防止 UI 卡死)
-        import threading
-        def async_init():
-            try:
-                self.device_manager.init_all_devices(logger=print)
-                # 初始化完成后，通知状态栏
-                from PySide6.QtCore import QMetaObject, Qt, Q_ARG
-                QMetaObject.invokeMethod(self.status_bar, "showMessage", 
-                                       Qt.QueuedConnection, 
-                                       Q_ARG(str, "✅ 后台硬件初始化指令已下发完毕"), 
-                                       Q_ARG(int, 5000))
-            except Exception as e:
-                print(f"后台初始化异常: {e}")
 
-        init_thread = threading.Thread(target=async_init, daemon=True)
-        init_thread.start()
+        # 3.5 API 监控与调试页
+        self.tab_api = ApiTab(self.engine, self.db_manager)
+        self.tabs.addTab(self.tab_api, "API 监控与调试")
 
         # 4. 单通道/硬件独立调试中心 (主容器)
         self.tab_debug_center = DebugTab(self.device_manager)

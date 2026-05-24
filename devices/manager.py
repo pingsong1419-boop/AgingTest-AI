@@ -34,6 +34,7 @@ class DeviceManager:
         
         self.update_config()
 
+
     def update_config(self):
         """根据数据库配置更新/重新初始化设备实例"""
         cfg = {}
@@ -195,21 +196,44 @@ class DeviceManager:
         if logger: logger("[*] 开始系统硬件全量初始化...")
         
         # 1. 基础控制与校准设备初始化
-        if self.easy320: self.easy320.connect()
-        if self.ca550: self.ca550.connect()
-        if self.chamber: self.chamber.connect()
+        if self.easy320: 
+            self.easy320.connect()
+            if logger: logger(f"[*] Easy320 PLC 状态: {'已联机' if self.easy320.is_connected else '离线'}")
+        if self.ca550: 
+            self.ca550.connect()
+            if logger: logger(f"[*] CA550 校准源 状态: {'已联机' if self.ca550.is_connected else '离线'}")
+        if self.chamber: 
+            self.chamber.connect()
+            if logger: logger(f"[*] 高低温老化箱 状态: {'已联机' if self.chamber.is_connected else '离线'}")
         
         # 2. 电源类设备初始化
-        if self.hv_source: self.hv_source.connect()
-        if self.afe_power_1: self.afe_power_1.connect()
-        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: self.afe_pwr_2.connect()
-        if self.afe_pwr_3: self.afe_pwr_3.connect()
-        if self.dut_power: self.dut_power.connect()
-        if self.ctrl_board_power: self.ctrl_board_power.connect()
+        if self.hv_source: 
+            self.hv_source.connect()
+            if logger: logger(f"[*] NGI 高压源 状态: {'已联机' if self.hv_source.is_connected else '离线'}")
+        if self.afe_power_1: 
+            self.afe_power_1.connect()
+            if logger: logger(f"[*] 1# AFE 供电电源 状态: {'已联机' if self.afe_power_1.is_connected else '离线'}")
+        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: 
+            self.afe_pwr_2.connect()
+            if logger: logger(f"[*] 2# AFE 供电电源 状态: {'已联机' if self.afe_pwr_2.is_connected else '离线'}")
+        if self.afe_pwr_3: 
+            self.afe_pwr_3.connect()
+            if logger: logger(f"[*] 3# AFE 供电电源 状态: {'已联机' if self.afe_pwr_3.is_connected else '离线'}")
+        
+        if self.dut_power: 
+            self.dut_power.connect()
+            if logger: logger(f"[*] DUT 供电主电源 状态: {'已联机' if self.dut_power.is_connected else '离线'}")
+            
+        if self.ctrl_board_power: 
+            self.ctrl_board_power.connect()
+            if logger: logger(f"[*] 控制板主电源 状态: {'已联机' if self.ctrl_board_power.is_connected else '离线'}")
         
         # 3. 电池模拟器初始化
+        sim_conn_count = 0
         for sim in self.simulators:
-            sim.connect()
+            if sim.connect():
+                sim_conn_count += 1
+        if logger: logger(f"[*] 电池模拟器 状态: {sim_conn_count} / {len(self.simulators)} 已联机")
             
         # 4. [关键] 功能板上电与 Easy320 分级上电逻辑
         power_ok = False
@@ -256,17 +280,19 @@ class DeviceManager:
         def check_board(b_tuple):
             idx, board = b_tuple
             if board.connect():
-                return True
-            return False
+                return (idx, True, getattr(board, "ip", "Unknown IP"))
+            return (idx, False, getattr(board, "ip", "Unknown IP"))
 
         with ThreadPoolExecutor(max_workers=20) as executor:
             results = list(executor.map(check_board, self.boards.items()))
-            online_count = sum(1 for r in results if r)
+            online_count = sum(1 for _, ok, _ in results if ok)
+            offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
         
         if logger: 
             logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 60")
             if online_count < 60:
                 logger(f"[!] 警告: 有 {60 - online_count} 个通道目前处于离线状态")
+                logger(f"[!] 离线通道详情: {', '.join(offline_details)}")
         return True
 
     def get_all_device_status(self):
@@ -302,22 +328,46 @@ class DeviceManager:
         return status_list
 
     def disconnect_all(self):
-        """安全断开所有硬件连接"""
-        print("正在断开所有硬件设备连接...")
-        for sim in self.simulators:
-            sim.disconnect()
-        if self.hv_source: self.hv_source.disconnect()
-        if self.afe_power_1: self.afe_power_1.disconnect()
-        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: self.afe_pwr_2.disconnect()
-        if hasattr(self, 'afe_pwr_3') and self.afe_pwr_3: self.afe_pwr_3.disconnect()
-        if self.dut_power: self.dut_power.disconnect()
-        if self.ctrl_board_power: self.ctrl_board_power.disconnect()
-        for board in self.boards.values():
-            board.disconnect()
+        """断开所有设备的连接并释放资源 (新增系统安全退出逻辑)"""
+        if getattr(self, "chamber", None):
+            try: self.chamber.disconnect()
+            except: pass
+        if getattr(self, "afe_system", None):
+            try: self.afe_system.disconnect()
+            except: pass
             
-        if self.easy320: self.easy320.disconnect()
-        if self.ca550: self.ca550.disconnect()
-        if self.chamber: self.chamber.disconnect()
+        for cid, board in self.boards.items():
+            try: board.relays.disconnect()
+            except: pass
+            
+        # 释放所有电源设备
+        power_devices = [
+            getattr(self, "hv_source", None),
+            getattr(self, "dut_power", None),
+            getattr(self, "ctrl_board_power", None),
+            getattr(self, "afe_power_1", None),
+            getattr(self, "afe_pwr_2", None),
+            getattr(self, "afe_pwr_3", None)
+        ]
+        for pwr in power_devices:
+            if pwr:
+                try: pwr.disconnect()
+                except: pass
+
+        # 释放其他设备
+        if getattr(self, "easy320", None):
+            try: self.easy320.disconnect()
+            except: pass
+        if getattr(self, "ca550", None):
+            try: self.ca550.disconnect()
+            except: pass
+            
+        # 释放所有电池模拟器
+        for sim in getattr(self, "simulators", []):
+            try: sim.disconnect()
+            except: pass
+            
+        print("[DeviceManager] 所有硬件设备通讯句柄已安全释放")
 
     def emergency_stop(self):
         """紧急停止：关闭所有电源输出"""

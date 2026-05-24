@@ -3,6 +3,7 @@ import re
 import threading
 from typing import List, Dict, Optional, Any
 from PySide6.QtCore import QObject, Signal, QThread, QTimer, Slot
+from core.api_client import AgingApiClient
 
 class NGStrategy(Enum):
     STOP_ON_ANY = "任何NG停止"
@@ -86,6 +87,8 @@ class ChannelWorker(QObject):
         self.last_hw_log = ""
         self.variables = {}
         self.is_suspended = False
+        self.master_barcode = ""
+        self.slave_barcodes = []
         
         # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
         self.log_history = []
@@ -108,6 +111,13 @@ class ChannelWorker(QObject):
         self.current_step_index = 0
         self.progress_updated.emit(self.channel_id, 0.0, {})
         self.log_message.emit(self.channel_id, f"[*] 测试开始，数据库ID: {self.test_id}")
+        
+        # 异步上报测试启动状态至大屏
+        if self.engine and self.engine.api_client:
+            def run_start():
+                self.engine.api_client.start_test(self.channel_id)
+            threading.Thread(target=run_start, daemon=True).start()
+            
         self.run_next_step()
 
     def stop(self):
@@ -135,6 +145,9 @@ class ChannelWorker(QObject):
             tid = self.test_id
             self.test_id = -1
             self.db_manager.finish_test(tid, "STOPPED")
+
+        # 触发大屏数据上报与通道重置
+        self._upload_final_data_and_reset(False)
 
     @property
     def is_waiting_for_sync(self) -> bool:
@@ -200,7 +213,8 @@ class ChannelWorker(QObject):
                 final_status = "FAIL" if has_ng else "PASS"
                 self.db_manager.finish_test(tid, final_status if self.is_running else "STOPPED")
                 
-            self.test_finished.emit(self.channel_id, final_success)
+            self.test_finished.emit(self.channel_id, not has_ng)
+            self._upload_final_data_and_reset(not has_ng)
             return
 
         # 极速闪电跳过循环 (Lightning Skip Loop)：遇到带 "#" 的被屏蔽项，一瞬间登记并广播跳过，0ms 极速奔向下一个勾选项！
@@ -913,6 +927,30 @@ class ChannelWorker(QObject):
                 unit=getattr(step, "unit", "NULL")
             )
             
+            # 异步上报当前单步进度与物理测量数据至大屏
+            if self.engine and self.engine.api_client:
+                def run_progress():
+                    barcode = "主机"
+                    test_value_str = str(val_to_log)
+                    result_str = "PASS" if is_pass else "FAIL"
+                    upper_limit_str = str(step.max_limit) if step.max_limit is not None else None
+                    lower_limit_str = str(step.min_limit) if step.min_limit is not None else None
+                    unit_str = getattr(step, "unit", None)
+                    if unit_str == "NULL": 
+                        unit_str = None
+                    self.engine.api_client.report_progress(
+                        channel_id=self.channel_id,
+                        barcode=barcode,
+                        name=step.name,
+                        test_value=test_value_str,
+                        result=result_str,
+                        unit=unit_str,
+                        upper_limit=upper_limit_str,
+                        lower_limit=lower_limit_str,
+                        index=str(self.current_step_index + 1)
+                    )
+                threading.Thread(target=run_progress, daemon=True).start()
+            
         self.step_finished.emit(self.channel_id, step.name, is_pass, val_to_log)
         if not is_pass and step.ng_strategy == NGStrategy.STOP_ON_ANY:
             self.log_message.emit(self.channel_id, f"[!] 触发NG停止策略: {step.name}")
@@ -922,10 +960,104 @@ class ChannelWorker(QObject):
                 self.db_manager.finish_test(tid, "NG")
             self.test_finished.emit(self.channel_id, False)
             self.is_running = False
+            
+            # 触发大屏数据上报与通道重置 (不合格)
+            self._upload_final_data_and_reset(False)
             return
         self.current_step_index += 1
         self.progress_updated.emit(self.channel_id, (self.current_step_index / max(1, len(self.steps))) * 100.0, {})
         QTimer.singleShot(0, self.run_next_step)
+
+    def _upload_final_data_and_reset(self, status: bool):
+        """异步执行测试判定结果上传、通道测试数据完整上报、以及大屏通道重置流程，异常时不阻塞本地业务"""
+        if not (self.engine and self.engine.api_client):
+            return
+
+        def run():
+            client = self.engine.api_client
+            cid = self.channel_id
+            
+            def safe_log(msg):
+                try:
+                    self.log_message.emit(cid, msg)
+                except RuntimeError:
+                    pass
+
+            m_barcode = getattr(self, "master_barcode", "") or f"CH{cid}_MASTER_SN"
+            slave_list = getattr(self, "slave_barcodes", []) or []
+            
+            # 映射三个可能从机 SN 条码
+            s1 = slave_list[0] if len(slave_list) > 0 else None
+            s2 = slave_list[1] if len(slave_list) > 1 else None
+            s3 = slave_list[2] if len(slave_list) > 2 else None
+            
+            # 整理开始与结束时间
+            import datetime
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            start_time_str = now_str
+            if hasattr(self, "step_start_times") and self.step_start_times:
+                try:
+                    first_time = min(self.step_start_times.values())
+                    start_time_str = datetime.datetime.fromtimestamp(first_time).strftime("%Y-%m-%d %H:%M:%S")
+                except:
+                    pass
+
+            # 拼装全程已测项目的完整历史细节报文
+            master_test_data = []
+            for idx, step in enumerate(self.steps):
+                if step.name.strip().startswith("#") or getattr(step, 'skip_runtime', False):
+                    continue
+                step_name = step.name
+                is_pass = self.step_statuses.get(step_name, True)
+                measured_val = self.step_measured_values.get(step_name, None)
+                val_str = str(measured_val) if measured_val is not None else "--"
+                
+                master_test_data.append({
+                    "name": step_name,
+                    "testValue": val_str,
+                    "unit": getattr(step, "unit", "NULL"),
+                    "upperLimit": str(step.max_limit) if step.max_limit is not None else "--",
+                    "lowerLimit": str(step.min_limit) if step.min_limit is not None else "--",
+                    "result": "PASS" if is_pass else "FAIL",
+                    "index": str(idx + 1),
+                    "testclass": "主机"
+                })
+
+            # 1. 发送完成信号至大屏
+            safe_log(f"[*] 正在上报测试完成判定信号至大屏... 最终判定: {'合格(PASS)' if status else '不合格(FAIL)'}")
+            f_res = client.finish_test(cid, status)
+            if f_res:
+                safe_log("[*] 大屏测试完成信号接收成功。")
+            else:
+                safe_log("[!] 警告: 大屏服务未连接，测试完成信号上报失败（本地继续）。")
+
+            # 2. 上传整条通道的所有完整判定测试记录
+            safe_log("[*] 正在上传本通道全部工步的最终测试报表数据...")
+            d_res = client.upload_test_data(
+                channel_id=cid,
+                master_barcode=m_barcode,
+                start_time=start_time_str,
+                end_time=now_str,
+                status=status,
+                master_test_data=master_test_data,
+                slave_barcode_1=s1,
+                slave_barcode_2=s2,
+                slave_barcode_3=s3
+            )
+            if d_res:
+                safe_log("[*] 完整测试历史记录大屏上传成功。")
+            else:
+                safe_log("[!] 警告: 大屏服务未连接，历史数据上传失败。")
+
+            # 3. 发送通道重置指令
+            safe_log("[*] 正在发送大屏通道重置复位指令...")
+            r_res = client.reset(cid)
+            if r_res:
+                safe_log("[*] 大屏通道重置复位完成。")
+            else:
+                safe_log("[!] 警告: 大屏服务未连接，通道重置失败。")
+
+        threading.Thread(target=run, daemon=True).start()
 
 class TestEngine(QObject):
     all_channels_finished = Signal()
@@ -934,6 +1066,8 @@ class TestEngine(QObject):
     seq_status_changed = Signal(int, int)
     channel_step_started = Signal(int, str)
     channel_test_finished = Signal(int, bool)
+    api_log_message = Signal(str)
+
     def __init__(self, device_manager=None, db_manager=None):
         super().__init__()
         self.device_manager, self.db_manager = device_manager, db_manager
@@ -945,6 +1079,52 @@ class TestEngine(QObject):
         self.resource_queues = {"ca550": [], "seq_step_lock": [], "seq_block_lock": []}
         self.batch_starting = False
         self._current_barrier_sub_step = {}
+
+        # 初始化 API 客户端
+        self.api_client = None
+        self.update_api_client()
+
+        # 启动后台心跳守护线程
+        self.heartbeat_running = True
+        self.heartbeat_thread = threading.Thread(target=self._heartbeat_worker, daemon=True)
+        self.heartbeat_thread.start()
+
+    def log_api_call(self, msg: str):
+        """API 日志输出并触发 Qt 信号"""
+        self.api_log_message.emit(msg)
+
+    def update_api_client(self):
+        """动态加载配置并更新 API 客户端"""
+        with self._lock:
+            cfg = self.db_manager.load_sys_config() if self.db_manager else {}
+            host = cfg.get("api_host", "127.0.0.1")
+            try:
+                port = int(cfg.get("api_port", 8008))
+            except:
+                port = 8008
+            self.api_client = AgingApiClient(host, port, logger=self.log_api_call)
+
+    def _heartbeat_worker(self):
+        """后台心跳工作线程，每 5 秒上报一次老化箱实时温度"""
+        import time
+        while self.heartbeat_running:
+            try:
+                # 获取实时老化温度箱温度
+                temp = 25.0
+                if self.device_manager and getattr(self.device_manager, 'chamber', None):
+                    temp = self.device_manager.chamber.data_store.get("VD720", 25.0)
+                
+                # 发送心跳
+                if self.api_client:
+                    self.api_client.heartbeat(temp)
+            except Exception as e:
+                self.log_api_call(f"[API ERR] 心跳后台上报出现异常: {str(e)}")
+            
+            # 定时 5 秒
+            for _ in range(50):
+                if not self.heartbeat_running:
+                    break
+                time.sleep(0.1)
 
     def begin_batch_start(self):
         with self._lock: self.batch_starting = True
@@ -1086,7 +1266,7 @@ class TestEngine(QObject):
                 elif "电流" in act: mgr.broadcast_current(val)
         except Exception as e: print(f"Global action error: {e}")
 
-    def start_channel_test(self, cid, recipe_data, test_id=-1, sync_group=None):
+    def start_channel_test(self, cid, recipe_data, test_id=-1, sync_group=None, master_barcode="", slaves=None):
         if sync_group:
             with self._lock:
                 # 记录该通道所属的同步组 (即所有勾选的通道集合)
@@ -1166,6 +1346,8 @@ class TestEngine(QObject):
         with self._lock:
             if cid in self.workers: self.stop_channel_test(cid)
         t = QThread(); w = ChannelWorker(cid, steps, self.device_manager, self.db_manager, engine=self)
+        w.master_barcode = master_barcode
+        w.slave_barcodes = slaves or []
         w.set_test_info(test_id); w.moveToThread(t); w.reached_barrier.connect(self.handle_barrier_reached)
         w.step_started.connect(self.channel_step_started)
         w.test_finished.connect(self.channel_test_finished)
@@ -1196,6 +1378,7 @@ class TestEngine(QObject):
             if t in self.zombie_threads: self.zombie_threads.remove(t)
 
     def stop_all(self):
+        self.heartbeat_running = False
         with self._lock:
             for cid in list(self.threads.keys()): self.stop_channel_test(cid)
             import time; s = time.time()

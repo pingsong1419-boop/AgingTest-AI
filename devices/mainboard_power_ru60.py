@@ -26,7 +26,7 @@ class MainboardPowerRU60:
             timeout=2,
             retries=1
         )
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.is_connected = False
 
     def connect(self) -> bool:
@@ -43,15 +43,8 @@ class MainboardPowerRU60:
                         retries=1
                     )
                 if self.client.connect():
-                    # 握手验证：读取 100 号电压寄存器
-                    result = self.client.read_input_registers(100, count=1, device_id=self.unit_id)
-                    if result and not result.isError():
-                        self.is_connected = True
-                        return True
-                    else:
-                        self.client.close()
-                        self.is_connected = False
-                        return False
+                    self.is_connected = True
+                    return True
                 return False
             except Exception:
                 self.is_connected = False
@@ -66,8 +59,9 @@ class MainboardPowerRU60:
         """设置电压 (十进制地址 149, 倍率 100)"""
         with self.lock:
             if not self.is_connected:
-                if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
-                return False
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败")
+                    return False
             try:
                 val = int(round(voltage * 100))
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Register 149: {val}")
@@ -83,8 +77,9 @@ class MainboardPowerRU60:
         """设置电流 (十进制地址 150, 倍率 10)"""
         with self.lock:
             if not self.is_connected:
-                if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
-                return False
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败")
+                    return False
             try:
                 val = int(round(current * 100))
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Register 150: {val}")
@@ -100,8 +95,9 @@ class MainboardPowerRU60:
         """输出控制 (十进制线圈地址 133)"""
         with self.lock:
             if not self.is_connected:
-                if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
-                return False
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败")
+                    return False
             try:
                 if logger: logger(f"[IP: {self.ip}] [TX] Write Coil 133: {state}")
                 result = self.client.write_coil(133, state, device_id=self.unit_id)
@@ -116,11 +112,12 @@ class MainboardPowerRU60:
         """测量电压 (十进制输入寄存器地址 100, 倍率 100)"""
         with self.lock:
             if not self.is_connected:
-                if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
-                return -1.0
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败")
+                    return -1.0
             try:
                 if logger: logger(f"[IP: {self.ip}] [TX] Read Register 100")
-                result = self.client.read_holding_registers(100, count=1, device_id=self.unit_id)
+                result = self.client.read_input_registers(100, count=1, device_id=self.unit_id)
                 if not result or result.isError():
                     if logger: logger(f"[IP: {self.ip}] [RX] Error")
                     return -1.0
@@ -135,11 +132,12 @@ class MainboardPowerRU60:
         """测量电流 (十进制输入寄存器地址 101, 倍率 10)"""
         with self.lock:
             if not self.is_connected:
-                if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接")
-                return -1.0
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败")
+                    return -1.0
             try:
                 if logger: logger(f"[IP: {self.ip}] [TX] Read Register 101")
-                result = self.client.read_holding_registers(101, count=1, device_id=self.unit_id)
+                result = self.client.read_input_registers(101, count=1, device_id=self.unit_id)
                 if not result or result.isError():
                     if logger: logger(f"[IP: {self.ip}] [RX] Error")
                     return -1.0

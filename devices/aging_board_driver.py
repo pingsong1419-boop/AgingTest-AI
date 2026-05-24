@@ -144,7 +144,7 @@ class AgingBoardController:
     def read_relays(self, count: int = 22) -> list:
         """读取所有继电器当前状态 (0-21)"""
         if not self.is_connected:
-            if not self.connect(): return []
+            return []
         try:
             result = self.client.read_coils(address=0, count=count, device_id=self.slave_id)
             if result.isError():
@@ -157,7 +157,7 @@ class AgingBoardController:
     def write_all_off(self) -> bool:
         """批量关闭本板卡所有 22 路继电器"""
         if not self.is_connected:
-            if not self.connect(): return False
+            return False
         try:
             result = self.client.write_coils(address=0, values=[False] * 22, device_id=self.slave_id)
             if not result.isError():
