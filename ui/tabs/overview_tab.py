@@ -1137,7 +1137,10 @@ class OverviewTab(QWidget):
 
         count = len(selected_cids)
 
-        
+        # 优先触发大屏接口，将所有选中的通道执行重置复位，使其状态变回 idle 并清除残留数据
+        if self.engine and getattr(self.engine, "api_client", None):
+            for ch_id in selected_cids:
+                self.engine.api_client.reset(ch_id)
 
         for ch_id in selected_cids:
 
