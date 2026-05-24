@@ -116,6 +116,15 @@ class ChannelWorker(QObject):
         # 异步上报测试启动状态至大屏
         if self.engine and self.engine.api_client:
             def run_start():
+                # 按照需求：点击开始测试的时候再将通道显示的条码发送 (prepare)
+                slaves = getattr(self, "slave_barcodes", []) or []
+                s1 = slaves[0] if len(slaves) > 0 else None
+                s2 = slaves[1] if len(slaves) > 1 else None
+                s3 = slaves[2] if len(slaves) > 2 else None
+                master = getattr(self, "master_barcode", "")
+                self.engine.api_client.prepare(self.channel_id, master, s1, s2, s3)
+                
+                # 随后立即发送 start_test 状态变更
                 self.engine.api_client.start_test(self.channel_id)
             threading.Thread(target=run_start, daemon=True).start()
             
@@ -158,7 +167,7 @@ class ChannelWorker(QObject):
     def is_waiting_for_sync(self, value: bool):
         self._is_waiting_for_sync = value
         if value:
-            self.start_sync_timeout(60000)
+            self.start_sync_timeout(86400000)
         else:
             self.stop_sync_timeout()
 
@@ -931,7 +940,7 @@ class ChannelWorker(QObject):
             # 异步上报当前单步进度与物理测量数据至大屏
             if self.engine and self.engine.api_client:
                 def run_progress():
-                    barcode = self.get_barcode_for_target_board(getattr(step, "target_board", "主机"))
+                    barcode = getattr(step, "target_board", "主机")
                     test_value_str = str(val_to_log)
                     result_str = "PASS" if is_pass else "FAIL"
                     upper_limit_str = str(step.max_limit) if step.max_limit is not None else None

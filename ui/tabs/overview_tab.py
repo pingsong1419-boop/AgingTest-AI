@@ -680,21 +680,6 @@ class OverviewTab(QWidget):
             print(f"[DEBUG] Channel {target_channel} barcodes and status updated successfully.")
             self.speak_text(f"通道 {target_channel} 扫码完成")
 
-            # 异步上报绑定条码信息至大屏 (prepare)
-            if self.engine and self.engine.api_client:
-                s1 = slaves[0] if len(slaves) > 0 else None
-                s2 = slaves[1] if len(slaves) > 1 else None
-                s3 = slaves[2] if len(slaves) > 2 else None
-                
-                def run_prepare():
-                    print(f"[API Action] Asynchronously calling prepare for ch={target_channel}")
-                    res = self.engine.api_client.prepare(target_channel, master, s1, s2, s3)
-                    if not res:
-                        print(f"[API Action] Warning: Failed to connect to server for ch={target_channel} prepare.")
-                
-                import threading
-                threading.Thread(target=run_prepare, daemon=True).start()
-
         else:
 
             print(f"[DEBUG] Target Channel index {idx} out of range (0-59)!")
@@ -1136,11 +1121,6 @@ class OverviewTab(QWidget):
         selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.chk_select.isChecked()]
 
         count = len(selected_cids)
-
-        # 优先触发大屏接口，将所有选中的通道执行重置复位，使其状态变回 idle 并清除残留数据
-        if self.engine and getattr(self.engine, "api_client", None):
-            for ch_id in selected_cids:
-                self.engine.api_client.reset(ch_id)
 
         for ch_id in selected_cids:
 
