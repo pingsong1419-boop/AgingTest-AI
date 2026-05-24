@@ -55,6 +55,7 @@ class TestStep:
         self.unit = "NULL"
         self.skip_runtime = False
         self.exec_mode = "并行执行"
+        self.target_board = "主机"
 
     def add_sub_step(self, sub_step: SubStep):
         self.sub_steps.append(sub_step)
@@ -930,7 +931,7 @@ class ChannelWorker(QObject):
             # 异步上报当前单步进度与物理测量数据至大屏
             if self.engine and self.engine.api_client:
                 def run_progress():
-                    barcode = "主机"
+                    barcode = self.get_barcode_for_target_board(getattr(step, "target_board", "主机"))
                     test_value_str = str(val_to_log)
                     result_str = "PASS" if is_pass else "FAIL"
                     upper_limit_str = str(step.max_limit) if step.max_limit is not None else None
@@ -967,6 +968,21 @@ class ChannelWorker(QObject):
         self.current_step_index += 1
         self.progress_updated.emit(self.channel_id, (self.current_step_index / max(1, len(self.steps))) * 100.0, {})
         QTimer.singleShot(0, self.run_next_step)
+
+    def get_barcode_for_target_board(self, target_board: str) -> str:
+        tb = str(target_board or "").strip()
+        m_barcode = getattr(self, "master_barcode", "") or f"CH{self.channel_id}_MASTER_SN"
+        slave_list = getattr(self, "slave_barcodes", []) or []
+        
+        if "主机" in tb or "MAIN" in tb.upper() or "DUT" in tb.upper():
+            return m_barcode
+        if "从机1" in tb or "从机 1" in tb or "SLAVE1" in tb.upper() or "SLAVE 1" in tb.upper():
+            return slave_list[0] if len(slave_list) > 0 else f"CH{self.channel_id}_SLAVE1_SN"
+        if "从机2" in tb or "从机 2" in tb or "SLAVE2" in tb.upper() or "SLAVE 2" in tb.upper():
+            return slave_list[1] if len(slave_list) > 1 else f"CH{self.channel_id}_SLAVE2_SN"
+        if "从机3" in tb or "从机 3" in tb or "SLAVE3" in tb.upper() or "SLAVE 3" in tb.upper():
+            return slave_list[2] if len(slave_list) > 2 else f"CH{self.channel_id}_SLAVE3_SN"
+        return m_barcode
 
     def _upload_final_data_and_reset(self, status: bool):
         """异步执行测试判定结果上传、通道测试数据完整上报、以及大屏通道重置流程，异常时不阻塞本地业务"""
@@ -1020,7 +1036,7 @@ class ChannelWorker(QObject):
                     "lowerLimit": str(step.min_limit) if step.min_limit is not None else "--",
                     "result": "PASS" if is_pass else "FAIL",
                     "index": str(idx + 1),
-                    "testclass": "主机"
+                    "testclass": getattr(step, "target_board", "主机")
                 })
 
             # 1. 发送完成信号至大屏
@@ -1049,13 +1065,8 @@ class ChannelWorker(QObject):
             else:
                 safe_log("[!] 警告: 大屏服务未连接，历史数据上传失败。")
 
-            # 3. 发送通道重置指令
-            safe_log("[*] 正在发送大屏通道重置复位指令...")
-            r_res = client.reset(cid)
-            if r_res:
-                safe_log("[*] 大屏通道重置复位完成。")
-            else:
-                safe_log("[!] 警告: 大屏服务未连接，通道重置失败。")
+            # 测试完成后不重置通道，保留测试最终判定和图表数据，仅打印提示
+            safe_log("[*] 测试已完成，大屏最终判定与图表数据已妥善留存。")
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -1289,6 +1300,7 @@ class TestEngine(QObject):
             step.retry_count = item.get('retry_count', "不复测")
             step.unit = item.get('unit', "NULL")
             step.exec_mode = item.get('exec_mode', "并行执行")
+            step.target_board = item.get('target_board', '主机')
             is_block_start = item.get('is_block_start', False)
             is_block_end = item.get('is_block_end', False)
             
