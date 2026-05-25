@@ -1,0 +1,1716 @@
+<TestReport id='279'>
+  <BasicInfo>
+    <Channel>4</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-24 14:46:13</StartTime>
+    <EndTime>2026-05-24 14:53:09</EndTime>
+    <TotalResult>PASS</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.058</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.072</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN2通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN4通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN1通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='KL15唤醒源识别'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.195</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL 5V供电回采电压'>
+      <Limit>4.95 ~ 5.05</Limit>
+      <Measured>4.996</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG1脉冲阻抗'>
+      <Limit>45000.0 ~ 55000.0</Limit>
+      <Measured>48263.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG3脉冲阻抗'>
+      <Limit>90000.0 ~ 110000.0</Limit>
+      <Measured>97870.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.646</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.468</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.632</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.435</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.632</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.646</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1无效测试'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1有效测试'>
+      <Limit>3.9 ~ 4.1</Limit>
+      <Measured>4.088</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1有效测试(闭合CC1_2015+_S2)'>
+      <Limit>9.5 ~ 10.5</Limit>
+      <Measured>10.207</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2无效测试'>
+      <Limit>1.0 ~ 1.5</Limit>
+      <Measured>1.357</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2有效测试'>
+      <Limit>0.5 ~ 0.8</Limit>
+      <Measured>0.663</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2有效测试(闭合CC2_SW3)'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2-PE断线模拟'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='环境温度测试'>
+      <Limit>0.0 ~ 85.0</Limit>
+      <Measured>28.1</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC1'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>26.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC2'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>26.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC3'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>26.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='NTC4'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>26.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.972</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.253</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT1_CS（HH）'>
+      <Limit>0.65 ~ 0.85</Limit>
+      <Measured>0.8</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.958</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.646</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT2_CS（HH）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.429</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.972</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.246</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT3_CS（HH）'>
+      <Limit>0.65 ~ 0.85</Limit>
+      <Measured>0.799</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4（LL）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.952</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4（LH）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4_CS（LH）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.003</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4（HH）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.598</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT4_CS（HH）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.429</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5（L）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5_CS（L）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.206</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT5_CS（H）'>
+      <Limit>0.65 ~ 0.85</Limit>
+      <Measured>0.811</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6（L）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6_CS（L）'>
+      <Limit>0.0 ~ 0.05</Limit>
+      <Measured>0.006</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.605</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT6_CS（H）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.435</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT7（L）'>
+      <Limit>0.0 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT7（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.266</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT7_CS（H）'>
+      <Limit>0.7 ~ 0.9</Limit>
+      <Measured>0.802</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT8（L）'>
+      <Limit>0.0 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT8（H）'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>11.598</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HSD_OUTPUT8_CS（H）'>
+      <Limit>0.35 ~ 0.5</Limit>
+      <Measured>0.428</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT1（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.96</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT1（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.039</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT2（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.967</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT2（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.026</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT3（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.973</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT3（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.039</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT4（L）'>
+      <Limit>2.6 ~ 3.0</Limit>
+      <Measured>2.98</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='LSD_OUTPUT4（H）'>
+      <Limit>0.0 ~ 0.3</Limit>
+      <Measured>0.019</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>100.058</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压1测试-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>100.077</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压2测试-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>99.925</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压3测试-100V'>
+      <Limit>99.0 ~ 101.0</Limit>
+      <Measured>99.431</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.999</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压1测试-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.895</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压2测试-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.933</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='高压3测试-750V'>
+      <Limit>749.0 ~ 751.0</Limit>
+      <Measured>749.287</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-650V'>
+      <Limit>649.0 ~ 651.0</Limit>
+      <Measured>650.0087</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='绝缘采集测试-正极1MΩ'>
+      <Limit>800.0 ~ 1200.0</Limit>
+      <Measured>1000.4kΩ</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='绝缘采集测试-负极30KΩ'>
+      <Limit>25.0 ~ 35.0</Limit>
+      <Measured>30.6kΩ</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='@高压源控制-0V'>
+      <Limit>0.0 ~ 1.0</Limit>
+      <Measured>0.5335</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='快充口绝缘阻抗-100KΩ'>
+      <Limit>80000.0 ~ 120000.0</Limit>
+      <Measured>93467.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='快充口绝缘阻抗-500KΩ'>
+      <Limit>425000.0 ~ 575000.0</Limit>
+      <Measured>470980.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='第一路负极粘连检测-无效'>
+      <Limit>4.9 ~ 5.02</Limit>
+      <Measured>4.99</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='第一路负极粘连检测-有效'>
+      <Limit>1.8 ~ 2.0</Limit>
+      <Measured>1.904</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='第二路负极粘连检测-无效'>
+      <Limit>4.9 ~ 5.02</Limit>
+      <Measured>4.999</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='第二路负极粘连检测-有效'>
+      <Limit>1.8 ~ 2.0</Limit>
+      <Measured>1.913</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CA550输出-2.5V'>
+      <Limit>2.49 ~ 2.51</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL电流采集（2.5V）'>
+      <Limit>2.4 ~ 2.6</Limit>
+      <Measured>2.506</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CA550输出-5V'>
+      <Limit>4.99 ~ 5.01</Limit>
+      <Measured>5.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL电流采集（5V）'>
+      <Limit>4.9 ~ 5.1</Limit>
+      <Measured>4.999</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CA550输出-0V'>
+      <Limit>-0.01 ~ 0.01</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL电流采集（0V）'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.01</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CA550输出-OFF'>
+      <Limit>-0.01 ~ 0.01</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='EEPROM测试'>
+      <Limit>测试通过 ~ None</Limit>
+      <Measured>测试通过</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='1模拟电池输出-2.5V'>
+      <Limit>44.946 ~ 45.054</Limit>
+      <Measured>45.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='2模拟电池输出-2.5V'>
+      <Limit>44.946 ~ 45.054</Limit>
+      <Measured>45.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='3模拟电池输出-2.5V'>
+      <Limit>44.946 ~ 45.054</Limit>
+      <Measured>45.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压测试准备'>
+      <Limit>None ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='节点配置'>
+      <Limit>None ~ None</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_01'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_02'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_03'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_04'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_05'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_06'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_07'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_08'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_09'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_10'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_11'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_12'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_13'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_14'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_15'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_16'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_17'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_18'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_19'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_20'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_21'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_22'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_23'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_24'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_25'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_26'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_27'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_28'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_29'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_30'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_31'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_32'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_33'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_34'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_35'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_36'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_37'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_38'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_39'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_40'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_41'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_42'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_43'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_44'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_45'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_46'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_47'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_48'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_49'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_50'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_51'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_52'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_53'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_54'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_55'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_56'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_57'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_58'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_59'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_60'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_61'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_62'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_63'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_64'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_65'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_66'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_67'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_68'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_69'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_70'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_71'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_72'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_73'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_74'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_75'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_76'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_77'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_78'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_79'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_80'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_81'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_82'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_83'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_84'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_85'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_86'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_87'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_88'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_89'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_90'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_91'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_92'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_93'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_94'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_95'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_96'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_97'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_98'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_99'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_100'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_101'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_102'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_103'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_104'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_105'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_106'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_107'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_108'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_109'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_110'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_111'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_112'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_113'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_114'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_115'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_116'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_117'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_118'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_119'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_120'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_121'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_122'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_123'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_124'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_125'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_126'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_127'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_128'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_129'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_130'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_131'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_132'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_133'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_134'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_135'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_136'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_137'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_138'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_139'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_140'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_141'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_142'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_143'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_144'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_145'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_146'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_147'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_148'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_149'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_150'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_151'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_152'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_153'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_154'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_155'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_156'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_157'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_158'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_159'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_160'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_161'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_162'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_163'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_164'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_165'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_166'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_167'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_168'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_169'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_170'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_171'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_172'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_173'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_174'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_175'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_176'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_177'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_178'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_179'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_180'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_181'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_182'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_183'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_184'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_185'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_186'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_187'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_188'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_189'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_190'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_191'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压读取_192'>
+      <Limit>2.497 ~ 2.503</Limit>
+      <Measured>2.499</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_01'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.853</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_02'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.844</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_03'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.882</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_04'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.835</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_05'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.878</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_06'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.863</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_07'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.825</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_08'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.869</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_09'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.86</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_10'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.81</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_11'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.85</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Stack电压_12'>
+      <Limit>39.5 ~ 40.1</Limit>
+      <Measured>39.897</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试1'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试2'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试3'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试4'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试5'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试6'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试7'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试8'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试9'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试10'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试11'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试12'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试13'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试14'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试15'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试16'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试17'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试18'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试19'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试20'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试21'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试22'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试23'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='板载温度测试24'>
+      <Limit>-45.0 ~ 90.0</Limit>
+      <Measured>36.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='从机测试完成'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='1模拟电池输出-OFF'>
+      <Limit>0.0 ~ 1.0</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='2模拟电池输出-OFF'>
+      <Limit>0.0 ~ 1.0</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='3模拟电池输出-OFF'>
+      <Limit>0.0 ~ 1.0</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='测试完成'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

@@ -1,0 +1,101 @@
+<TestReport id='272'>
+  <BasicInfo>
+    <Channel>1</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-24 14:42:52</StartTime>
+    <EndTime>2026-05-24 14:43:47</EndTime>
+    <TotalResult>STOPPED</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.005</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.018</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN2通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN4通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN1通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='KL15唤醒源识别'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.128</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL 5V供电回采电压'>
+      <Limit>4.95 ~ 5.05</Limit>
+      <Measured>4.993</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG1脉冲阻抗'>
+      <Limit>45000.0 ~ 55000.0</Limit>
+      <Measured>48838.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG3脉冲阻抗'>
+      <Limit>90000.0 ~ 110000.0</Limit>
+      <Measured>97554.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.593</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.428</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.58</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

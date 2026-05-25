@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BMS 测试报告 - 2</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #1a1a2e;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 10px;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f3460;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecca3;
+            padding-left: 10px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-item {
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-right: 10px;
+        }
+        .result-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .result-pass { background-color: #d4edda; color: #155724; }
+        .result-ng { background-color: #f8d7da; color: #721c24; }
+        .result-running { background-color: #fff3cd; color: #856404; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+        th {
+            background-color: #0f3460;
+            color: #fff;
+            font-weight: 600;
+        }
+        tr:hover { background-color: #f8f9fa; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BMS 老化测试详细判定报告</h1>
+        
+        <div class="section-title">基本信息</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">通道号:</span>CH-02</div>
+            <div class="info-item"><span class="info-label">货架号:</span>01-A02</div>
+            <div class="info-item"><span class="info-label">主机条码:</span>2</div>
+            <div class="info-item"><span class="info-label">从机1条码:</span>22</div>
+            <div class="info-item"><span class="info-label">从机2条码:</span>222</div>
+            <div class="info-item"><span class="info-label">从机3条码:</span>2222</div>
+            <div class="info-item"><span class="info-label">测试配方:</span>DJ2513_Aging</div>
+            <div class="info-item"><span class="info-label">测试总判定:</span>
+                <span class="result-badge result-running">STOPPED</span>
+            </div>
+            <div class="info-item"><span class="info-label">测试开始时间:</span>2026-05-24 14:42:52</div>
+            <div class="info-item"><span class="info-label">测试结束时间:</span>2026-05-24 14:43:47</div>
+        </div>
+        
+        <div class="section-title">详细判定数据</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>测试项名称</th>
+                    <th class="text-center">单位</th>
+                    <th class="text-center">下限</th>
+                    <th class="text-center">上限</th>
+                    <th class="text-center">测量值</th>
+                    <th class="text-center">判定结果</th>
+                    <th class="text-center">执行用时(秒)</th>
+                    <th>记录时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>设备初始化</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">PASS</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">13.10</td>
+                    <td>2026-05-24 14:43:05</td>
+                </tr>
+                <tr>
+                    <td>BMS板工作唤醒</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">PASS</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">6.18</td>
+                    <td>2026-05-24 14:43:11</td>
+                </tr>
+                <tr>
+                    <td>供电DCDC+电压测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">13.0</td>
+                    <td class="text-center">12.031</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.76</td>
+                    <td>2026-05-24 14:43:12</td>
+                </tr>
+                <tr>
+                    <td>供电P+电压测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">13.0</td>
+                    <td class="text-center">12.052</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-05-24 14:43:12</td>
+                </tr>
+                <tr>
+                    <td>CAN2通讯测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.10</td>
+                    <td>2026-05-24 14:43:13</td>
+                </tr>
+                <tr>
+                    <td>CAN4通讯测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.10</td>
+                    <td>2026-05-24 14:43:14</td>
+                </tr>
+                <tr>
+                    <td>CAN1通讯测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.07</td>
+                    <td>2026-05-24 14:43:15</td>
+                </tr>
+                <tr>
+                    <td>KL15唤醒源识别</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">13.0</td>
+                    <td class="text-center">12.235</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.81</td>
+                    <td>2026-05-24 14:43:16</td>
+                </tr>
+                <tr>
+                    <td>HALL 5V供电回采电压</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">4.95</td>
+                    <td class="text-center">5.05</td>
+                    <td class="text-center">5.006</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-05-24 14:43:16</td>
+                </tr>
+                <tr>
+                    <td>SIG1脉冲阻抗</td>
+                    <td class="text-center">Ω</td>
+                    <td class="text-center">45000.0</td>
+                    <td class="text-center">55000.0</td>
+                    <td class="text-center">49011.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.05</td>
+                    <td>2026-05-24 14:43:20</td>
+                </tr>
+                <tr>
+                    <td>SIG3脉冲阻抗</td>
+                    <td class="text-center">Ω</td>
+                    <td class="text-center">90000.0</td>
+                    <td class="text-center">110000.0</td>
+                    <td class="text-center">96927.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.06</td>
+                    <td>2026-05-24 14:43:22</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-IN功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.619</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.05</td>
+                    <td>2026-05-24 14:43:27</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-频率</td>
+                    <td class="text-center">Hz</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-05-24 14:43:28</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-占空比</td>
+                    <td class="text-center">%</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-05-24 14:43:28</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-OUT功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.474</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.01</td>
+                    <td>2026-05-24 14:43:33</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-IN功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.619</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.06</td>
+                    <td>2026-05-24 14:43:38</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-频率</td>
+                    <td class="text-center">Hz</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-05-24 14:43:38</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-占空比</td>
+                    <td class="text-center">%</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-05-24 14:43:38</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-OUT功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.408</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.03</td>
+                    <td>2026-05-24 14:43:43</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

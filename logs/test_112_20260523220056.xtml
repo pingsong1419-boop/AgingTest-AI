@@ -1,0 +1,36 @@
+<TestReport id='112'>
+  <BasicInfo>
+    <Channel>2</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-23 21:58:46</StartTime>
+    <EndTime>2026-05-23 22:00:56</EndTime>
+    <TotalResult>STOPPED</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>FAIL</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.038</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.065</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压测试准备'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

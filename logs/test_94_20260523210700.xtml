@@ -1,0 +1,11 @@
+<TestReport id='94'>
+  <BasicInfo>
+    <Channel>2</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-23 21:06:53</StartTime>
+    <EndTime>2026-05-23 21:07:00</EndTime>
+    <TotalResult>STOPPED</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+  </ItemsResults>
+</TestReport>

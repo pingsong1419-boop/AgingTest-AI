@@ -1,0 +1,41 @@
+<TestReport id='86'>
+  <BasicInfo>
+    <Channel>2</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-23 20:51:14</StartTime>
+    <EndTime>2026-05-23 20:52:21</EndTime>
+    <TotalResult>NG</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.038</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.058</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='单体电压测试准备'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='1模拟电池输出-2.5V'>
+      <Limit>44.946 ~ 45.054</Limit>
+      <Measured>0.0</Measured>
+      <Result>NG</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

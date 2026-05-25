@@ -75,36 +75,6 @@
                     "is_judgment": false,
                     "sync_exec": true,
                     "fail_strategy": "失败停止"
-                },
-                {
-                    "name": "1# AFE 电源 (AFE 1)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
-                    "action": "设置参数",
-                    "params": "0.0V / 0.0A / 关闭输出",
-                    "device": "1# AFE 电源 (AFE 1)",
-                    "type": "设置仪表",
-                    "is_judgment": false,
-                    "sync_exec": true,
-                    "fail_strategy": "失败停止"
-                },
-                {
-                    "name": "2# AFE 电源 (AFE 2)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
-                    "action": "设置参数",
-                    "params": "0.0V / 0.0A / 关闭输出",
-                    "device": "2# AFE 电源 (AFE 2)",
-                    "type": "设置仪表",
-                    "is_judgment": false,
-                    "sync_exec": true,
-                    "fail_strategy": "失败停止"
-                },
-                {
-                    "name": "3# AFE 电源 (AFE 3)-设置参数 (0.0V / 0.0A / 关闭输出) [同步]",
-                    "action": "设置参数",
-                    "params": "0.0V / 0.0A / 关闭输出",
-                    "device": "3# AFE 电源 (AFE 3)",
-                    "type": "设置仪表",
-                    "is_judgment": false,
-                    "sync_exec": true,
-                    "fail_strategy": "失败停止"
                 }
             ]
         },
@@ -1151,9 +1121,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (1000ms)",
+                    "name": "等待 (Wait)-固定延时 (500ms)",
                     "action": "固定延时",
-                    "params": "1000ms",
+                    "params": "500ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -1283,9 +1253,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "name": "等待 (Wait)-固定延时 (1000ms)",
                     "action": "固定延时",
-                    "params": "2000ms",
+                    "params": "1000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -1461,9 +1431,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2500ms)",
+                    "name": "等待 (Wait)-固定延时 (1500ms)",
                     "action": "固定延时",
-                    "params": "2500ms",
+                    "params": "1500ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -1505,7 +1475,7 @@
         {
             "name": "环境温度测试",
             "mode": "范围判定",
-            "min": "0",
+            "min": "-40",
             "max": "85",
             "strategy": "任何NG停止",
             "standard_type": "数值",
@@ -4503,9 +4473,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "name": "等待 (Wait)-固定延时 (500ms)",
                     "action": "固定延时",
-                    "params": "2000ms",
+                    "params": "500ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -4575,9 +4545,9 @@
                     "fail_strategy": "重试3次"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "name": "等待 (Wait)-固定延时 (1000ms)",
                     "action": "固定延时",
-                    "params": "2000ms",
+                    "params": "1000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -4843,9 +4813,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (3000ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "3000ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -4899,13 +4869,13 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (3000ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "3000ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -4975,13 +4945,13 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (3000ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "3000ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -5031,13 +5001,13 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (3000ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "3000ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -5117,9 +5087,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (3000ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "3000ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -5209,9 +5179,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (3000ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "3000ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -5593,9 +5563,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (5000ms)",
+                    "name": "等待 (Wait)-固定延时 (4000ms)",
                     "action": "固定延时",
-                    "params": "5000ms",
+                    "params": "4000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -12283,13 +12253,13 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (1500ms)",
+                    "name": "等待 (Wait)-固定延时 (2500ms)",
                     "action": "固定延时",
-                    "params": "1500ms",
+                    "params": "2500ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -12303,13 +12273,13 @@
                     "fail_strategy": "重试3次"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "name": "等待 (Wait)-固定延时 (100ms)",
                     "action": "固定延时",
-                    "params": "2000ms",
+                    "params": "100ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -12339,13 +12309,13 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (1500ms)",
+                    "name": "等待 (Wait)-固定延时 (2500ms)",
                     "action": "固定延时",
-                    "params": "1500ms",
+                    "params": "2500ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -12359,13 +12329,13 @@
                     "fail_strategy": "重试3次"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "name": "等待 (Wait)-固定延时 (100ms)",
                     "action": "固定延时",
-                    "params": "2000ms",
+                    "params": "100ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 }
             ]
@@ -12395,13 +12365,13 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (1500ms)",
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
                     "action": "固定延时",
-                    "params": "1500ms",
+                    "params": "2000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
-                    "sync_exec": null,
+                    "sync_exec": false,
                     "fail_strategy": "失败停止"
                 },
                 {
@@ -12415,9 +12385,9 @@
                     "fail_strategy": "重试3次"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "name": "等待 (Wait)-固定延时 (100ms)",
                     "action": "固定延时",
-                    "params": "2000ms",
+                    "params": "100ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,

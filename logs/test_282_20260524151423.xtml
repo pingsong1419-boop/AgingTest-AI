@@ -1,0 +1,166 @@
+<TestReport id='282'>
+  <BasicInfo>
+    <Channel>3</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-05-24 15:13:14</StartTime>
+    <EndTime>2026-05-24 15:14:23</EndTime>
+    <TotalResult>NG</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>PASS</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电DCDC+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.011</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='供电P+电压测试'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.031</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN2通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN4通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='CAN1通讯测试'>
+      <Limit>OK ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='KL15唤醒源识别'>
+      <Limit>11.0 ~ 13.0</Limit>
+      <Measured>12.208</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HALL 5V供电回采电压'>
+      <Limit>4.95 ~ 5.05</Limit>
+      <Measured>5.001</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG1脉冲阻抗'>
+      <Limit>45000.0 ~ 55000.0</Limit>
+      <Measured>45679.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='SIG3脉冲阻抗'>
+      <Limit>90000.0 ~ 110000.0</Limit>
+      <Measured>96927.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.58</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL1-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.448</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.632</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL2-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.415</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-IN功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.619</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-频率'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-占空比'>
+      <Limit>49.0 ~ 51.0</Limit>
+      <Measured>50.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='HVIL3-OUT功能采集'>
+      <Limit>9.0 ~ 11.0</Limit>
+      <Measured>9.593</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1无效测试'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1有效测试'>
+      <Limit>3.9 ~ 4.1</Limit>
+      <Measured>4.071</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='GB_2015+CC1有效测试(闭合CC1_2015+_S2)'>
+      <Limit>9.5 ~ 10.5</Limit>
+      <Measured>10.186</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2无效测试'>
+      <Limit>1.0 ~ 1.5</Limit>
+      <Measured>1.36</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2有效测试'>
+      <Limit>0.5 ~ 0.8</Limit>
+      <Measured>0.661</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2有效测试(闭合CC2_SW3)'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Chaoji_CC2-PE断线模拟'>
+      <Limit>0.0 ~ 0.15</Limit>
+      <Measured>0.004</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='环境温度测试'>
+      <Limit>0.0 ~ 85.0</Limit>
+      <Measured>-7.0</Measured>
+      <Result>NG</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>
