@@ -1,0 +1,242 @@
+[
+    {
+        "board_ip":  "",
+        "channel_id":  1,
+        "shelf_code":  "01-A01"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  2,
+        "shelf_code":  "01-A02"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  3,
+        "shelf_code":  "01-A03"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  4,
+        "shelf_code":  "01-A04"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  5,
+        "shelf_code":  "01-A05"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  6,
+        "shelf_code":  "01-A06"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  7,
+        "shelf_code":  "01-A07"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  8,
+        "shelf_code":  "01-A08"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  9,
+        "shelf_code":  "01-A09"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  10,
+        "shelf_code":  "01-A10"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  11,
+        "shelf_code":  "01-A11"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  12,
+        "shelf_code":  "01-A12"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  13,
+        "shelf_code":  "01-A13"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  14,
+        "shelf_code":  "01-A14"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  15,
+        "shelf_code":  "01-A15"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  16,
+        "shelf_code":  "01-A16"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  17,
+        "shelf_code":  "01-B01"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  18,
+        "shelf_code":  "01-B02"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  19,
+        "shelf_code":  "01-B03"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  20,
+        "shelf_code":  "01-B04"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  21,
+        "shelf_code":  "01-B05"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  22,
+        "shelf_code":  "01-B06"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  23,
+        "shelf_code":  "01-B07"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  24,
+        "shelf_code":  "01-B08"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  25,
+        "shelf_code":  "01-B09"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  26,
+        "shelf_code":  "01-B10"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  27,
+        "shelf_code":  "01-B11"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  28,
+        "shelf_code":  "01-B12"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  29,
+        "shelf_code":  "01-B13"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  30,
+        "shelf_code":  "01-B14"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  31,
+        "shelf_code":  "01-B15"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  32,
+        "shelf_code":  "01-B16"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  33,
+        "shelf_code":  "01-C01"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  34,
+        "shelf_code":  "01-C02"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  35,
+        "shelf_code":  "01-C03"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  36,
+        "shelf_code":  "01-C04"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  37,
+        "shelf_code":  "01-C05"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  38,
+        "shelf_code":  "01-C06"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  39,
+        "shelf_code":  "01-C07"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  40,
+        "shelf_code":  "01-C08"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  41,
+        "shelf_code":  "01-C09"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  42,
+        "shelf_code":  "01-C10"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  43,
+        "shelf_code":  "01-C11"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  44,
+        "shelf_code":  "01-C12"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  45,
+        "shelf_code":  "01-C13"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  46,
+        "shelf_code":  "01-C14"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  47,
+        "shelf_code":  "01-C15"
+    },
+    {
+        "board_ip":  "",
+        "channel_id":  48,
+        "shelf_code":  "01-C16"
+    }
+]

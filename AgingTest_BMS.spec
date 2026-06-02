@@ -5,7 +5,13 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        ('ui/tabs/checkmark.png', 'ui/tabs'),
+        ('resources/*', 'resources'),
+        ('config/*', 'config'),
+        ('recipes/*', 'recipes'),
+        ('chamber_presets/*', 'chamber_presets')
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,6 +38,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='resources/icon.ico',
 )
 coll = COLLECT(
     exe,

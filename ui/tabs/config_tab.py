@@ -554,7 +554,7 @@ class ConfigTab(QWidget):
                 parent.setForeground(0, QColor("#808080"))
             else:
                 parent.setForeground(0, QColor("#00E5FF"))
-            font = QFont()
+            font = parent.font(0)
             font.setBold(True)
             parent.setFont(0, font)
             self.step_tree.addTopLevelItem(parent)
@@ -823,7 +823,7 @@ class ConfigTab(QWidget):
                 else:
                     new_item.setForeground(0, QColor("#00E5FF"))
                     
-                font = QFont()
+                font = new_item.font(0)
                 font.setBold(True)
                 new_item.setFont(0, font)
                 
@@ -1138,7 +1138,7 @@ class ConfigTab(QWidget):
             item.setData(5, Qt.UserRole, data.get('is_block_end', False))
             
             item.setForeground(0, QColor("#00E5FF"))
-            font = QFont()
+            font = item.font(0)
             font.setBold(True)
             item.setFont(0, font)
             

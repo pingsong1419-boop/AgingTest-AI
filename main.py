@@ -8,7 +8,7 @@ def main():
     
     # 加载全局工业风深色样式
     if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(sys.executable)
+        base_dir = sys._MEIPASS
     else:
         base_dir = os.path.abspath(os.path.dirname(__file__))
         

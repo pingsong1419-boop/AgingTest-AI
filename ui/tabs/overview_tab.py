@@ -259,6 +259,9 @@ class OverviewTab(QWidget):
 
     def _init_ui(self):
 
+        self.is_recipe_applied = False
+        self.is_scan_completed = False
+        
         main_layout = QVBoxLayout(self)
 
         
@@ -277,7 +280,7 @@ class OverviewTab(QWidget):
 
         
 
-        control_panel.addWidget(QLabel("  |  选择测试配方:"))
+        control_panel.addWidget(QLabel("  |  选择配方:"))
 
         self.combo_recipe = QComboBox()
 
@@ -287,7 +290,7 @@ class OverviewTab(QWidget):
 
         
 
-        self.btn_apply = QPushButton("下发配方至勾选通道")
+        self.btn_apply = QPushButton("下发配方")
 
         self.btn_apply.setStyleSheet("background-color: #007BFF; border-color: #0056b3;")
 
@@ -317,7 +320,7 @@ class OverviewTab(QWidget):
 
         
 
-        self.btn_stop = QPushButton("强制停止测试")
+        self.btn_stop = QPushButton("强制停止")
 
         self.btn_stop.setStyleSheet("background-color: #DC3545; border-color: #bd2130;")
 
@@ -327,13 +330,21 @@ class OverviewTab(QWidget):
 
         
 
-        self.btn_report_path = QPushButton("📁 报表路径")
+        self.btn_open_report = QPushButton("📂 打开报表")
 
-        self.btn_report_path.setStyleSheet("background-color: #6C757D; border-color: #545b62;")
+        self.btn_open_report.setStyleSheet("background-color: #17A2B8; border-color: #117A8B;")
 
-        self.btn_report_path.clicked.connect(self.select_report_path)
+        self.btn_open_report.clicked.connect(self.open_report_folder)
 
-        control_panel.addWidget(self.btn_report_path)
+        control_panel.addWidget(self.btn_open_report)
+
+        self.btn_reset_screen = QPushButton("🔄 重置大屏")
+
+        self.btn_reset_screen.setStyleSheet("background-color: #E65100; border-color: #E65100;")
+
+        self.btn_reset_screen.clicked.connect(self.reset_all_screen_channels)
+
+        control_panel.addWidget(self.btn_reset_screen)
 
         
 
@@ -447,13 +458,13 @@ class OverviewTab(QWidget):
 
 
 
-        # 初始化 60 个通道的监控卡片
+        # 初始化 48 个通道的监控卡片
 
         self.channel_widgets = []
 
         columns = 5  # 每行改为 5 个通道
 
-        for i in range(60):
+        for i in range(48):
 
             ch_id = i + 1
 
@@ -671,7 +682,7 @@ class OverviewTab(QWidget):
 
         print(f"[DEBUG] Target Channel: {target_channel}, Shelf: {shelf}, Master: {master}, Slaves: {slaves}")
 
-        # 找到对应的通道 UI 并更新数据 (target_channel 是 1-60)
+        # 找到对应的通道 UI 并更新数据 (target_channel 是 1-48)
         idx = target_channel - 1
         if 0 <= idx < len(self.channel_widgets):
             ch_widget = self.channel_widgets[idx]
@@ -683,6 +694,8 @@ class OverviewTab(QWidget):
         else:
 
             print(f"[DEBUG] Target Channel index {idx} out of range (0-59)!")
+            
+        self.is_scan_completed = True
 
 
 
@@ -700,11 +713,67 @@ class OverviewTab(QWidget):
 
         threading.Thread(target=run, daemon=True).start()
 
+    def reset_all_screen_channels(self):
+
+        """异步重置大屏上的所有 48 个通道"""
+
+        from PySide6.QtWidgets import QMessageBox
+
+        reply = QMessageBox.question(
+
+            self, "确认重置", 
+
+            "您确定要向大屏系统发送重置所有 48 个通道的指令吗？\n这将清除大屏上所有通道当前的绑定与测试数据！",
+
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+
+        )
+
+        if reply == QMessageBox.No:
+
+            return
+
+
+
+        def run():
+
+            import time
+
+            print("[*] 正在异步重置大屏所有 48 个通道...")
+
+            success_count = 0
+
+            if self.engine and self.engine.api_client:
+
+                for cid in range(1, 49):
+
+                    res = self.engine.api_client.reset(cid)
+
+                    if res:
+
+                        success_count += 1
+
+                    time.sleep(0.02)
+
+            
+
+            self.speak_text(f"已完成大屏重置，成功重置{success_count}个通道")
+
+            print(f"[*] 大屏通道重置完成。成功数量: {success_count}/48")
+
+            
+
+        import threading
+
+        threading.Thread(target=run, daemon=True).start()
+
 
 
     def start_selected_tests(self):
 
         """开始测试勾选的通道，开始前做严格校验（配方下发和扫码完整性）"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Overview] 收到“开始测试”指令")
 
         # 1. 查找勾选的活跃通道
 
@@ -875,6 +944,8 @@ class OverviewTab(QWidget):
     def trigger_multi_channel_tests(self):
 
         """由老化箱界面调用：立即触发已勾选且配方完整的通道进行测试"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Overview] 老化箱触发多通道并发测试")
 
         selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
 
@@ -1001,6 +1072,8 @@ class OverviewTab(QWidget):
     def stop_selected_tests(self):
 
         """强制停止选中的测试通道"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Overview] 收到“停止测试”指令")
 
         selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
 
@@ -1119,8 +1192,12 @@ class OverviewTab(QWidget):
 
 
         selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.chk_select.isChecked()]
-
         count = len(selected_cids)
+        
+        if count == 0:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "操作失败", "没有勾选任何通道，无法下发配方！")
+            return
 
         for ch_id in selected_cids:
 
@@ -1201,6 +1278,8 @@ class OverviewTab(QWidget):
         from PySide6.QtWidgets import QMessageBox
 
         QMessageBox.information(self, "下发成功", f"已成功将配方内容加载至 {count} 个通道，并建立了同步组。\n未勾选的通道已重置并停止测试。")
+
+        self.is_recipe_applied = True
 
 
 
@@ -1370,49 +1449,36 @@ class OverviewTab(QWidget):
         is_testing = False
 
         if self.engine and len(self.engine.workers) > 0:
-
             is_testing = True
-
             
-
-        if getattr(self, '_last_is_testing', None) == is_testing:
-
+        current_state = (is_testing, self.is_recipe_applied, self.is_scan_completed)
+        if getattr(self, '_last_btn_state', None) == current_state:
             return
-
-        self._last_is_testing = is_testing
-
+        self._last_btn_state = current_state
             
-
         self.btn_apply.setEnabled(not is_testing)
-
-        self.btn_start.setEnabled(not is_testing)
-
-        self.btn_run_test.setEnabled(not is_testing)
-
+        self.btn_start.setEnabled(not is_testing and self.is_recipe_applied)
+        self.btn_run_test.setEnabled(not is_testing and self.is_scan_completed)
         
-
         # 灰色样式以便更明显地看出被禁用
-
         disabled_style = "background-color: #444444; color: #888888; border-color: #333333;"
-
         
-
         if is_testing:
-
             self.btn_apply.setStyleSheet(disabled_style)
-
             self.btn_start.setStyleSheet(disabled_style)
-
             self.btn_run_test.setStyleSheet(disabled_style)
-
         else:
-
             self.btn_apply.setStyleSheet("background-color: #007BFF; border-color: #0056b3;")
-
-            self.btn_start.setStyleSheet("background-color: #17A2B8; border-color: #117A8B;")
-
-            self.btn_run_test.setStyleSheet("background-color: #28A745; border-color: #1e7e34;")
-
+            
+            if self.is_recipe_applied:
+                self.btn_start.setStyleSheet("background-color: #17A2B8; border-color: #117A8B;")
+            else:
+                self.btn_start.setStyleSheet(disabled_style)
+                
+            if self.is_scan_completed:
+                self.btn_run_test.setStyleSheet("background-color: #28A745; border-color: #1e7e34;")
+            else:
+                self.btn_run_test.setStyleSheet(disabled_style)
 
 
             
@@ -1453,7 +1519,11 @@ class OverviewTab(QWidget):
 
         current_path = sys_cfg.get("report_root_path", os.path.abspath("reports"))
 
-        
+        # 确保默认路径存在，防止打包好后因为物理路径不存在导致 QFileDialog 无法启动
+        try:
+            os.makedirs(current_path, exist_ok=True)
+        except Exception:
+            pass
 
         dir_path = QFileDialog.getExistingDirectory(self, "选择报表保存根目录", current_path)
 
@@ -1468,4 +1538,25 @@ class OverviewTab(QWidget):
             from PySide6.QtWidgets import QMessageBox
 
             QMessageBox.information(self, "设置成功", f"报表保存根目录已成功设置为：\n{dir_path}")
+
+    def open_report_folder(self):
+        """直接在 Windows 资源管理器中打开当前报表保存目录"""
+        import os
+        sys_cfg = {}
+        if self.db_manager:
+            sys_cfg = self.db_manager.load_sys_config() or {}
+        
+        dir_path = sys_cfg.get("report_root_path", os.path.abspath("reports"))
+        
+        # 确保目录真实物理存在
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except Exception:
+            pass
+            
+        try:
+            os.startfile(dir_path)
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "打开失败", f"无法打开文件夹：{dir_path}\n错误信息：{e}")
 

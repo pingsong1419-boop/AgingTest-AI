@@ -60,7 +60,7 @@ class MockDeviceManager:
         self.ctrl_board_power = _make_mock_power()
         self.hv_source = _make_mock_power()
         self.simulators = [_make_mock_sim() for _ in range(3)]
-        self.boards = {i: _make_mock_board() for i in range(1, 61)}
+        self.boards = {i: _make_mock_board() for i in range(1, 49)}
         self.easy320 = type('MockEasy', (), {
             'write_relay': lambda *a, **k: True,
             'read_relays': lambda *a, **k: [True] * 32,

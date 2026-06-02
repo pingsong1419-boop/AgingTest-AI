@@ -1053,6 +1053,9 @@ class ChamberTab(QWidget):
 
     def start_aging_sequence(self):
         """启动老化测试工步自动运行引擎"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Chamber] 请求“启动老化测试工步”")
+
         self._is_bypass_chamber = False
         if not self.steps_data:
             QMessageBox.warning(self, "警告", "请先配置或加载老化测试工步！")
@@ -1095,6 +1098,9 @@ class ChamberTab(QWidget):
 
     def stop_aging_sequence(self):
         """停止工步测试"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Chamber] 收到“停止工步测试”指令")
+
         self.sequence_running = False
         self.active_step_idx = -1
         self.step_elapsed_sec = 0.0
@@ -1328,20 +1334,25 @@ class ChamberTab(QWidget):
             
             if step_name == "BMS带载工作":
                 logger.info("[老化引擎] 进入 'BMS带载工作'，配置主机电源与老化板继电器")
-                if getattr(self, "mgr", None) and getattr(self.mgr, "dut_power", None):
-                    self.mgr.dut_power.set_voltage(12.0)
-                    self.mgr.dut_power.set_current(200.0)
-                    self.mgr.dut_power.output_control(True)
                 
-                # 按顺序控制勾选通道的老化功能板继电器的1，11继电器
-                overview_tab = self.get_overview_tab()
-                if overview_tab and getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
-                    selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
-                    for cid in selected_cids:
-                        if cid in self.mgr.boards:
-                            board = self.mgr.boards[cid]
-                            board.relays.write_relay(1, True)
-                            board.relays.write_relay(11, True)
+                def _bms_task():
+                    if getattr(self, "mgr", None) and getattr(self.mgr, "dut_power", None):
+                        self.mgr.dut_power.set_voltage(12.0)
+                        self.mgr.dut_power.set_current(200.0)
+                        self.mgr.dut_power.output_control(True)
+                    
+                    # 按顺序控制勾选通道的老化功能板继电器的1，11继电器
+                    overview_tab = self.get_overview_tab()
+                    if overview_tab and getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
+                        selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+                        for cid in selected_cids:
+                            if cid in self.mgr.boards:
+                                board = self.mgr.boards[cid]
+                                board.relays.write_relay(1, True)
+                                board.relays.write_relay(11, True)
+                
+                import threading
+                threading.Thread(target=_bms_task, daemon=True).start()
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0
@@ -1351,13 +1362,18 @@ class ChamberTab(QWidget):
                 
             elif step_name == "老化完成取料":
                 logger.info("[老化引擎] 进入 '老化完成取料'，关闭主机电源与所有继电器")
-                if getattr(self, "mgr", None):
-                    if getattr(self.mgr, "dut_power", None):
-                        self.mgr.dut_power.output_control(False)
-                    if hasattr(self.mgr, "boards"):
-                        for cid, board in self.mgr.boards.items():
-                            if board.is_connected:
-                                board.relays.write_all_off()
+                
+                def _finish_task():
+                    if getattr(self, "mgr", None):
+                        if getattr(self.mgr, "dut_power", None):
+                            self.mgr.dut_power.output_control(False)
+                        if hasattr(self.mgr, "boards"):
+                            for cid, board in self.mgr.boards.items():
+                                if board.is_connected:
+                                    board.relays.write_all_off()
+                
+                import threading
+                threading.Thread(target=_finish_task, daemon=True).start()
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0

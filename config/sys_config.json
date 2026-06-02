@@ -14,5 +14,7 @@
     "easy320_ip": "192.168.1.88",
     "ca550_com": "COM90",
     "api_host": "192.168.1.102",
-    "api_port": 8008
+    "api_port": 8008,
+    "master_barcode_regex": "^\\d{4}$",
+    "slave_barcode_regex": "^\\d{3}$"
 }

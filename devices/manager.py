@@ -108,13 +108,13 @@ class DeviceManager:
         # 建立一个映射字典供快速查询
         db_ips = {c["channel_id"]: c["board_ip"] for c in ch_configs if c.get("board_ip")}
 
-        for i in range(1, 61):
+        for i in range(1, 49):
             ip = db_ips.get(i) or f"{base_ip}{start_suffix + i - 1}"
             self.boards[i] = ControlBoard(ip, i)
 
     def _get_sim_and_ch(self, global_ch: int):
         """
-        根据全局通道号 (1-60) 自动路由到具体的物理设备和物理通道
+        根据全局通道号 (1-48) 自动路由到具体的物理设备和物理通道
         """
         unit_index = (global_ch - 1) // 18
         local_ch = (global_ch - 1) % 18 + 1
@@ -272,8 +272,8 @@ class DeviceManager:
         elif not power_ok:
             if logger: logger("[!] 由于控制板供电电源异常，已跳过 PLC 继电器分级上电流程。")
         
-        # 5. [关键] 逻辑自检：并行扫描 60 路老化板在线状态
-        if logger: logger("[*] 开始并行扫描 60 路老化板在线状态 (TCP 握手)...")
+        # 5. [关键] 逻辑自检：并行扫描 48 路老化板在线状态
+        if logger: logger("[*] 开始并行扫描 48 路老化板在线状态 (TCP 握手)...")
         from concurrent.futures import ThreadPoolExecutor
         
         online_count = 0
@@ -289,9 +289,9 @@ class DeviceManager:
             offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
         
         if logger: 
-            logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 60")
-            if online_count < 60:
-                logger(f"[!] 警告: 有 {60 - online_count} 个通道目前处于离线状态")
+            logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 48")
+            if online_count < 48:
+                logger(f"[!] 警告: 有 {48 - online_count} 个通道目前处于离线状态")
                 logger(f"[!] 离线通道详情: {', '.join(offline_details)}")
         return True
 
@@ -310,7 +310,7 @@ class DeviceManager:
             })
 
         connected_boards = sum(1 for b in self.boards.values() if b.is_connected)
-        add_status("老化控制板 (分布式)", None, f"已联机: {connected_boards} / 60")
+        add_status("老化控制板 (分布式)", None, f"已联机: {connected_boards} / 48")
         
         if self.hv_source: add_status("NGI 高压源", self.hv_source)
         if self.afe_power_1: add_status("1# AFE 供电电源", self.afe_power_1)

@@ -2,8 +2,10 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                  QLabel, QTableWidget, QTableWidgetItem, 
                                  QHeaderView, QGroupBox, QLineEdit, QPushButton,
                                  QFormLayout, QFrame, QMessageBox, QScrollArea, QTabWidget)
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QAction, QKeySequence, QShortcut
 from PySide6.QtCore import Qt, QTimer
+from ui.dialogs.barcode_learn_dialog import BarcodeLearnDialog
+import time
 
 class HardwareTab(QWidget):
     def __init__(self, db_manager):
@@ -94,6 +96,28 @@ class HardwareTab(QWidget):
         self.edit_ca550_com = QLineEdit()
         form_others.addRow("CA550 串口号:", self.edit_ca550_com)
 
+        # 主机条码规则
+        master_regex_layout = QHBoxLayout()
+        self.edit_master_regex = QLineEdit()
+        self.edit_master_regex.setPlaceholderText("例如: ^M.*")
+        btn_learn_master = QPushButton("🧠 智能获取")
+        btn_learn_master.setStyleSheet("background-color: #17A2B8; font-weight: bold;")
+        btn_learn_master.clicked.connect(lambda: self.open_barcode_learn(self.edit_master_regex))
+        master_regex_layout.addWidget(self.edit_master_regex)
+        master_regex_layout.addWidget(btn_learn_master)
+        form_afe.addRow("主机条码规则 (正则):", master_regex_layout)
+        
+        # 从机条码规则
+        slave_regex_layout = QHBoxLayout()
+        self.edit_slave_regex = QLineEdit()
+        self.edit_slave_regex.setPlaceholderText("例如: ^S.*")
+        btn_learn_slave = QPushButton("🧠 智能获取")
+        btn_learn_slave.setStyleSheet("background-color: #17A2B8; font-weight: bold;")
+        btn_learn_slave.clicked.connect(lambda: self.open_barcode_learn(self.edit_slave_regex))
+        slave_regex_layout.addWidget(self.edit_slave_regex)
+        slave_regex_layout.addWidget(btn_learn_slave)
+        form_afe.addRow("从机条码规则 (正则):", slave_regex_layout)
+
         config_main_layout.addLayout(form_afe, 2)
         config_main_layout.addLayout(form_others, 3)
         
@@ -116,8 +140,8 @@ class HardwareTab(QWidget):
         self.board_table.setColumnCount(6)
         self.board_table.setHorizontalHeaderLabels(["通道", "货架二维码", "控制板 IP", "继电器通讯", "CAN通讯", "操作"])
         self.board_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.board_table.setRowCount(60)
-        for i in range(60):
+        self.board_table.setRowCount(48)
+        for i in range(48):
             ch_item = QTableWidgetItem(f"CH-{i+1:02d}")
             ch_item.setTextAlignment(Qt.AlignCenter)
             self.board_table.setItem(i, 0, ch_item)
@@ -136,7 +160,7 @@ class HardwareTab(QWidget):
         self.btn_save_boards.clicked.connect(self.save_board_monitor_config)
         boards_layout.addWidget(self.btn_save_boards)
 
-        self.sub_tabs.addTab(tab_boards, "2. 分布式控制板监控 (60路)")
+        self.sub_tabs.addTab(tab_boards, "2. 分布式控制板监控 (48路)")
 
     def set_device_manager(self, manager):
         self.device_manager = manager
@@ -163,13 +187,13 @@ class HardwareTab(QWidget):
                 it2.setTextAlignment(Qt.AlignCenter)
         self.status_table.setUpdatesEnabled(True)
         
-        # 刷新 60 路控制板状态
+        # 刷新 48 路控制板状态
         self.board_table.setUpdatesEnabled(False)
         # 获取通道配置以获取货架码
         ch_configs = self.db_manager.load_channel_config() or []
         ch_map = {c["channel_id"]: c for c in ch_configs}
 
-        for i in range(1, 61):
+        for i in range(1, 49):
             board = self.device_manager.boards.get(i)
             config = ch_map.get(i, {})
             
@@ -188,22 +212,34 @@ class HardwareTab(QWidget):
                 self.board_table.setItem(i-1, 2, it_ip)
             
             # Relay Status
-            it_r = self.board_table.item(i-1, 3) or QTableWidgetItem()
+            it_r = self.board_table.item(i-1, 3)
             r_ok = board.relays.is_connected if board else False
             txt = "在线" if r_ok else "离线"
-            if it_r.text() != txt:
-                it_r.setText(txt); it_r.setForeground(QColor("#28A745" if r_ok else "#DC3545"))
+            if not it_r:
+                it_r = QTableWidgetItem(txt)
+                it_r.setForeground(QColor("#28A745" if r_ok else "#DC3545"))
                 it_r.setTextAlignment(Qt.AlignCenter)
-            self.board_table.setItem(i-1, 3, it_r)
+                self.board_table.setItem(i-1, 3, it_r)
+            else:
+                if it_r.text() != txt:
+                    it_r.setText(txt)
+                    it_r.setForeground(QColor("#28A745" if r_ok else "#DC3545"))
+                    it_r.setTextAlignment(Qt.AlignCenter)
             
             # CAN Status
-            it_c = self.board_table.item(i-1, 4) or QTableWidgetItem()
+            it_c = self.board_table.item(i-1, 4)
             c_ok = board.can.is_connected if board else False
             txt = "在线" if c_ok else "离线"
-            if it_c.text() != txt:
-                it_c.setText(txt); it_c.setForeground(QColor("#28A745" if c_ok else "#DC3545"))
+            if not it_c:
+                it_c = QTableWidgetItem(txt)
+                it_c.setForeground(QColor("#28A745" if c_ok else "#DC3545"))
                 it_c.setTextAlignment(Qt.AlignCenter)
-            self.board_table.setItem(i-1, 4, it_c)
+                self.board_table.setItem(i-1, 4, it_c)
+            else:
+                if it_c.text() != txt:
+                    it_c.setText(txt)
+                    it_c.setForeground(QColor("#28A745" if c_ok else "#DC3545"))
+                    it_c.setTextAlignment(Qt.AlignCenter)
             
         self.board_table.setUpdatesEnabled(True)
 
@@ -258,6 +294,8 @@ class HardwareTab(QWidget):
         self.edit_ctrl_pwr_ip.setText(cfg.get("ctrl_pwr_ip", "192.168.1.202"))
         self.edit_easy320_ip.setText(cfg.get("easy320_ip", "192.168.1.88"))
         self.edit_ca550_com.setText(cfg.get("ca550_com", ""))
+        self.edit_master_regex.setText(cfg.get("master_barcode_regex", r"^[M].*"))
+        self.edit_slave_regex.setText(cfg.get("slave_barcode_regex", r"^[S].*"))
 
         ch_cfgs = self.db_manager.load_channel_config() or []
 
@@ -276,7 +314,9 @@ class HardwareTab(QWidget):
             "sim3_ip": self.edit_sim3_ip.text(),
             "ctrl_pwr_ip": self.edit_ctrl_pwr_ip.text(),
             "easy320_ip": self.edit_easy320_ip.text(),
-            "ca550_com": self.edit_ca550_com.text()
+            "ca550_com": self.edit_ca550_com.text(),
+            "master_barcode_regex": self.edit_master_regex.text(),
+            "slave_barcode_regex": self.edit_slave_regex.text()
         }
         if self.db_manager.save_sys_config(data):
             if self.device_manager: self.device_manager.update_config()
@@ -285,7 +325,7 @@ class HardwareTab(QWidget):
     def save_board_monitor_config(self):
         """从监控表格中收集修改后的货架码和 IP 并保存到配置文件"""
         configs = []
-        for i in range(60):
+        for i in range(48):
             item_shelf = self.board_table.item(i, 1)
             item_ip = self.board_table.item(i, 2)
             configs.append({
@@ -316,3 +356,10 @@ class HardwareTab(QWidget):
                     self.table.setItem(i, 2, QTableWidgetItem(f"{base}.{start + i}"))
             except:
                 QMessageBox.warning(self, "错误", "IP 格式不正确。")
+
+    def open_barcode_learn(self, target_edit: QLineEdit):
+        """打开智能学习条码规则弹窗并回填结果"""
+        dialog = BarcodeLearnDialog(self)
+        if dialog.exec() == 1 and dialog.generated_regex:
+            target_edit.setText(dialog.generated_regex)
+

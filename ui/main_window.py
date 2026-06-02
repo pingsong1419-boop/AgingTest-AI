@@ -26,6 +26,19 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("BMS 老化测试上位机")
+        
+        # 动态加载窗体图标
+        import os, sys
+        from PySide6.QtGui import QIcon
+        if getattr(sys, 'frozen', False):
+            base_dir = sys._MEIPASS
+        else:
+            base_dir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        
+        icon_path = os.path.join(base_dir, "resources", "icon.ico")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+            
         self.resize(1280, 800)
         
         # 初始化核心业务引擎

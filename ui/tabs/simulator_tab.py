@@ -146,7 +146,7 @@ class SimulatorTab(QWidget):
         layout.addLayout(mid_layout)
 
         # 3. 全系统广播同步 (跨设备)
-        global_group = QGroupBox("全系统广播同步 (所有设备 CH 1-60)")
+        global_group = QGroupBox("全系统广播同步 (所有设备 CH 1-48)")
         global_group.setStyleSheet("QGroupBox { border: 2px solid #FFC107; padding-top: 15px; }")
         global_layout = QGridLayout()
         global_layout.addWidget(QLabel("全局电压设定 (V):"), 0, 0)
@@ -307,6 +307,9 @@ class SimulatorTab(QWidget):
 
 
     def _notify_status(self, msg):
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Simulator] {msg}")
+
         p = self.parent()
         while p:
             if hasattr(p, "show_status"):

@@ -174,7 +174,7 @@ class RNCANTab(QWidget):
         
         self.combo_target_ch = QComboBox()
         self.combo_target_ch.setFixedWidth(100)
-        for i in range(1, 61): self.combo_target_ch.addItem(f"通道 {i}", i)
+        for i in range(1, 49): self.combo_target_ch.addItem(f"通道 {i}", i)
         self.combo_target_ch.currentIndexChanged.connect(self.on_target_board_changed)
         
         conn_layout.addWidget(QLabel("选择板卡:"), 0, 0)

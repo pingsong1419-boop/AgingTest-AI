@@ -98,7 +98,11 @@ class ChannelWorker(QObject):
         self.step_measured_values = {}
         self.current_progress = 0.0
         self.step_start_times = {}
-        self.log_message.connect(lambda _, msg: self.log_history.append(msg))
+        def _on_log_msg(_, msg):
+            self.log_history.append(msg)
+            import datetime
+            print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [CH-{self.channel_id:02d}] {msg}")
+        self.log_message.connect(_on_log_msg)
         self.step_finished.connect(lambda _, name, is_pass, val: (self.step_statuses.__setitem__(name, is_pass), self.step_measured_values.__setitem__(name, val)))
         self.sub_step_finished.connect(lambda _, step_idx, sub_idx, status, result: self.sub_step_statuses.__setitem__((step_idx, sub_idx), (status, result)))
         self.progress_updated.connect(lambda _, prog, __: setattr(self, "current_progress", prog))
@@ -998,55 +1002,55 @@ class ChannelWorker(QObject):
         if not (self.engine and self.engine.api_client):
             return
 
-        def run():
-            client = self.engine.api_client
-            cid = self.channel_id
+        # 核心修复：提前提取所有依赖 self 的数据，防止后台线程启动时 self (ChannelWorker) 已被 Qt 销毁导致 RuntimeError
+        client = self.engine.api_client
+        cid = self.channel_id
+        m_barcode = getattr(self, "master_barcode", "") or f"CH{cid}_MASTER_SN"
+        slave_list = getattr(self, "slave_barcodes", []) or []
+        log_emitter = self.log_message
+        
+        # 映射三个可能从机 SN 条码
+        s1 = slave_list[0] if len(slave_list) > 0 else None
+        s2 = slave_list[1] if len(slave_list) > 1 else None
+        s3 = slave_list[2] if len(slave_list) > 2 else None
+        
+        import datetime
+        now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        start_time_str = now_str
+        if hasattr(self, "step_start_times") and self.step_start_times:
+            try:
+                first_time = min(self.step_start_times.values())
+                start_time_str = datetime.datetime.fromtimestamp(first_time).strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                pass
+
+        # 提前拼装全程已测项目的完整历史细节报文
+        master_test_data = []
+        for idx, step in enumerate(self.steps):
+            if step.name.strip().startswith("#") or getattr(step, 'skip_runtime', False):
+                continue
+            step_name = step.name
+            is_pass = self.step_statuses.get(step_name, True)
+            measured_val = self.step_measured_values.get(step_name, None)
+            val_str = str(measured_val) if measured_val is not None else "--"
             
+            master_test_data.append({
+                "name": step_name,
+                "testValue": val_str,
+                "unit": getattr(step, "unit", "NULL"),
+                "upperLimit": str(step.max_limit) if step.max_limit is not None else "--",
+                "lowerLimit": str(step.min_limit) if step.min_limit is not None else "--",
+                "result": "PASS" if is_pass else "FAIL",
+                "index": str(idx + 1),
+                "testclass": getattr(step, "target_board", "主机")
+            })
+
+        def run():
             def safe_log(msg):
                 try:
-                    self.log_message.emit(cid, msg)
+                    log_emitter.emit(cid, msg)
                 except RuntimeError:
                     pass
-
-            m_barcode = getattr(self, "master_barcode", "") or f"CH{cid}_MASTER_SN"
-            slave_list = getattr(self, "slave_barcodes", []) or []
-            
-            # 映射三个可能从机 SN 条码
-            s1 = slave_list[0] if len(slave_list) > 0 else None
-            s2 = slave_list[1] if len(slave_list) > 1 else None
-            s3 = slave_list[2] if len(slave_list) > 2 else None
-            
-            # 整理开始与结束时间
-            import datetime
-            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            start_time_str = now_str
-            if hasattr(self, "step_start_times") and self.step_start_times:
-                try:
-                    first_time = min(self.step_start_times.values())
-                    start_time_str = datetime.datetime.fromtimestamp(first_time).strftime("%Y-%m-%d %H:%M:%S")
-                except:
-                    pass
-
-            # 拼装全程已测项目的完整历史细节报文
-            master_test_data = []
-            for idx, step in enumerate(self.steps):
-                if step.name.strip().startswith("#") or getattr(step, 'skip_runtime', False):
-                    continue
-                step_name = step.name
-                is_pass = self.step_statuses.get(step_name, True)
-                measured_val = self.step_measured_values.get(step_name, None)
-                val_str = str(measured_val) if measured_val is not None else "--"
-                
-                master_test_data.append({
-                    "name": step_name,
-                    "testValue": val_str,
-                    "unit": getattr(step, "unit", "NULL"),
-                    "upperLimit": str(step.max_limit) if step.max_limit is not None else "--",
-                    "lowerLimit": str(step.min_limit) if step.min_limit is not None else "--",
-                    "result": "PASS" if is_pass else "FAIL",
-                    "index": str(idx + 1),
-                    "testclass": getattr(step, "target_board", "主机")
-                })
 
             # 1. 发送完成信号至大屏
             safe_log(f"[*] 正在上报测试完成判定信号至大屏... 最终判定: {'合格(PASS)' if status else '不合格(FAIL)'}")
@@ -1111,6 +1115,8 @@ class TestEngine(QObject):
 
     def log_api_call(self, msg: str):
         """API 日志输出并触发 Qt 信号"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [TestEngine-API] {msg}")
         self.api_log_message.emit(msg)
 
     def update_api_client(self):

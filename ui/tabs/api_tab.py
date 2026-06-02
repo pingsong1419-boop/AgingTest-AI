@@ -165,6 +165,11 @@ class ApiTab(QWidget):
         btn_reset.clicked.connect(self.trigger_reset)
         buttons_grid.addWidget(btn_reset, 3, 0, 1, 2)
 
+        btn_reset_all = QPushButton("8. Reset All (重置大屏所有通道)")
+        btn_reset_all.setStyleSheet("background-color: #C2185B; color: white;")
+        btn_reset_all.clicked.connect(self.trigger_reset_all)
+        buttons_grid.addWidget(btn_reset_all, 4, 0, 1, 2)
+
         debug_v.addLayout(buttons_grid)
         debug_group.setLayout(debug_v)
         left_layout.addWidget(debug_group)
@@ -409,4 +414,19 @@ class ApiTab(QWidget):
             if self.engine and self.engine.api_client:
                 res = self.engine.api_client.reset(cid)
                 self.append_log(f"[API Action] reset(ch={cid}) Result -> {res}")
+        threading.Thread(target=run, daemon=True).start()
+
+    def trigger_reset_all(self):
+        def run():
+            if self.engine and self.engine.api_client:
+                self.append_log("[API Action] 🔄 开始批量重置大屏所有 48 个通道...")
+                success_count = 0
+                import time
+                for cid in range(1, 49):
+                    res = self.engine.api_client.reset(cid)
+                    self.append_log(f"[API Action] reset(ch={cid}) Result -> {res}")
+                    if res:
+                        success_count += 1
+                    time.sleep(0.02)
+                self.append_log(f"[API Action] 🔄 批量重置大屏通道完成！成功: {success_count}/48")
         threading.Thread(target=run, daemon=True).start()

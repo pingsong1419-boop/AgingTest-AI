@@ -223,21 +223,30 @@ class DBManager:
         sys_cfg = self.load_sys_config()
         report_root = sys_cfg.get("report_root_path", os.path.abspath("reports"))
         
-        # 2. 所在文件夹按测试配方命名
-        recipe_folder = os.path.join(report_root, recipe_name)
-        os.makedirs(recipe_folder, exist_ok=True)
+        # 2. 所在文件夹按日期和通道号分类
+        try:
+            test_date = start_time_str.split(" ")[0]
+            if len(test_date) != 10 or test_date[4] != '-' or test_date[7] != '-':
+                raise ValueError
+        except Exception:
+            test_date = datetime.date.today().strftime("%Y-%m-%d")
+            
+        channel_id = main_info[1]
+        channel_folder_name = f"CH{channel_id:02d}"
+        target_folder = os.path.join(report_root, test_date, channel_folder_name)
+        os.makedirs(target_folder, exist_ok=True)
         
-        # 3. 报表命名：主机条码 + 测试开始时间 + 结束时间
+        # 3. 报表命名：通道号 + 主机条码 + 测试开始时间 + 结束时间
         def sanitize_filename(name):
             return "".join(c for c in name if c.isalnum() or c in ('-', '_', ' ')).strip()
             
         safe_master = sanitize_filename(master_code)
         safe_start = sanitize_filename(start_time_str.replace(":", "-").replace(" ", "_"))
         safe_end = sanitize_filename(end_time_str.replace(":", "-").replace(" ", "_"))
-        filename_base = f"{safe_master}_{safe_start}_to_{safe_end}"
+        filename_base = f"CH{channel_id:02d}_{safe_master}_{safe_start}_to_{safe_end}"
         
-        csv_path = os.path.join(recipe_folder, f"{filename_base}.csv")
-        html_path = os.path.join(recipe_folder, f"{filename_base}.html")
+        csv_path = os.path.join(target_folder, f"{filename_base}.csv")
+        html_path = os.path.join(target_folder, f"{filename_base}.html")
         
         # 4. 写入 CSV
         import csv

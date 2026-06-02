@@ -32,11 +32,11 @@ class ScanDialog(QDialog):
         self.master_code = ""
         self.slave_codes = []
 
-        # 扫码校验规则 (可配置)
+        # 加载全局配置的条码规则
+        sys_cfg = self.db_manager.load_sys_config() if self.db_manager else {}
         self.rules = {
-            "shelf": r"^(\d{2})-([ABC])(\d{2})$",
-            "master": r".+", # 默认允许任意非空
-            "slave": r".+"   # 默认允许任意非空
+            "master": sys_cfg.get("master_barcode_regex", r"^M.*"),
+            "slave": sys_cfg.get("slave_barcode_regex", r"^S.*")
         }
         
         self._init_ui()
@@ -177,30 +177,26 @@ class ScanDialog(QDialog):
 
     def parse_shelf_code(self, code):
         """
-        货架码规则: XX-YZZ (如 01-A02)
-        01-A01 -> CH-01, 01-A16 -> CH-16
-        01-B01 -> CH-17, 01-B16 -> CH-32
-        01-C01 -> CH-33, 01-C16 -> CH-48
-        CH-49及以上禁用
+        根据用户在【硬件状态与全局配置】中填写的实际货架二维码来匹配通道号。
+        不再使用正则硬编码。
         """
-        match = re.match(r"^(\d{2})-([ABC])(\d{2})$", code)
-        if not match:
-            return -1
-        cabinet, car, slot = match.groups()
-        if cabinet != "01": # 目前固定为1号
-            return -1
-        
-        slot_num = int(slot)
-        if not (1 <= slot_num <= 16):
+        if not self.db_manager:
             return -1
             
-        offset = {"A": 0, "B": 16, "C": 32}
-        channel_id = offset[car] + slot_num
-        
-        if channel_id > 48:
-            return -1
-            
-        return channel_id
+        ch_configs = self.db_manager.load_channel_config() or []
+        for cfg in ch_configs:
+            # 忽略空配置
+            shelf_code = cfg.get("shelf_code", "").strip()
+            if not shelf_code:
+                continue
+                
+            if shelf_code == code:
+                channel_id = cfg.get("channel_id")
+                # 校验通道有效性 (目前最大支持 48)
+                if isinstance(channel_id, int) and 1 <= channel_id <= 48:
+                    return channel_id
+                    
+        return -1
 
     def _update_step_prompt(self):
         """根据当前状态更新顶部提示语并进行语音播报"""
@@ -224,99 +220,103 @@ class ScanDialog(QDialog):
             
         self.speak_text(speak_msg)
 
+    def _highlight_slot(self, slot_widget):
+        slot_widget.val_input.setStyleSheet("""
+            QLineEdit {
+                font-size: 14px; 
+                color: #00FF00; 
+                font-weight: bold; 
+                font-family: 'Consolas', monospace;
+                border: 2px solid #00FF00;
+                background-color: #0F2A1A;
+            }
+        """)
+        slot_widget.setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 6px;")
+
     def process_scan(self):
         code = self.scan_input.text().strip()
         self.scan_input.clear()
         if not code: return
         
-        # 第一步：货架码
-        if self.target_channel == -1:
-            ch_id = self.parse_shelf_code(code)
-            if ch_id != -1:
-                # 校验是否是已勾选通道
-                if self.checked_channels and ch_id not in self.checked_channels:
-                    self.lbl_step.setText(f"❌ 通道 CH-{ch_id:02d} 未勾选，无法扫码入站！")
-                    self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
-                    self.speak_text("该通道未勾选")
-                    return
-                
-                self.target_channel = ch_id
-                self.shelf_code = code
-                self.lbl_ch_info.setText(f"测试通道: CH-{self.target_channel:02d}")
-                self.slot_shelf.val_input.setText(code)
-                self.slot_shelf.val_input.setStyleSheet("""
-                    QLineEdit {
-                        font-size: 14px; 
-                        color: #00FF00; 
-                        font-weight: bold; 
-                        font-family: 'Consolas', monospace;
-                        border: 2px solid #00FF00;
-                        background-color: #0F2A1A;
-                    }
-                """)
-                self.slot_shelf.setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 6px;")
-                self._update_step_prompt()
-            else:
-                self.lbl_step.setText(f"❌ 货架码不符规则: {code}")
+        # --- 防重复扫码校验 ---
+        if code == self.master_code or code in self.slave_codes:
+            self.lbl_step.setText(f"❌ 条码重复！请勿重复扫描同一实物")
+            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+            self.speak_text("条码重复")
+            return
+            
+        # --- 智能识别逻辑 ---
+        # 1. 尝试匹配货架码
+        ch_id = self.parse_shelf_code(code)
+        is_shelf = (ch_id != -1)
+        
+        # 2. 尝试匹配主机码
+        is_master = False
+        if self.rules.get("master"):
+            try: is_master = bool(re.match(self.rules["master"], code))
+            except: is_master = False
+            
+        # 3. 尝试匹配从机码
+        is_slave = False
+        if self.rules.get("slave"):
+            try: is_slave = bool(re.match(self.rules["slave"], code))
+            except: is_slave = False
+
+        # --- 智能分配 ---
+        if is_shelf:
+            if self.checked_channels and ch_id not in self.checked_channels:
+                self.lbl_step.setText(f"❌ 通道 CH-{ch_id:02d} 未勾选，无法扫码入站！")
                 self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
-                self.speak_text("条码规则不符合要求")
+                self.speak_text("该通道未勾选")
+                return
+            
+            self.target_channel = ch_id
+            self.shelf_code = code
+            self.lbl_ch_info.setText(f"测试通道: CH-{self.target_channel:02d}")
+            self.slot_shelf.val_input.setText(code)
+            self._highlight_slot(self.slot_shelf)
+            
+        elif is_master and not self.master_code:
+            self.master_code = code
+            self.slot_master.val_input.setText(code)
+            self._highlight_slot(self.slot_master)
+            
+        elif is_slave and not self.master_code:
+            self.lbl_step.setText("❌ 顺序错误：必须先扫描【主机条码】！")
+            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+            self.speak_text("请先扫描主机")
+            return
+            
+        elif is_slave and len(self.slave_codes) < self.slaves_count:
+            idx = len(self.slave_codes)
+            self.slave_codes.append(code)
+            self.slave_slots[idx].val_input.setText(code)
+            self._highlight_slot(self.slave_slots[idx])
+            
+        elif is_master and self.master_code:
+             # 如果已经扫了主机码但再次扫描了符合主机的码，报错提示
+            self.lbl_step.setText("❌ 主机码已存在，请勿重复扫描")
+            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+            self.speak_text("主机码已存在")
+            return
+            
+        elif is_slave and len(self.slave_codes) >= self.slaves_count:
+            self.lbl_step.setText("❌ 从机数量已达上限，无需继续扫描")
+            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+            self.speak_text("从机已满")
+            return
+            
+        else:
+            self.lbl_step.setText(f"❌ 无法识别的条码类别: {code}")
+            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+            self.speak_text("条码无法识别")
             return
 
-        # 第二步：主机码
-        if not self.master_code:
-            if re.match(self.rules["master"], code):
-                self.master_code = code
-                self.slot_master.val_input.setText(code)
-                self.slot_master.val_input.setStyleSheet("""
-                    QLineEdit {
-                        font-size: 14px; 
-                        color: #00FF00; 
-                        font-weight: bold; 
-                        font-family: 'Consolas', monospace;
-                        border: 2px solid #00FF00;
-                        background-color: #0F2A1A;
-                    }
-                """)
-                self.slot_master.setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 6px;")
-                
-                if self.slaves_count == 0:
-                    self.finalize_scan()
-                else:
-                    self._update_step_prompt()
-            else:
-                self.lbl_step.setText(f"❌ 主机码不符规则")
-                self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
-                self.speak_text("条码规则不符合要求")
-            return
-
-        # 第三步：从机码
-        if len(self.slave_codes) < self.slaves_count:
-            if re.match(self.rules["slave"], code):
-                idx = len(self.slave_codes)
-                self.slave_codes.append(code)
-                
-                self.slave_slots[idx].val_input.setText(code)
-                self.slave_slots[idx].val_input.setStyleSheet("""
-                    QLineEdit {
-                        font-size: 14px; 
-                        color: #00FF00; 
-                        font-weight: bold; 
-                        font-family: 'Consolas', monospace;
-                        border: 2px solid #00FF00;
-                        background-color: #0F2A1A;
-                    }
-                """)
-                self.slave_slots[idx].setStyleSheet("background-color: #0F2A1A; border: 2px solid #00FF00; border-radius: 6px;")
-                
-                if len(self.slave_codes) == self.slaves_count:
-                    self.finalize_scan()
-                else:
-                    self._update_step_prompt()
-            else:
-                self.lbl_step.setText(f"❌ 从机码不符规则")
-                self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
-                self.speak_text("条码规则不符合要求")
-            return
+        # 检查是否全部扫完
+        if self.target_channel != -1 and self.master_code and len(self.slave_codes) == self.slaves_count:
+            self.finalize_scan()
+        else:
+            self._update_step_prompt()
 
     def finalize_scan(self):
         # 从输入框获取最终的条码数据（以防用户进行了手动修改）

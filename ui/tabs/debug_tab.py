@@ -19,7 +19,7 @@ class SingleChannelDebugTab(QWidget):
         select_layout = QHBoxLayout()
         select_layout.addWidget(QLabel("当前通道:"))
         self.channel_combo = QComboBox()
-        self.channel_combo.addItems([f"Channel {i+1}" for i in range(60)])
+        self.channel_combo.addItems([f"Channel {i+1}" for i in range(48)])
         select_layout.addWidget(self.channel_combo)
         self.btn_connect = QPushButton("连接/开启监听")
         self.btn_connect.setStyleSheet("background-color: #28A745; color: white;")
