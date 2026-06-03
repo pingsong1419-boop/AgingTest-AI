@@ -1388,8 +1388,6 @@ class ChamberTab(QWidget):
                             self.mgr.afe_pwr_2.output_control(False)
                         if getattr(self.mgr, "afe_pwr_3", None):
                             self.mgr.afe_pwr_3.output_control(False)
-                        if getattr(self.mgr, "ctrl_board_power", None):
-                            self.mgr.ctrl_board_power.output_control(False)
                             
                         # 4. 关闭所有老化板继电器
                         if hasattr(self.mgr, "boards"):

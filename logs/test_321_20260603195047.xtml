@@ -1,0 +1,16 @@
+<TestReport id='321'>
+  <BasicInfo>
+    <Channel>33</Channel>
+    <Recipe>DJ2513_1</Recipe>
+    <StartTime>2026-06-03 19:49:22</StartTime>
+    <EndTime>2026-06-03 19:50:47</EndTime>
+    <TotalResult>STOPPED</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>OK</Measured>
+      <Result>PASS</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

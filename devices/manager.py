@@ -329,6 +329,25 @@ class DeviceManager:
 
     def disconnect_all(self):
         """断开所有设备的连接并释放资源 (新增系统安全退出逻辑)"""
+        print("[DeviceManager] 正在执行系统安全退出下电流程...")
+        
+        # 1. 优先关闭分级供电的继电器 (Easy320)
+        if getattr(self, "easy320", None) and self.easy320.is_connected:
+            try:
+                for i in range(16):
+                    self.easy320.write_relay(i, False)
+                print("[DeviceManager] 已成功关闭分级供电的继电器。")
+            except Exception as e:
+                print(f"[DeviceManager] 继电器下电异常: {e}")
+                
+        # 2. 其次关闭控制板供电电源
+        if getattr(self, "ctrl_board_power", None) and self.ctrl_board_power.is_connected:
+            try:
+                self.ctrl_board_power.output_control(False)
+                print("[DeviceManager] 已成功关闭控制板供电电源。")
+            except Exception as e:
+                print(f"[DeviceManager] 控制板电源下电异常: {e}")
+
         if getattr(self, "chamber", None):
             try: self.chamber.disconnect()
             except: pass
