@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BMS 测试报告 - 3333</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #1a1a2e;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 10px;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f3460;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecca3;
+            padding-left: 10px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-item {
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-right: 10px;
+        }
+        .result-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .result-pass { background-color: #d4edda; color: #155724; }
+        .result-ng { background-color: #f8d7da; color: #721c24; }
+        .result-running { background-color: #fff3cd; color: #856404; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+        th {
+            background-color: #0f3460;
+            color: #fff;
+            font-weight: 600;
+        }
+        tr:hover { background-color: #f8f9fa; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BMS 老化测试详细判定报告</h1>
+        
+        <div class="section-title">基本信息</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">通道号:</span>CH-33</div>
+            <div class="info-item"><span class="info-label">货架号:</span>01-C01</div>
+            <div class="info-item"><span class="info-label">主机条码:</span>3333</div>
+            <div class="info-item"><span class="info-label">从机1条码:</span>111</div>
+            <div class="info-item"><span class="info-label">从机2条码:</span>222</div>
+            <div class="info-item"><span class="info-label">从机3条码:</span>333</div>
+            <div class="info-item"><span class="info-label">测试配方:</span>DJ2513_Aging</div>
+            <div class="info-item"><span class="info-label">测试总判定:</span>
+                <span class="result-badge result-ng">NG</span>
+            </div>
+            <div class="info-item"><span class="info-label">测试开始时间:</span>2026-06-03 17:56:32</div>
+            <div class="info-item"><span class="info-label">测试结束时间:</span>2026-06-03 18:00:35</div>
+        </div>
+        
+        <div class="section-title">详细判定数据</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>测试项名称</th>
+                    <th class="text-center">单位</th>
+                    <th class="text-center">下限</th>
+                    <th class="text-center">上限</th>
+                    <th class="text-center">测量值</th>
+                    <th class="text-center">判定结果</th>
+                    <th class="text-center">执行用时(秒)</th>
+                    <th>记录时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>设备初始化</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">PASS</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">8.06</td>
+                    <td>2026-06-03 17:56:40</td>
+                </tr>
+                <tr>
+                    <td>BMS板工作唤醒</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">PASS</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">6.14</td>
+                    <td>2026-06-03 17:56:46</td>
+                </tr>
+                <tr>
+                    <td>供电DCDC+电压测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">13.0</td>
+                    <td class="text-center">12.072</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.07</td>
+                    <td>2026-06-03 17:56:46</td>
+                </tr>
+                <tr>
+                    <td>供电P+电压测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">13.0</td>
+                    <td class="text-center">12.072</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:56:46</td>
+                </tr>
+                <tr>
+                    <td>CAN2通讯测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-06-03 17:56:47</td>
+                </tr>
+                <tr>
+                    <td>CAN4通讯测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.03</td>
+                    <td>2026-06-03 17:56:48</td>
+                </tr>
+                <tr>
+                    <td>CAN1通讯测试</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center">--</td>
+                    <td class="text-center">OK</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.03</td>
+                    <td>2026-06-03 17:56:49</td>
+                </tr>
+                <tr>
+                    <td>KL15唤醒源识别</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">13.0</td>
+                    <td class="text-center">12.222</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:56:49</td>
+                </tr>
+                <tr>
+                    <td>HALL 5V供电回采电压</td>
+                    <td class="text-center">NULL</td>
+                    <td class="text-center">4.95</td>
+                    <td class="text-center">5.05</td>
+                    <td class="text-center">4.996</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:56:49</td>
+                </tr>
+                <tr>
+                    <td>SIG1脉冲阻抗</td>
+                    <td class="text-center">Ω</td>
+                    <td class="text-center">45000.0</td>
+                    <td class="text-center">55000.0</td>
+                    <td class="text-center">48320.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.07</td>
+                    <td>2026-06-03 17:56:51</td>
+                </tr>
+                <tr>
+                    <td>SIG3脉冲阻抗</td>
+                    <td class="text-center">Ω</td>
+                    <td class="text-center">90000.0</td>
+                    <td class="text-center">110000.0</td>
+                    <td class="text-center">94255.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.07</td>
+                    <td>2026-06-03 17:56:53</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-IN功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.672</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.05</td>
+                    <td>2026-06-03 17:56:58</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-频率</td>
+                    <td class="text-center">Hz</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:56:58</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-占空比</td>
+                    <td class="text-center">%</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:56:58</td>
+                </tr>
+                <tr>
+                    <td>HVIL1-OUT功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.468</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.07</td>
+                    <td>2026-06-03 17:57:04</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-IN功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.672</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.03</td>
+                    <td>2026-06-03 17:57:09</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-频率</td>
+                    <td class="text-center">Hz</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:57:09</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-占空比</td>
+                    <td class="text-center">%</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:09</td>
+                </tr>
+                <tr>
+                    <td>HVIL2-OUT功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.435</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.06</td>
+                    <td>2026-06-03 17:57:14</td>
+                </tr>
+                <tr>
+                    <td>HVIL3-IN功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.665</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.03</td>
+                    <td>2026-06-03 17:57:19</td>
+                </tr>
+                <tr>
+                    <td>HVIL3-频率</td>
+                    <td class="text-center">Hz</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:57:19</td>
+                </tr>
+                <tr>
+                    <td>HVIL3-占空比</td>
+                    <td class="text-center">%</td>
+                    <td class="text-center">49.0</td>
+                    <td class="text-center">51.0</td>
+                    <td class="text-center">50.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:19</td>
+                </tr>
+                <tr>
+                    <td>HVIL3-OUT功能采集</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.0</td>
+                    <td class="text-center">11.0</td>
+                    <td class="text-center">9.672</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">5.04</td>
+                    <td>2026-06-03 17:57:24</td>
+                </tr>
+                <tr>
+                    <td>GB_2015+CC1无效测试</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.15</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.63</td>
+                    <td>2026-06-03 17:57:26</td>
+                </tr>
+                <tr>
+                    <td>GB_2015+CC1有效测试</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.9</td>
+                    <td class="text-center">4.1</td>
+                    <td class="text-center">4.092</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.55</td>
+                    <td>2026-06-03 17:57:26</td>
+                </tr>
+                <tr>
+                    <td>GB_2015+CC1有效测试(闭合CC1_2015+_S2)</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">9.5</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">10.224</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.40</td>
+                    <td>2026-06-03 17:57:29</td>
+                </tr>
+                <tr>
+                    <td>Chaoji_CC2无效测试</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.0</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center">1.358</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.07</td>
+                    <td>2026-06-03 17:57:31</td>
+                </tr>
+                <tr>
+                    <td>Chaoji_CC2有效测试</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.5</td>
+                    <td class="text-center">0.8</td>
+                    <td class="text-center">0.663</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.04</td>
+                    <td>2026-06-03 17:57:32</td>
+                </tr>
+                <tr>
+                    <td>Chaoji_CC2有效测试(闭合CC2_SW3)</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.15</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.11</td>
+                    <td>2026-06-03 17:57:33</td>
+                </tr>
+                <tr>
+                    <td>Chaoji_CC2-PE断线模拟</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.15</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.80</td>
+                    <td>2026-06-03 17:57:35</td>
+                </tr>
+                <tr>
+                    <td>环境温度测试</td>
+                    <td class="text-center">℃</td>
+                    <td class="text-center">-40.0</td>
+                    <td class="text-center">85.0</td>
+                    <td class="text-center">40.1</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.01</td>
+                    <td>2026-06-03 17:57:35</td>
+                </tr>
+                <tr>
+                    <td>NTC1</td>
+                    <td class="text-center">℃</td>
+                    <td class="text-center">-45.0</td>
+                    <td class="text-center">90.0</td>
+                    <td class="text-center">38.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:35</td>
+                </tr>
+                <tr>
+                    <td>NTC2</td>
+                    <td class="text-center">℃</td>
+                    <td class="text-center">-45.0</td>
+                    <td class="text-center">90.0</td>
+                    <td class="text-center">39.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:35</td>
+                </tr>
+                <tr>
+                    <td>NTC3</td>
+                    <td class="text-center">℃</td>
+                    <td class="text-center">-45.0</td>
+                    <td class="text-center">90.0</td>
+                    <td class="text-center">39.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.04</td>
+                    <td>2026-06-03 17:57:35</td>
+                </tr>
+                <tr>
+                    <td>NTC4</td>
+                    <td class="text-center">℃</td>
+                    <td class="text-center">-45.0</td>
+                    <td class="text-center">90.0</td>
+                    <td class="text-center">39.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.07</td>
+                    <td>2026-06-03 17:57:35</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT1（LL）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.972</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-06-03 17:57:36</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT1（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.006</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-06-03 17:57:38</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT1_CS（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.05</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:38</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT1（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.314</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-06-03 17:57:39</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT1_CS（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.65</td>
+                    <td class="text-center">0.85</td>
+                    <td class="text-center">0.78</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.20</td>
+                    <td>2026-06-03 17:57:41</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT2（LL）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.972</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.69</td>
+                    <td>2026-06-03 17:57:43</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT2（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.006</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-06-03 17:57:45</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT2_CS（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.05</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:45</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT2（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.666</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-06-03 17:57:46</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT2_CS（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.35</td>
+                    <td class="text-center">0.5</td>
+                    <td class="text-center">0.431</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.20</td>
+                    <td>2026-06-03 17:57:48</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT3（LL）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.979</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.98</td>
+                    <td>2026-06-03 17:57:49</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT3（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.006</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.43</td>
+                    <td>2026-06-03 17:57:50</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT3_CS（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.05</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:57:50</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT3（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.287</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.49</td>
+                    <td>2026-06-03 17:57:51</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT3_CS（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.65</td>
+                    <td class="text-center">0.85</td>
+                    <td class="text-center">0.804</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.50</td>
+                    <td>2026-06-03 17:57:52</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT4（LL）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.979</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.00</td>
+                    <td>2026-06-03 17:57:53</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT4（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.006</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.97</td>
+                    <td>2026-06-03 17:57:54</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT4_CS（LH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.05</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:57:54</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT4（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.652</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.50</td>
+                    <td>2026-06-03 17:57:56</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT4_CS（HH）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.35</td>
+                    <td class="text-center">0.5</td>
+                    <td class="text-center">0.426</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.17</td>
+                    <td>2026-06-03 17:57:57</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT5（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.006</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.09</td>
+                    <td>2026-06-03 17:57:58</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT5_CS（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.05</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:57:58</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT5（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.266</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.14</td>
+                    <td>2026-06-03 17:57:59</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT5_CS（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.65</td>
+                    <td class="text-center">0.85</td>
+                    <td class="text-center">0.815</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.61</td>
+                    <td>2026-06-03 17:58:00</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT6（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.65</td>
+                    <td>2026-06-03 17:58:00</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT6_CS（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.05</td>
+                    <td class="text-center">0.004</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:58:00</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT6（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.652</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.12</td>
+                    <td>2026-06-03 17:58:01</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT6_CS（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.35</td>
+                    <td class="text-center">0.5</td>
+                    <td class="text-center">0.433</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.61</td>
+                    <td>2026-06-03 17:58:02</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT7（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.61</td>
+                    <td>2026-06-03 17:58:03</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT7（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.287</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.11</td>
+                    <td>2026-06-03 17:58:04</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT7_CS（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.7</td>
+                    <td class="text-center">0.9</td>
+                    <td class="text-center">0.807</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.64</td>
+                    <td>2026-06-03 17:58:04</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT8（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.63</td>
+                    <td>2026-06-03 17:58:05</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT8（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">10.5</td>
+                    <td class="text-center">12.5</td>
+                    <td class="text-center">11.652</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.12</td>
+                    <td>2026-06-03 17:58:06</td>
+                </tr>
+                <tr>
+                    <td>HSD_OUTPUT8_CS（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.35</td>
+                    <td class="text-center">0.5</td>
+                    <td class="text-center">0.42</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.61</td>
+                    <td>2026-06-03 17:58:07</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT1（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.96</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.93</td>
+                    <td>2026-06-03 17:58:08</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT1（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.039</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.74</td>
+                    <td>2026-06-03 17:58:10</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT2（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.973</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.96</td>
+                    <td>2026-06-03 17:58:11</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT2（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.019</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.45</td>
+                    <td>2026-06-03 17:58:14</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT3（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.986</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.98</td>
+                    <td>2026-06-03 17:58:15</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT3（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.039</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.73</td>
+                    <td>2026-06-03 17:58:18</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT4（L）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.6</td>
+                    <td class="text-center">3.0</td>
+                    <td class="text-center">2.98</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.99</td>
+                    <td>2026-06-03 17:58:19</td>
+                </tr>
+                <tr>
+                    <td>LSD_OUTPUT4（H）</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">0.3</td>
+                    <td class="text-center">0.026</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.72</td>
+                    <td>2026-06-03 17:58:21</td>
+                </tr>
+                <tr>
+                    <td>@高压源控制-100V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">99.0</td>
+                    <td class="text-center">101.0</td>
+                    <td class="text-center">100.0574</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">7.74</td>
+                    <td>2026-06-03 17:58:29</td>
+                </tr>
+                <tr>
+                    <td>高压1测试-100V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">99.0</td>
+                    <td class="text-center">101.0</td>
+                    <td class="text-center">100.077</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:58:29</td>
+                </tr>
+                <tr>
+                    <td>高压2测试-100V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">99.0</td>
+                    <td class="text-center">101.0</td>
+                    <td class="text-center">100.077</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.27</td>
+                    <td>2026-06-03 17:58:30</td>
+                </tr>
+                <tr>
+                    <td>高压3测试-100V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">99.0</td>
+                    <td class="text-center">101.0</td>
+                    <td class="text-center">99.621</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.05</td>
+                    <td>2026-06-03 17:58:30</td>
+                </tr>
+                <tr>
+                    <td>@高压源控制-750V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">749.0</td>
+                    <td class="text-center">751.0</td>
+                    <td class="text-center">750.4338</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">4.07</td>
+                    <td>2026-06-03 17:58:35</td>
+                </tr>
+                <tr>
+                    <td>高压1测试-750V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">749.0</td>
+                    <td class="text-center">751.0</td>
+                    <td class="text-center">749.819</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:58:35</td>
+                </tr>
+                <tr>
+                    <td>高压2测试-750V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">749.0</td>
+                    <td class="text-center">751.0</td>
+                    <td class="text-center">749.971</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:58:35</td>
+                </tr>
+                <tr>
+                    <td>高压3测试-750V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">749.0</td>
+                    <td class="text-center">751.0</td>
+                    <td class="text-center">749.325</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.06</td>
+                    <td>2026-06-03 17:58:35</td>
+                </tr>
+                <tr>
+                    <td>@高压源控制-650V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">649.0</td>
+                    <td class="text-center">651.0</td>
+                    <td class="text-center">650.0194</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">4.12</td>
+                    <td>2026-06-03 17:58:39</td>
+                </tr>
+                <tr>
+                    <td>绝缘采集测试-正极1MΩ</td>
+                    <td class="text-center">KΩ</td>
+                    <td class="text-center">800.0</td>
+                    <td class="text-center">1200.0</td>
+                    <td class="text-center">1049.9kΩ</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">92.91</td>
+                    <td>2026-06-03 18:00:12</td>
+                </tr>
+                <tr>
+                    <td>绝缘采集测试-负极30KΩ</td>
+                    <td class="text-center">KΩ</td>
+                    <td class="text-center">25.0</td>
+                    <td class="text-center">35.0</td>
+                    <td class="text-center">31.5kΩ</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">0.07</td>
+                    <td>2026-06-03 18:00:12</td>
+                </tr>
+                <tr>
+                    <td>@高压源控制-0V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center">1.0</td>
+                    <td class="text-center">0.5598</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">3.61</td>
+                    <td>2026-06-03 18:00:15</td>
+                </tr>
+                <tr>
+                    <td>快充口绝缘阻抗-100KΩ</td>
+                    <td class="text-center">Ω</td>
+                    <td class="text-center">80000.0</td>
+                    <td class="text-center">120000.0</td>
+                    <td class="text-center">91457.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">3.10</td>
+                    <td>2026-06-03 18:00:19</td>
+                </tr>
+                <tr>
+                    <td>快充口绝缘阻抗-500KΩ</td>
+                    <td class="text-center">Ω</td>
+                    <td class="text-center">425000.0</td>
+                    <td class="text-center">575000.0</td>
+                    <td class="text-center">492223.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.69</td>
+                    <td>2026-06-03 18:00:21</td>
+                </tr>
+                <tr>
+                    <td>第一路负极粘连检测-无效</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">4.9</td>
+                    <td class="text-center">5.02</td>
+                    <td class="text-center">4.989</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.06</td>
+                    <td>2026-06-03 18:00:23</td>
+                </tr>
+                <tr>
+                    <td>第一路负极粘连检测-有效</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.8</td>
+                    <td class="text-center">2.0</td>
+                    <td class="text-center">1.895</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.69</td>
+                    <td>2026-06-03 18:00:26</td>
+                </tr>
+                <tr>
+                    <td>第二路负极粘连检测-无效</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">4.9</td>
+                    <td class="text-center">5.02</td>
+                    <td class="text-center">4.998</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.08</td>
+                    <td>2026-06-03 18:00:28</td>
+                </tr>
+                <tr>
+                    <td>第二路负极粘连检测-有效</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.8</td>
+                    <td class="text-center">2.0</td>
+                    <td class="text-center">1.904</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">2.68</td>
+                    <td>2026-06-03 18:00:31</td>
+                </tr>
+                <tr>
+                    <td>CA550输出-2.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">2.49</td>
+                    <td class="text-center">2.51</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-ng">NG</span></td>
+                    <td class="text-center">4.04</td>
+                    <td>2026-06-03 18:00:35</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

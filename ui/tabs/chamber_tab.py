@@ -267,14 +267,7 @@ class ChamberTab(QWidget):
         btn_del_p.clicked.connect(self.delete_preset)
         preset_layout.addWidget(btn_del_p)
         
-        # 加速比滑块
-        preset_layout.addWidget(QLabel("  时间加速比:"))
-        self.combo_speed = QComboBox()
-        self.combo_speed.wheelEvent = lambda event: event.ignore()
-        self.combo_speed.addItems(["实时 (1x)", "加速 (60x) - 1秒表1分钟", "极速 (3600x) - 1秒表60分钟"])
-        self.combo_speed.setCurrentIndex(0) # 默认显示为实时 1x
-        self.combo_speed.currentIndexChanged.connect(self.change_speed_factor)
-        preset_layout.addWidget(self.combo_speed)
+
         
         # 联动多通道测试复选框
         self.chk_linkage = QCheckBox("联动多通道测试")
@@ -287,13 +280,13 @@ class ChamberTab(QWidget):
         
         # 工步配置表格
         self.table_steps = QTableWidget(0, 6)
-        self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "目标温度 (℃)", "测试时间/倒计时", "超时时间", "执行状态"])
+        self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "目标温度 (℃)", "测试时间/倒计时", "测试终止条件", "执行状态"])
         self.table_steps.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_steps.setColumnWidth(0, 65)   # 工步序号缩小
         self.table_steps.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch) # 工步名称占据多余空间
         self.table_steps.setColumnWidth(2, 95)   # 目标温度缩小
         self.table_steps.setColumnWidth(3, 175)  # 测试时间栏增大，充分显示倒计时
-        self.table_steps.setColumnWidth(4, 75)   # 超时时间缩小
+        self.table_steps.setColumnWidth(4, 150)   # 测试终止条件
         self.table_steps.setColumnWidth(5, 90)   # 执行状态
         self.table_steps.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_steps.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -684,14 +677,14 @@ class ChamberTab(QWidget):
                         "name": s.get("name", "自定义工步"),
                         "temp": s.get("temp", 25.0),
                         "hours": s.get("hours", 1.0),
-                        "timeout": s.get("timeout", 0.0),
+                        "end_cond": s.get("end_cond", "到达目标时间终止"),
                         "status": "等待中"
                     })
                 self.refresh_steps_table()
                 return
 
         # 兜底默认方案
-        self.steps_data.append({"name": "维持温度", "temp": 25.0, "hours": 0.2, "timeout": 0.0, "status": "等待中"})
+        self.steps_data.append({"name": "维持温度", "temp": 25.0, "hours": 0.2, "end_cond": "到达目标时间终止", "status": "等待中"})
         self.refresh_steps_table()
 
     def save_preset(self):
@@ -748,7 +741,6 @@ class ChamberTab(QWidget):
             try:
                 temp_item = self.table_steps.item(row, 2)
                 hours_item = self.table_steps.item(row, 3)
-                timeout_item = self.table_steps.item(row, 4)
                 
                 if temp_item:
                     self.steps_data[row]["temp"] = float(temp_item.text())
@@ -756,14 +748,25 @@ class ChamberTab(QWidget):
                     hours_str = hours_item.text()
                     if "min" in hours_str: hours_str = hours_str.split("min")[0]
                     self.steps_data[row]["hours"] = float(hours_str)
-                if timeout_item:
-                    timeout_str = timeout_item.text()
-                    if "min" in timeout_str: timeout_str = timeout_str.split("min")[0]
-                    self.steps_data[row]["timeout"] = float(timeout_str)
+                
+                cond_item = self.table_steps.item(row, 4)
+                if cond_item:
+                    self.steps_data[row]["end_cond"] = cond_item.text()
+                
+                # 强力校正终止条件，确保数据层与业务规范100%绑定
+                step_name = self.steps_data[row]["name"]
+                if step_name in ["升温至目标温度", "降温至目标温度"]:
+                    self.steps_data[row]["end_cond"] = "到达目标温度终止"
+                elif step_name == "维持温度":
+                    self.steps_data[row]["end_cond"] = "到达目标时间终止"
+                elif step_name == "启动多通道测试":
+                    self.steps_data[row]["end_cond"] = "测试结束终止"
+                elif step_name in ["老化完成取料", "BMS带载工作"]:
+                    self.steps_data[row]["end_cond"] = "默认"
             except:
                 pass
     def on_cell_changed(self, row, col):
-        if col not in (2, 3, 4):
+        if col not in (2, 3):
             return
         if row >= len(self.steps_data):
             return
@@ -804,25 +807,6 @@ class ChamberTab(QWidget):
                     item.setText(f"{self.steps_data[row]['hours']:.3f}min (已完成)")
                 else:
                     item.setText(f"{self.steps_data[row]['hours']:.3f}")
-            elif col == 4: # Timeout (超时时间)
-                if "min" in val_str:
-                    val_str = val_str.split("min")[0].strip()
-                self.steps_data[row]["timeout"] = float(val_str)
-                # 重新格式化为 3 位小数
-                if self.steps_data[row]["status"] == "运行中...":
-                    if self.steps_data[row]["hours"] == 0 and self.steps_data[row]["timeout"] > 0:
-                        rem = max(0, self.steps_data[row]["timeout"] - self.step_elapsed_sec)
-                        total_m = int(rem)
-                        s = int((rem - total_m) * 60)
-                        h = total_m // 60
-                        m = total_m % 60
-                        item.setText(f"{self.steps_data[row]['timeout']:.3f}min (剩 {h:02d}:{m:02d}:{s:02d})")
-                    else:
-                        item.setText(f"{self.steps_data[row]['timeout']:.3f}")
-                elif self.steps_data[row]["status"] in ("已完成", "已完成(超时)", "超时未达标"):
-                    item.setText(f"{self.steps_data[row]['timeout']:.3f}min (已完成)")
-                else:
-                    item.setText(f"{self.steps_data[row]['timeout']:.3f}")
             
             # 如果修改的是当前正在运行的工步，且工步引擎处于启动状态，立即下发PLC
             if row == self.active_step_idx and self.sequence_running:
@@ -836,8 +820,6 @@ class ChamberTab(QWidget):
                     item.setText(f"{self.steps_data[row]['temp']:.1f}")
             elif col == 3:
                 item.setText(f"{self.steps_data[row]['hours']:.3f}")
-            elif col == 4:
-                item.setText(f"{self.steps_data[row]['timeout']:.3f}")
         finally:
             self.table_steps.blockSignals(False)
 
@@ -876,25 +858,7 @@ class ChamberTab(QWidget):
                 item_hours = QTableWidgetItem(f"{test_val:.3f}")
             item_hours.setTextAlignment(Qt.AlignCenter)
             
-            # 超时时间
-            timeout_val = step.get('timeout', 0.0)
-            if step["status"] == "运行中...":
-                if test_val == 0 and timeout_val > 0:
-                    rem = max(0, timeout_val - self.step_elapsed_sec)
-                    total_m = int(rem)
-                    s = int((rem - total_m) * 60)
-                    h = total_m // 60
-                    m = total_m % 60
-                    item_timeout = QTableWidgetItem(f"{timeout_val:.3f}min (剩 {h:02d}:{m:02d}:{s:02d})")
-                else:
-                    item_timeout = QTableWidgetItem(f"{timeout_val:.3f}")
-            elif step["status"] == "超时未达标":
-                item_timeout = QTableWidgetItem(f"{timeout_val:.3f}min (超时)")
-            else:
-                item_timeout = QTableWidgetItem(f"{timeout_val:.3f}")
-            item_timeout.setTextAlignment(Qt.AlignCenter)
-            
-            # 执行状态
+                        # 执行状态
             item_status = QTableWidgetItem(step["status"])
             item_status.setTextAlignment(Qt.AlignCenter)
             item_status.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -922,6 +886,16 @@ class ChamberTab(QWidget):
             # 绑定下拉框数据到 underlying step list
             def _update_name(text, r=row):
                 self.steps_data[r]["name"] = text
+                # 自动分配固定终止条件
+                if text in ["升温至目标温度", "降温至目标温度"]:
+                    self.steps_data[r]["end_cond"] = "到达目标温度终止"
+                elif text == "维持温度":
+                    self.steps_data[r]["end_cond"] = "到达目标时间终止"
+                elif text == "启动多通道测试":
+                    self.steps_data[r]["end_cond"] = "测试结束终止"
+                elif text in ["老化完成取料", "BMS带载工作"]:
+                    self.steps_data[r]["end_cond"] = "默认"
+
                 if text in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
                     item_t = self.table_steps.item(r, 2)
                     if item_t:
@@ -932,12 +906,36 @@ class ChamberTab(QWidget):
                     if item_t:
                         item_t.setText(f"{self.steps_data[r].get('temp', 25.0):.1f}")
                         item_t.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
+                
+                # 延迟刷新表格以显示最新的终止条件绑定状态
+                from PySide6.QtCore import QTimer
+                QTimer.singleShot(0, self.refresh_steps_table)
             combo.currentTextChanged.connect(_update_name)
             self.table_steps.setCellWidget(row, 1, combo)
             
+            # 根据工步名称自动固定/锁定终止条件
+            step_name = step.get("name", "")
+            fixed_cond = "默认"
+            if step_name in ["升温至目标温度", "降温至目标温度"]:
+                fixed_cond = "到达目标温度终止"
+            elif step_name == "维持温度":
+                fixed_cond = "到达目标时间终止"
+            elif step_name == "启动多通道测试":
+                fixed_cond = "测试结束终止"
+            elif step_name in ["老化完成取料", "BMS带载工作"]:
+                fixed_cond = "默认"
+            else:
+                fixed_cond = step.get("end_cond", "到达目标时间终止")
+            step["end_cond"] = fixed_cond
+
+            # 测试终止条件文本项 (只读)
+            item_cond = QTableWidgetItem(fixed_cond)
+            item_cond.setTextAlignment(Qt.AlignCenter)
+            item_cond.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.table_steps.setItem(row, 4, item_cond)
+            
             self.table_steps.setItem(row, 2, item_temp)
             self.table_steps.setItem(row, 3, item_hours)
-            self.table_steps.setItem(row, 4, item_timeout)
             self.table_steps.setItem(row, 5, item_status)
         self.table_steps.blockSignals(False)
 
@@ -952,7 +950,7 @@ class ChamberTab(QWidget):
             "name": f"自定义工步 {row + 1}",
             "temp": 25.0,
             "hours": 0.0,
-            "timeout": 0.0,
+            "end_cond": "到达目标时间终止",
             "status": "等待中"
         })
         self.refresh_steps_table()
@@ -1339,12 +1337,6 @@ class ChamberTab(QWidget):
                 overview_tab = self.get_overview_tab()
                 if overview_tab and getattr(self, "chk_linkage", None) and self.chk_linkage.isChecked():
                     overview_tab.trigger_multi_channel_tests()
-                
-                # 倒计时停止，执行状态变更
-                step["hours"] = 0.0
-                step["timeout"] = 0.0
-                self.steps_data[self.active_step_idx]["hours"] = 0.0
-                self.steps_data[self.active_step_idx]["timeout"] = 0.0
 
             elif step_name == "BMS带载工作":
                 logger.info("[老化引擎] 进入 'BMS带载工作'，配置主机电源与老化板继电器")
@@ -1362,28 +1354,49 @@ class ChamberTab(QWidget):
                         for cid in selected_cids:
                             if cid in self.mgr.boards:
                                 board = self.mgr.boards[cid]
-                                board.relays.write_relay(1, True)
-                                board.relays.write_relay(11, True)
+                                # 开启继电器连接并写入继电器 1 (索引为 0) 和继电器 11 (索引为 10)
+                                if not board.relays.is_connected:
+                                    board.relays.connect()
+                                board.relays.write_relay(0, True)
+                                board.relays.write_relay(10, True)
                 
                 import threading
                 threading.Thread(target=_bms_task, daemon=True).start()
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0
-                step["timeout"] = 0.0
                 self.steps_data[self.active_step_idx]["hours"] = 0.0
-                self.steps_data[self.active_step_idx]["timeout"] = 0.0
                 
             elif step_name == "老化完成取料":
-                logger.info("[老化引擎] 进入 '老化完成取料'，关闭主机电源与所有继电器")
+                logger.info("[老化引擎] 进入 '老化完成取料'，关闭所有电源、高压源、模拟电池及老化板继电器")
                 
                 def _finish_task():
                     if getattr(self, "mgr", None):
+                        # 1. 断开高压源 output
+                        if getattr(self.mgr, "hv_source", None):
+                            self.mgr.hv_source.output_control(False)
+                            
+                        # 2. 断开模拟电池输出 (广播关闭所有模拟器通道)
+                        self.mgr.broadcast_output(False)
+                        
+                        # 3. 断开供电电源输出
                         if getattr(self.mgr, "dut_power", None):
                             self.mgr.dut_power.output_control(False)
+                        if getattr(self.mgr, "afe_power_1", None):
+                            self.mgr.afe_power_1.output_control(False)
+                        if getattr(self.mgr, "afe_pwr_2", None):
+                            self.mgr.afe_pwr_2.output_control(False)
+                        if getattr(self.mgr, "afe_pwr_3", None):
+                            self.mgr.afe_pwr_3.output_control(False)
+                        if getattr(self.mgr, "ctrl_board_power", None):
+                            self.mgr.ctrl_board_power.output_control(False)
+                            
+                        # 4. 关闭所有老化板继电器
                         if hasattr(self.mgr, "boards"):
                             for cid, board in self.mgr.boards.items():
-                                if board.is_connected:
+                                if not board.relays.is_connected:
+                                    board.relays.connect()
+                                if board.relays.is_connected:
                                     board.relays.write_all_off()
                 
                 import threading
@@ -1391,21 +1404,28 @@ class ChamberTab(QWidget):
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0
-                step["timeout"] = 0.0
                 self.steps_data[self.active_step_idx]["hours"] = 0.0
-                self.steps_data[self.active_step_idx]["timeout"] = 0.0
 
         if not getattr(self, "_is_bypass_chamber", False):
             if step_name in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
-                # 只需要维持当前温度，不需要升温降温控制。
-                # 将目标温度设置为当前实际温度 (VD720)，防止其继续向原来的目标升降温。
-                current_temp = self.chamber.data_store.get("VD720", 25.0) if self.chamber else 25.0
-                mode_heat = self.should_heat_step(step_name, current_temp)
+                # 维持设定温度，而不是使用实际温度。
+                setting_temp = 25.0
+                if self.chamber:
+                    setting_temp = self.chamber.data_store.get("VD800", 0.0)
+                    if setting_temp <= 0.0:
+                        setting_temp = self.chamber.data_store.get("VD750", 25.0)
+                if setting_temp <= 0.0 or setting_temp == 25.0:
+                    for prev_idx in range(self.active_step_idx - 1, -1, -1):
+                        if self.steps_data[prev_idx]["name"] in ["升温至目标温度", "降温至目标温度", "维持温度"]:
+                            setting_temp = self.steps_data[prev_idx]["temp"]
+                            break
+                
+                mode_heat = self.should_heat_step(step_name, setting_temp)
                 self.chamber.write_bit("V699.0", mode_heat)
                 if mode_heat:
-                    self.chamber.write_real("VD800", current_temp)
+                    self.chamber.write_real("VD800", setting_temp)
                 else:
-                    self.apply_cooling_target(current_temp)
+                    self.apply_cooling_target(setting_temp)
                 self.chamber.write_bit("V699.2", True)
             else:
                 mode_heat = self.should_heat_step(step_name, step["temp"])
@@ -1417,7 +1437,7 @@ class ChamberTab(QWidget):
                 self.chamber.write_bit("V699.2", True)
 
         test_hours = step.get("hours", 0.0)
-        timeout_hours = step.get("timeout", 0.0)
+        end_cond = step.get("end_cond", "默认")
         
         # 驱动工步计时：如果是物理 PLC 联机状态，强制 1.0 实时倍速运行（避免物理测试时间瞬间耗尽）；仿真模式下才支持时间加速
         effective_speed = 1.0 if (self.chamber and not self.chamber.use_simulation) else self.speed_factor
@@ -1427,8 +1447,6 @@ class ChamberTab(QWidget):
         # 当前工步进度百分比
         if test_hours > 0:
             pct = min(100, int((self.step_elapsed_sec / test_hours) * 100))
-        elif timeout_hours > 0:
-            pct = min(100, int((self.step_elapsed_sec / timeout_hours) * 100))
         else:
             pct = 100
         self.pbar_step.setValue(pct)
@@ -1439,11 +1457,20 @@ class ChamberTab(QWidget):
         # 更新工步卡片显示
         self.lbl_active_step.setText(f"当前阶段: {step['name']} (Step {self.active_step_idx + 1}/{len(self.steps_data)})")
         if test_hours > 0:
-            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {test_hours:.3f} 分钟 (测试)")
-        elif timeout_hours > 0:
-            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {timeout_hours:.3f} 分钟 (超时界限)")
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {test_hours:.3f} 分钟 ({end_cond})")
         else:
-            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / 0.000 分钟 (即时)")
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / 0.000 分钟 ({end_cond})")
+            
+        # --- 新增加大屏信息传输接口，将当前运行的老化测试工步信息传给大屏 ---
+        self._api_report_ticks = getattr(self, "_api_report_ticks", 0) + 1
+        if self._api_report_ticks % 5 == 0:
+            overview_tab = self.get_overview_tab()
+            if overview_tab and hasattr(overview_tab, "engine") and overview_tab.engine:
+                selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+                if selected_cids:
+                    elapsed_sec = int(self.step_elapsed_sec * 60)
+                    countdown_sec = int(max(0, (test_hours - self.step_elapsed_sec) * 60)) if test_hours > 0 else 0
+                    overview_tab.engine.report_step_info_to_all(selected_cids, self.active_step_idx, step_name, elapsed_sec, countdown_sec)
         
         # --- 联动多通道测试控制逻辑 ---
         if hasattr(self, "chk_linkage") and self.chk_linkage.isChecked():
@@ -1538,58 +1565,57 @@ class ChamberTab(QWidget):
                     if int(self.step_elapsed_sec * 3600) % 5 == 0:
                         print(f"[Aging Debug] Step '{step_name}': test_hours={test_hours}, selected_cids={selected_cids}, workers={workers_keys}, all_checked_finished={all_checked_finished}")
 
-        # 如果当前是一个测试类工步，且所有勾选通道已经测试完成，直接结束工步
-        is_multi_channel_step = "测试" in step_name or "功能测试" in step_name or "带载" in step_name
-        if is_multi_channel_step and has_selected_channels and all_checked_finished:
-            step_completed = True
-            completion_reason = "全部通道测试完成"
-            logger.info(f"[老化引擎] 勾选的通道均已测试完成，自动结束老化工步 '{step_name}'。")
-
-        # 正常时间判断逻辑
-        if not step_completed:
+        # 终止条件判断逻辑
+        if end_cond == "测试结束终止":
+            time_met = True
             if test_hours > 0:
-                if self.step_elapsed_sec >= test_hours:
-                    if has_selected_channels and not all_checked_finished:
-                        self._handle_timeout_ng(step_name, test_hours, "测试时间耗尽，但仍有通道未完成测试")
-                        return
+                time_met = (self.step_elapsed_sec >= test_hours)
+            
+            test_met = True
+            if has_selected_channels:
+                test_met = all_checked_finished
+                
+            if time_met and test_met:
+                step_completed = True
+                completion_reason = "时间已达标且通道测试全部完成"
+                logger.info(f"[老化引擎] 同时满足设定时间达标与勾选通道测试全部结束条件，自动结束工步 '{step_name}'。")
+        elif end_cond == "到达目标温度终止":
+            if getattr(self, "_is_bypass_chamber", False):
+                step_completed = True
+                completion_reason = "温度达标"
+            else:
+                current_temp = self.chamber.data_store.get("VD720", 25.0) if self.chamber else 25.0
+                target_temp = step["temp"]
+                
+                is_heating_transition = False
+                is_cooling_transition = False
+                if "升温" in step_name:
+                    is_heating_transition = True
+                elif "降温" in step_name:
+                    is_cooling_transition = True
+                else:
+                    if target_temp > current_temp:
+                        is_heating_transition = True
                     else:
-                        step_completed = True
-                        completion_reason = "时间耗尽"
-            elif timeout_hours > 0:
-                if getattr(self, "_is_bypass_chamber", False):
+                        is_cooling_transition = True
+                
+                if is_heating_transition and current_temp >= target_temp:
                     step_completed = True
                     completion_reason = "温度达标"
-                else:
-                    current_temp = self.chamber.data_store.get("VD720", 25.0) if self.chamber else 25.0
-                    target_temp = step["temp"]
-                    
-                    is_heating_transition = False
-                    is_cooling_transition = False
-                    if "升温" in step_name:
-                        is_heating_transition = True
-                    elif "降温" in step_name:
-                        is_cooling_transition = True
-                    else:
-                        if target_temp > current_temp:
-                            is_heating_transition = True
-                        else:
-                            is_cooling_transition = True
-                    
-                    if is_heating_transition and current_temp >= target_temp:
-                        step_completed = True
-                        completion_reason = "温度达标"
-                        logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达升温目标 {target_temp:.1f} °C，自动切换工步")
-                    elif is_cooling_transition and current_temp <= target_temp:
-                        step_completed = True
-                        completion_reason = "温度达标"
-                        logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达降温目标 {target_temp:.1f} °C，自动切换工步")
-                    
-                    if not step_completed and self.step_elapsed_sec >= timeout_hours:
-                        if is_multi_channel_step and not all_checked_finished:
-                            self._handle_timeout_ng(step_name, timeout_hours, "未收到所有通道测试完成信号")
-                        else:
-                            self._handle_timeout_ng(step_name, timeout_hours, f"实际箱温未达设定温度 ({target_temp:.1f} ℃)")
-                        return
+                    logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达升温目标 {target_temp:.1f} °C，自动切换工步")
+                elif is_cooling_transition and current_temp <= target_temp:
+                    step_completed = True
+                    completion_reason = "温度达标"
+                    logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达降温目标 {target_temp:.1f} °C，自动切换工步")
+                
+                if not step_completed and test_hours > 0 and self.step_elapsed_sec >= test_hours:
+                    self._handle_timeout_ng(step_name, test_hours, f"实际箱温未达设定温度 ({target_temp:.1f} ℃)，已超时")
+                    return
+        else: # "到达目标时间终止" 或 "默认"
+            if test_hours > 0:
+                if self.step_elapsed_sec >= test_hours:
+                    step_completed = True
+                    completion_reason = "时间耗尽"
             else:
                 step_completed = True
                 completion_reason = "即时完成"

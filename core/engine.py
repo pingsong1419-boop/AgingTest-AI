@@ -90,6 +90,7 @@ class ChannelWorker(QObject):
         self.is_suspended = False
         self.master_barcode = ""
         self.slave_barcodes = []
+        self.last_reported_progress = None
         
         # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
         self.log_history = []
@@ -952,6 +953,19 @@ class ChannelWorker(QObject):
                     unit_str = getattr(step, "unit", None)
                     if unit_str == "NULL": 
                         unit_str = None
+                    
+                    # 缓存最后的进度数据以便重连时重新发送
+                    self.last_reported_progress = {
+                        "barcode": barcode,
+                        "name": step.name,
+                        "test_value": test_value_str,
+                        "result": result_str,
+                        "unit": unit_str,
+                        "upper_limit": upper_limit_str,
+                        "lower_limit": lower_limit_str,
+                        "index": str(self.current_step_index + 1)
+                    }
+                    
                     self.engine.api_client.report_progress(
                         channel_id=self.channel_id,
                         barcode=barcode,
@@ -1107,6 +1121,7 @@ class TestEngine(QObject):
         # 初始化 API 客户端
         self.api_client = None
         self.update_api_client()
+        self.big_screen_online = True # 大屏在线状态标志
 
         # 启动后台心跳守护线程
         self.heartbeat_running = True
@@ -1140,10 +1155,21 @@ class TestEngine(QObject):
                 if self.device_manager and getattr(self.device_manager, 'chamber', None):
                     temp = self.device_manager.chamber.data_store.get("VD720", 25.0)
                 
-                # 发送心跳
+                # 发送心跳并检测连接状态
+                success = False
                 if self.api_client:
-                    self.api_client.heartbeat(temp)
+                    success = self.api_client.heartbeat(temp)
+                
+                if success:
+                    # 如果之前是离线，现在重连成功，则重新上报所有当前运行通道的状态及条码信息
+                    if not getattr(self, "big_screen_online", True):
+                        self.log_api_call("[API Restored] 检测到大屏连接已恢复，开始重新发送当前测试通道的条码信息及测试状态...")
+                        self.resend_active_channels_status()
+                    self.big_screen_online = True
+                else:
+                    self.big_screen_online = False
             except Exception as e:
+                self.big_screen_online = False
                 self.log_api_call(f"[API ERR] 心跳后台上报出现异常: {str(e)}")
             
             # 定时 5 秒
@@ -1151,6 +1177,108 @@ class TestEngine(QObject):
                 if not self.heartbeat_running:
                     break
                 time.sleep(0.1)
+
+    def resend_active_channels_status(self):
+        """当检测到大屏重新连接后，遍历所有勾选及运行中的通道，重新上报其条码信息、启动状态以及最后的测试进度"""
+        def run_resend():
+            # 获取所有勾选的通道（无论是否在 workers 中）
+            selected_infos = []
+            if getattr(self, "get_selected_channel_barcodes_callback", None):
+                try:
+                    selected_infos = self.get_selected_channel_barcodes_callback()
+                except Exception as e:
+                    self.log_api_call(f"[API Restored ERR] 获取勾选通道信息失败: {e}")
+
+            with self._lock:
+                active_workers = {w.channel_id: w for w in self.workers.values()}
+
+            if not selected_infos and not active_workers:
+                return
+
+            self.log_api_call(f"[API Restored] 正在后台重新向大屏发送通道条码和状态...")
+            
+            # 记录已处理的 cid 集合
+            processed_cids = set()
+
+            for info in selected_infos:
+                cid = info["cid"]
+                master = info["master"]
+                slaves = info["slaves"]
+                s1 = slaves[0] if len(slaves) > 0 else None
+                s2 = slaves[1] if len(slaves) > 1 else None
+                s3 = slaves[2] if len(slaves) > 2 else None
+                
+                # 重新发送条码绑定 (prepare)
+                self.log_api_call(f"[API Restored] 重新发送勾选通道 {cid} 条码绑定: {master}")
+                self.api_client.prepare(cid, master, s1, s2, s3)
+                processed_cids.add(cid)
+                
+                # 如果这个通道也在 workers 并且在运行中，发送状态
+                worker = active_workers.get(cid)
+                if worker and getattr(worker, "is_running", False):
+                    # 发送 start-test
+                    self.log_api_call(f"[API Restored] 重新发送运行中通道 {cid} 开始测试状态")
+                    self.api_client.start_test(cid)
+                    
+                    # 重新发送进度
+                    last_progress = getattr(worker, "last_reported_progress", None)
+                    if last_progress:
+                        self.log_api_call(f"[API Restored] 重新发送通道 {cid} 进度: {last_progress.get('name')}")
+                        self.api_client.report_progress(
+                            channel_id=cid,
+                            barcode=last_progress.get("barcode"),
+                            name=last_progress.get("name"),
+                            test_value=last_progress.get("test_value"),
+                            result=last_progress.get("result"),
+                            unit=last_progress.get("unit"),
+                            upper_limit=last_progress.get("upper_limit"),
+                            lower_limit=last_progress.get("lower_limit"),
+                            index=last_progress.get("index")
+                        )
+
+            # 补偿：如果 worker 里有没被勾选的通道
+            for cid, worker in active_workers.items():
+                if cid not in processed_cids and getattr(worker, "is_running", False):
+                    slaves = getattr(worker, "slave_barcodes", []) or []
+                    s1 = slaves[0] if len(slaves) > 0 else None
+                    s2 = slaves[1] if len(slaves) > 1 else None
+                    s3 = slaves[2] if len(slaves) > 2 else None
+                    master = getattr(worker, "master_barcode", "")
+                    self.log_api_call(f"[API Restored] 重新发送运行中通道 {cid} 条码绑定: {master}")
+                    self.api_client.prepare(cid, master, s1, s2, s3)
+                    self.log_api_call(f"[API Restored] 重新发送运行中通道 {cid} 开始测试状态")
+                    self.api_client.start_test(cid)
+                    last_progress = getattr(worker, "last_reported_progress", None)
+                    if last_progress:
+                        self.log_api_call(f"[API Restored] 重新发送通道 {cid} 进度: {last_progress.get('name')}")
+                        self.api_client.report_progress(
+                            channel_id=cid,
+                            barcode=last_progress.get("barcode"),
+                            name=last_progress.get("name"),
+                            test_value=last_progress.get("test_value"),
+                            result=last_progress.get("result"),
+                            unit=last_progress.get("unit"),
+                            upper_limit=last_progress.get("upper_limit"),
+                            lower_limit=last_progress.get("lower_limit"),
+                            index=last_progress.get("index")
+                        )
+        
+        threading.Thread(target=run_resend, daemon=True).start()
+
+    def report_step_info_to_all(self, selected_cids: list, step_index: int, step_name: str, elapsed_seconds: int, countdown_seconds: int):
+        """异步将当前工步信息上报给所有指定的通道"""
+        if not getattr(self, "api_client", None):
+            return
+            
+        def run_report():
+            for cid in selected_cids:
+                try:
+                    self.api_client.report_step_info(cid, step_index, step_name, elapsed_seconds, countdown_seconds)
+                except Exception:
+                    pass
+        
+        threading.Thread(target=run_report, daemon=True).start()
+
 
     def begin_batch_start(self):
         with self._lock: self.batch_starting = True

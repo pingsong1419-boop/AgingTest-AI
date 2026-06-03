@@ -13,6 +13,7 @@ class ChannelWidget(QFrame):
     def __init__(self, channel_id):
 
         super().__init__()
+        self.channel_id = channel_id
 
         # 初始化条码缓存属性
 
@@ -255,7 +256,22 @@ class OverviewTab(QWidget):
 
         self._init_ui()
 
+        if self.engine:
+            self.engine.get_selected_channel_barcodes_callback = self.get_selected_channel_barcodes
+
         
+
+    def get_selected_channel_barcodes(self):
+        result = []
+        if hasattr(self, 'channel_widgets'):
+            for i, ch in enumerate(self.channel_widgets):
+                if ch.isEnabled() and ch.chk_select.isChecked():
+                    result.append({
+                        "cid": i + 1,
+                        "master": ch.master_barcode,
+                        "slaves": ch.slave_barcodes
+                    })
+        return result
 
     def _init_ui(self):
 
@@ -905,20 +921,21 @@ class OverviewTab(QWidget):
 
 
 
-        # 7. 通过全部校验，准备进入老化箱界面
-
-        if not self.engine:
-
-            from PySide6.QtWidgets import QMessageBox
-
-            QMessageBox.critical(self, "错误", "测试引擎未初始化！")
-
-            return
-
-
+        # 7. 通过全部校验，立即下发对应通道的条码信息到大屏 (prepare)
+        if self.engine and self.engine.api_client:
+            def send_barcodes_async():
+                for cid in selected_cids:
+                    ch_widget = self.channel_widgets[cid - 1]
+                    master = ch_widget.master_barcode
+                    slaves = [s for s in ch_widget.slave_barcodes if s]
+                    s1 = slaves[0] if len(slaves) > 0 else None
+                    s2 = slaves[1] if len(slaves) > 1 else None
+                    s3 = slaves[2] if len(slaves) > 2 else None
+                    self.engine.api_client.prepare(cid, master, s1, s2, s3)
+            import threading
+            threading.Thread(target=send_barcodes_async, daemon=True).start()
 
         # 不再弹窗选择，直接跳转到“高低温老化箱”通讯控制界面，等待用户加载配方并点击“启动老化测试工步”
-
         parent_widget = self.parentWidget()
 
         while parent_widget:
