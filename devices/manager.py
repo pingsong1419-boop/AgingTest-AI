@@ -348,6 +348,14 @@ class DeviceManager:
             except Exception as e:
                 print(f"[DeviceManager] 控制板电源下电异常: {e}")
 
+        # 3. 关闭被测物供电电源 (DUT Power)
+        if getattr(self, "dut_power", None) and self.dut_power.is_connected:
+            try:
+                self.dut_power.output_control(False)
+                print("[DeviceManager] 已成功关闭被测物(DUT)供电电源。")
+            except Exception as e:
+                print(f"[DeviceManager] 被测物(DUT)电源下电异常: {e}")
+
         if getattr(self, "chamber", None):
             try: self.chamber.disconnect()
             except: pass
