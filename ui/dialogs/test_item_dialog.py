@@ -9,7 +9,7 @@ class TestItemDialog(QDialog):
     def __init__(self, parent=None, data=None):
         super().__init__(parent)
         self.setWindowTitle("编辑测试项 (判定条件)")
-        self.setFixedSize(380, 600)
+        self.setFixedSize(420, 750)
         self.setStyleSheet("""
             QDialog { background-color: #1F1F35; color: white; }
             QLabel { font-size: 13px; color: #B0B0B0; margin-top: 5px; }
@@ -20,6 +20,7 @@ class TestItemDialog(QDialog):
                 padding: 6px;
                 color: white;
                 font-size: 13px;
+                min-height: 25px;
             }
         """)
         

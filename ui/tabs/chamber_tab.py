@@ -195,7 +195,7 @@ class ChamberTab(QWidget):
         self.lbl_active_step.setStyleSheet("color: #00E5FF; font-size: 11px; font-weight: bold; border: none;")
         ly_step.addWidget(self.lbl_active_step)
         
-        self.lbl_step_time = QLabel("工步耗时: -- / -- 小时")
+        self.lbl_step_time = QLabel("工步耗时: -- / -- 分钟")
         self.lbl_step_time.setStyleSheet("color: #CCCCCC; font-size: 11px; border: none;")
         ly_step.addWidget(self.lbl_step_time)
         
@@ -248,6 +248,7 @@ class ChamberTab(QWidget):
         preset_layout = QHBoxLayout()
         preset_layout.addWidget(QLabel("预设方案:"))
         self.combo_presets = QComboBox()
+        self.combo_presets.wheelEvent = lambda event: event.ignore()
         self.refresh_preset_list()
         preset_layout.addWidget(self.combo_presets)
         
@@ -269,7 +270,8 @@ class ChamberTab(QWidget):
         # 加速比滑块
         preset_layout.addWidget(QLabel("  时间加速比:"))
         self.combo_speed = QComboBox()
-        self.combo_speed.addItems(["实时 (1x)", "加速 (60x) - 1分表1小时", "极速 (3600x) - 1秒表1小时"])
+        self.combo_speed.wheelEvent = lambda event: event.ignore()
+        self.combo_speed.addItems(["实时 (1x)", "加速 (60x) - 1秒表1分钟", "极速 (3600x) - 1秒表60分钟"])
         self.combo_speed.setCurrentIndex(0) # 默认显示为实时 1x
         self.combo_speed.currentIndexChanged.connect(self.change_speed_factor)
         preset_layout.addWidget(self.combo_speed)
@@ -752,11 +754,11 @@ class ChamberTab(QWidget):
                     self.steps_data[row]["temp"] = float(temp_item.text())
                 if hours_item:
                     hours_str = hours_item.text()
-                    if "h" in hours_str: hours_str = hours_str.split("h")[0]
+                    if "min" in hours_str: hours_str = hours_str.split("min")[0]
                     self.steps_data[row]["hours"] = float(hours_str)
                 if timeout_item:
                     timeout_str = timeout_item.text()
-                    if "h" in timeout_str: timeout_str = timeout_str.split("h")[0]
+                    if "min" in timeout_str: timeout_str = timeout_str.split("min")[0]
                     self.steps_data[row]["timeout"] = float(timeout_str)
             except:
                 pass
@@ -784,39 +786,41 @@ class ChamberTab(QWidget):
                 # 重新格式化为 1 位小数
                 item.setText(f"{self.steps_data[row]['temp']:.1f}")
             elif col == 3: # Hours (测试时间)
-                if "h" in val_str:
-                    val_str = val_str.split("h")[0].strip()
+                if "min" in val_str:
+                    val_str = val_str.split("min")[0].strip()
                 self.steps_data[row]["hours"] = float(val_str)
                 # 重新格式化为 3 位小数
                 if self.steps_data[row]["status"] == "运行中...":
                     if self.steps_data[row]["hours"] > 0:
                         rem = max(0, self.steps_data[row]["hours"] - self.step_elapsed_sec)
-                        h = int(rem)
-                        m = int((rem - h) * 60)
-                        s = int(((rem - h) * 60 - m) * 60)
-                        item.setText(f"{self.steps_data[row]['hours']:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                        total_m = int(rem)
+                        s = int((rem - total_m) * 60)
+                        h = total_m // 60
+                        m = total_m % 60
+                        item.setText(f"{self.steps_data[row]['hours']:.3f}min (剩 {h:02d}:{m:02d}:{s:02d})")
                     else:
                         item.setText("0.000")
                 elif self.steps_data[row]["status"] == "已完成":
-                    item.setText(f"{self.steps_data[row]['hours']:.3f}h (已完成)")
+                    item.setText(f"{self.steps_data[row]['hours']:.3f}min (已完成)")
                 else:
                     item.setText(f"{self.steps_data[row]['hours']:.3f}")
             elif col == 4: # Timeout (超时时间)
-                if "h" in val_str:
-                    val_str = val_str.split("h")[0].strip()
+                if "min" in val_str:
+                    val_str = val_str.split("min")[0].strip()
                 self.steps_data[row]["timeout"] = float(val_str)
                 # 重新格式化为 3 位小数
                 if self.steps_data[row]["status"] == "运行中...":
                     if self.steps_data[row]["hours"] == 0 and self.steps_data[row]["timeout"] > 0:
                         rem = max(0, self.steps_data[row]["timeout"] - self.step_elapsed_sec)
-                        h = int(rem)
-                        m = int((rem - h) * 60)
-                        s = int(((rem - h) * 60 - m) * 60)
-                        item.setText(f"{self.steps_data[row]['timeout']:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                        total_m = int(rem)
+                        s = int((rem - total_m) * 60)
+                        h = total_m // 60
+                        m = total_m % 60
+                        item.setText(f"{self.steps_data[row]['timeout']:.3f}min (剩 {h:02d}:{m:02d}:{s:02d})")
                     else:
                         item.setText(f"{self.steps_data[row]['timeout']:.3f}")
                 elif self.steps_data[row]["status"] in ("已完成", "已完成(超时)", "超时未达标"):
-                    item.setText(f"{self.steps_data[row]['timeout']:.3f}h (已完成)")
+                    item.setText(f"{self.steps_data[row]['timeout']:.3f}min (已完成)")
                 else:
                     item.setText(f"{self.steps_data[row]['timeout']:.3f}")
             
@@ -859,14 +863,15 @@ class ChamberTab(QWidget):
             if step["status"] == "运行中...":
                 if test_val > 0:
                     rem = max(0, test_val - self.step_elapsed_sec)
-                    h = int(rem)
-                    m = int((rem - h) * 60)
-                    s = int(((rem - h) * 60 - m) * 60)
-                    item_hours = QTableWidgetItem(f"{test_val:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                    total_m = int(rem)
+                    s = int((rem - total_m) * 60)
+                    h = total_m // 60
+                    m = total_m % 60
+                    item_hours = QTableWidgetItem(f"{test_val:.3f}min (剩 {h:02d}:{m:02d}:{s:02d})")
                 else:
                     item_hours = QTableWidgetItem("0.000")
             elif step["status"] == "已完成":
-                item_hours = QTableWidgetItem(f"{test_val:.3f}h (已完成)")
+                item_hours = QTableWidgetItem(f"{test_val:.3f}min (已完成)")
             else:
                 item_hours = QTableWidgetItem(f"{test_val:.3f}")
             item_hours.setTextAlignment(Qt.AlignCenter)
@@ -876,14 +881,15 @@ class ChamberTab(QWidget):
             if step["status"] == "运行中...":
                 if test_val == 0 and timeout_val > 0:
                     rem = max(0, timeout_val - self.step_elapsed_sec)
-                    h = int(rem)
-                    m = int((rem - h) * 60)
-                    s = int(((rem - h) * 60 - m) * 60)
-                    item_timeout = QTableWidgetItem(f"{timeout_val:.3f}h (剩 {h:02d}:{m:02d}:{s:02d})")
+                    total_m = int(rem)
+                    s = int((rem - total_m) * 60)
+                    h = total_m // 60
+                    m = total_m % 60
+                    item_timeout = QTableWidgetItem(f"{timeout_val:.3f}min (剩 {h:02d}:{m:02d}:{s:02d})")
                 else:
                     item_timeout = QTableWidgetItem(f"{timeout_val:.3f}")
             elif step["status"] == "超时未达标":
-                item_timeout = QTableWidgetItem(f"{timeout_val:.3f}h (超时)")
+                item_timeout = QTableWidgetItem(f"{timeout_val:.3f}min (超时)")
             else:
                 item_timeout = QTableWidgetItem(f"{timeout_val:.3f}")
             item_timeout.setTextAlignment(Qt.AlignCenter)
@@ -906,6 +912,7 @@ class ChamberTab(QWidget):
             
             # Issue 2: 工步下拉选择
             combo = QComboBox()
+            combo.wheelEvent = lambda event: event.ignore()
             step_options = ["升温至目标温度", "降温至目标温度", "维持温度", "启动多通道测试", "BMS带载工作", "老化完成取料"]
             if step["name"] not in step_options:
                 step_options.append(step["name"])
@@ -1088,11 +1095,6 @@ class ChamberTab(QWidget):
         self.btn_del.setEnabled(False)
         self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
 
-        # 立即触发已勾选的多通道测试
-        overview_tab = self.get_overview_tab()
-        if overview_tab and self.chk_linkage.isChecked():
-            overview_tab.trigger_multi_channel_tests()
-            
         # 激活第一步的温度下发
         self.apply_step_temperatures(0)
 
@@ -1143,7 +1145,7 @@ class ChamberTab(QWidget):
         self._is_bypass_chamber = False
         
         self.lbl_active_step.setText("当前阶段: 已停机终止")
-        self.lbl_step_time.setText("工步耗时: -- / -- 小时")
+        self.lbl_step_time.setText("工步耗时: -- / -- 分钟")
         self.pbar_step.setValue(0)
         self.pbar_total.setValue(0)
 
@@ -1332,7 +1334,19 @@ class ChamberTab(QWidget):
         if getattr(self, "_current_step_init_idx", -1) != self.active_step_idx:
             self._current_step_init_idx = self.active_step_idx
             
-            if step_name == "BMS带载工作":
+            if step_name == "启动多通道测试":
+                logger.info("[老化引擎] 进入 '启动多通道测试'，触发主界面的多通道测试")
+                overview_tab = self.get_overview_tab()
+                if overview_tab and getattr(self, "chk_linkage", None) and self.chk_linkage.isChecked():
+                    overview_tab.trigger_multi_channel_tests()
+                
+                # 倒计时停止，执行状态变更
+                step["hours"] = 0.0
+                step["timeout"] = 0.0
+                self.steps_data[self.active_step_idx]["hours"] = 0.0
+                self.steps_data[self.active_step_idx]["timeout"] = 0.0
+
+            elif step_name == "BMS带载工作":
                 logger.info("[老化引擎] 进入 'BMS带载工作'，配置主机电源与老化板继电器")
                 
                 def _bms_task():
@@ -1407,8 +1421,8 @@ class ChamberTab(QWidget):
         
         # 驱动工步计时：如果是物理 PLC 联机状态，强制 1.0 实时倍速运行（避免物理测试时间瞬间耗尽）；仿真模式下才支持时间加速
         effective_speed = 1.0 if (self.chamber and not self.chamber.use_simulation) else self.speed_factor
-        hours_per_tick = (1.0 * effective_speed) / 3600.0
-        self.step_elapsed_sec += hours_per_tick
+        mins_per_tick = (1.0 * effective_speed) / 60.0
+        self.step_elapsed_sec += mins_per_tick
         
         # 当前工步进度百分比
         if test_hours > 0:
@@ -1425,11 +1439,11 @@ class ChamberTab(QWidget):
         # 更新工步卡片显示
         self.lbl_active_step.setText(f"当前阶段: {step['name']} (Step {self.active_step_idx + 1}/{len(self.steps_data)})")
         if test_hours > 0:
-            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {test_hours:.3f} 小时 (测试)")
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {test_hours:.3f} 分钟 (测试)")
         elif timeout_hours > 0:
-            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {timeout_hours:.3f} 小时 (超时界限)")
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / {timeout_hours:.3f} 分钟 (超时界限)")
         else:
-            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / 0.000 小时 (即时)")
+            self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / 0.000 分钟 (即时)")
         
         # --- 联动多通道测试控制逻辑 ---
         if hasattr(self, "chk_linkage") and self.chk_linkage.isChecked():
