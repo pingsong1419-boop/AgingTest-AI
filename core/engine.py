@@ -1265,17 +1265,16 @@ class TestEngine(QObject):
         
         threading.Thread(target=run_resend, daemon=True).start()
 
-    def report_step_info_to_all(self, selected_cids: list, step_index: int, step_name: str, elapsed_seconds: int, countdown_seconds: int):
-        """异步将当前工步信息上报给所有指定的通道"""
+    def report_system_step_info(self, step_index: int, step_name: str):
+        """异步将当前工步信息上报给大屏全局系统"""
         if not getattr(self, "api_client", None):
             return
             
         def run_report():
-            for cid in selected_cids:
-                try:
-                    self.api_client.report_step_info(cid, step_index, step_name, elapsed_seconds, countdown_seconds)
-                except Exception:
-                    pass
+            try:
+                self.api_client.report_system_step(step_index, step_name)
+            except Exception:
+                pass
         
         threading.Thread(target=run_report, daemon=True).start()
 

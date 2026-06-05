@@ -41,6 +41,25 @@ class DeviceManager:
         if self.db_manager:
             cfg = self.db_manager.load_sys_config() or {}
 
+        # 0. 安全断开可能存在的旧实例
+        if getattr(self, 'chamber', None):
+            try: self.chamber.disconnect()
+            except: pass
+        if getattr(self, 'ca550', None):
+            try: self.ca550.disconnect()
+            except: pass
+        if getattr(self, 'easy320', None):
+            try: self.easy320.disconnect()
+            except: pass
+        for pwr in [getattr(self, 'hv_source', None), getattr(self, 'dut_power', None), getattr(self, 'ctrl_board_power', None), getattr(self, 'afe_power_1', None), getattr(self, 'afe_pwr_2', None), getattr(self, 'afe_pwr_3', None)]:
+            if pwr:
+                try: pwr.disconnect()
+                except: pass
+        for sim in getattr(self, 'simulators', []):
+            if sim:
+                try: sim.disconnect()
+                except: pass
+
         # 1. 模拟电池
         sim1_ip = cfg.get("sim1_ip", "192.168.1.210")
         sim1_port = int(cfg.get("sim1_port", 5025))

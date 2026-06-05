@@ -78,16 +78,14 @@ class AgingApiClient:
         return self._post(f"/api/channels/{channel_id}/progress", body)
 
     # ------------------------------------------------------------------ #
-    # 3.5 上报当前老化测试工步信息
+    # 3.5 上报当前老化测试全局系统工步信息
     # ------------------------------------------------------------------ #
-    def report_step_info(self, channel_id: int, step_index: int, step_name: str, step_test_time: int, step_countdown: int) -> bool:
+    def report_system_step(self, step_index: int, step_name: str) -> bool:
         body = {
             "step_index": step_index,
-            "step_name": step_name,
-            "step_test_time": step_test_time,
-            "step_countdown": step_countdown
+            "step_name": step_name
         }
-        return self._post(f"/api/channels/{channel_id}/step", body)
+        return self._post("/api/system/step", body)
 
     # ------------------------------------------------------------------ #
     # 4. 心跳上报（全局，每 5 秒调用一次）

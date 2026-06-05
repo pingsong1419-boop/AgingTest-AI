@@ -20,7 +20,6 @@ class ChamberTab(QWidget):
         super().__init__()
         self.mgr = device_manager
         self.db_manager = db_manager
-        self.chamber = device_manager.chamber
         
         # 工步执行引擎变量
         self.steps_data = [] # 存储当前编辑中的工步 [{name, temp, hours, status}]
@@ -42,6 +41,10 @@ class ChamberTab(QWidget):
         # 同步初始联机状态，防止启动已连上但 UI 显示离线
         if self.chamber and self.chamber.is_connected:
             self._finalize_connect(True)
+
+    @property
+    def chamber(self):
+        return self.mgr.chamber if self.mgr else None
 
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
@@ -252,20 +255,20 @@ class ChamberTab(QWidget):
         self.refresh_preset_list()
         preset_layout.addWidget(self.combo_presets)
         
-        btn_load_p = QPushButton("加载")
-        btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
-        btn_load_p.clicked.connect(self.on_load_preset_clicked)
-        preset_layout.addWidget(btn_load_p)
+        self.btn_load_p = QPushButton("加载")
+        self.btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
+        self.btn_load_p.clicked.connect(self.on_load_preset_clicked)
+        preset_layout.addWidget(self.btn_load_p)
 
-        btn_save_p = QPushButton("保存")
-        btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
-        btn_save_p.clicked.connect(self.save_preset)
-        preset_layout.addWidget(btn_save_p)
+        self.btn_save_p = QPushButton("保存")
+        self.btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
+        self.btn_save_p.clicked.connect(self.save_preset)
+        preset_layout.addWidget(self.btn_save_p)
 
-        btn_del_p = QPushButton("删除")
-        btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
-        btn_del_p.clicked.connect(self.delete_preset)
-        preset_layout.addWidget(btn_del_p)
+        self.btn_del_p = QPushButton("删除")
+        self.btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
+        self.btn_del_p.clicked.connect(self.delete_preset)
+        preset_layout.addWidget(self.btn_del_p)
         
 
         
@@ -661,6 +664,9 @@ class ChamberTab(QWidget):
             self.combo_presets.addItem("无可用预设")
 
     def on_load_preset_clicked(self):
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "老化测试运行期间，禁止加载预设！")
+            return
         preset_name = self.combo_presets.currentText()
         if preset_name and preset_name != "无可用预设":
             self.load_preset_profile(preset_name)
@@ -689,6 +695,9 @@ class ChamberTab(QWidget):
 
     def save_preset(self):
         from PySide6.QtWidgets import QInputDialog
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "老化测试运行期间，禁止保存预设！")
+            return
         if not self.steps_data:
             QMessageBox.warning(self, "警告", "当前没有工步数据可保存！")
             return
@@ -715,6 +724,9 @@ class ChamberTab(QWidget):
                     QMessageBox.critical(self, "错误", "保存失败，请检查文件权限！")
 
     def delete_preset(self):
+        if self.sequence_running:
+            QMessageBox.warning(self, "警告", "老化测试运行期间，禁止删除预设！")
+            return
         name = self.combo_presets.currentText()
         if not name or name == "无可用预设": return
         
@@ -1019,42 +1031,32 @@ class ChamberTab(QWidget):
         self.table_steps.selectRow(idx + 1)
 
     def start_aging_bypass_chamber(self):
-        """屏蔽老化箱，强制放行多通道测试（直接唤醒所有由于挂起导致暂停的通道，不下发PLC指令）"""
-        if not self.steps_data:
-            QMessageBox.warning(self, "警告", "请先配置或加载老化测试工步！")
+        """屏蔽老化箱，强制放行多通道测试（直接跳过工步序列，仅触发多通道测试）"""
+        if not self.chk_linkage.isChecked():
+            QMessageBox.warning(self, "警告", "需勾选【联动多通道测试】才能启动电性能测试！")
+            return
+            
+        overview_tab = self.get_overview_tab()
+        if not overview_tab:
             return
 
-        self._sync_table_to_data()
-            
+        # 彻底屏蔽老化工步执行序列，仅保留标识
         self._is_bypass_chamber = True
-        self.active_step_idx = 0
-        self.step_elapsed_sec = 0.0
-        self.sequence_running = True
+        self.sequence_running = False
         
-        for i, step in enumerate(self.steps_data):
-            step["status"] = "运行中(屏蔽状态)" if i == 0 else "等待中"
-            
-        self.refresh_steps_table()
-        self.btn_run_seq.setEnabled(False)
-        self.btn_run_seq.setStyleSheet("background-color: #555555; color: #888888; border-radius: 4px;")
-        self.btn_bypass_run.setEnabled(False)
-        self.btn_bypass_run.setStyleSheet("background-color: #555555; color: #888888; border-radius: 4px;")
+        # 联动触发大屏通道并行测试
+        overview_tab.trigger_multi_channel_tests()
         
-        # 禁用新增和删除工步按钮
-        self.btn_add.setEnabled(False)
-        self.btn_add.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
-        self.btn_del.setEnabled(False)
-        self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        # 解除所有 worker 挂起（如果是断点重连情况）
+        if overview_tab.engine:
+            with overview_tab.engine._lock:
+                for worker in overview_tab.engine.workers.values():
+                    worker.is_suspended = False
+                    
+        self.lbl_active_step.setText("当前阶段: 屏蔽模式，已直接启动多通道电性能测试")
+        self.lbl_step_time.setText("工步耗时: -- / --")
         
-        # 联动复位：解除所有 worker 的挂起状态
-        overview_tab = self.get_overview_tab()
-        if overview_tab:
-            if self.chk_linkage.isChecked():
-                overview_tab.trigger_multi_channel_tests()
-            if overview_tab.engine:
-                with overview_tab.engine._lock:
-                    for worker in overview_tab.engine.workers.values():
-                        worker.is_suspended = False
+        QMessageBox.information(self, "启动成功", "已跳过老化箱测试序列，直接启动多通道电性能测试！")
 
     def start_aging_sequence(self):
         """启动老化测试工步自动运行引擎"""
@@ -1069,9 +1071,16 @@ class ChamberTab(QWidget):
         # 启动前必须先同步表格，否则刚编辑的工步类型/目标温度会被刷新覆盖。
         self._sync_table_to_data()
             
-        # 真正开启 PLC 系统启动指令
-        self.write_plc_bit("V0.5", True, sync=False)
-        self.write_plc_bit("V0.6", False, sync=False)
+        # 真正开启 PLC 系统启动指令（如果是升降温，暂不启动，交由 tick 中的压缩机保护处理）
+        first_step_name = self.steps_data[0].get("name", "") if self.steps_data else ""
+        if first_step_name not in ["升温至目标温度", "降温至目标温度"]:
+            # 其它不带压的工步（如维持温度、老化测试等），不再强制启动系统，仅下发必要温度即可
+            self.apply_step_temperatures(0)
+            logger.info(f"[老化引擎] 首个工步为 '{first_step_name}'，不下发系统启动指令，仅下发温度配置。")
+        else:
+            self.write_plc_bit("V0.5", False, sync=False)
+            self.write_plc_bit("V0.6", True, sync=False)
+            logger.info(f"[老化引擎] 首个工步为 '{first_step_name}'，初始保持停机，准备进入压缩机保护。")
         
         self.active_step_idx = 0
         self.step_elapsed_sec = 0.0
@@ -1087,14 +1096,21 @@ class ChamberTab(QWidget):
         self.btn_bypass_run.setEnabled(False)
         self.btn_bypass_run.setStyleSheet("background-color: #555555; color: #888888; border-radius: 4px;")
         
-        # 禁用新增和删除工步按钮
+        # 禁用预设区与新增删除按钮
+        self.btn_load_p.setEnabled(False)
+        self.btn_load_p.setStyleSheet("background-color: #555555; color: #888888;")
+        self.btn_save_p.setEnabled(False)
+        self.btn_save_p.setStyleSheet("background-color: #555555; color: #888888;")
+        self.btn_del_p.setEnabled(False)
+        self.btn_del_p.setStyleSheet("background-color: #555555; color: #888888;")
+        self.combo_presets.setEnabled(False)
         self.btn_add.setEnabled(False)
         self.btn_add.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(False)
         self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
 
-        # 激活第一步的温度下发
-        self.apply_step_temperatures(0)
+        # 激活第一步的温度下发 (由上面的逻辑替代)
+        # self.apply_step_temperatures(0)
 
     def stop_aging_sequence(self):
         """停止工步测试"""
@@ -1134,7 +1150,14 @@ class ChamberTab(QWidget):
         self.btn_bypass_run.setEnabled(True)
         self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         
-        # 启用新增和删除工步按钮
+        # 启用预设区与新增删除按钮
+        self.btn_load_p.setEnabled(True)
+        self.btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
+        self.btn_save_p.setEnabled(True)
+        self.btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
+        self.btn_del_p.setEnabled(True)
+        self.btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
+        self.combo_presets.setEnabled(True)
         self.btn_add.setEnabled(True)
         self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(True)
@@ -1332,6 +1355,16 @@ class ChamberTab(QWidget):
         if getattr(self, "_current_step_init_idx", -1) != self.active_step_idx:
             self._current_step_init_idx = self.active_step_idx
             
+            # 压缩机保护逻辑：进入升降温工步时，强制停机 1 分钟
+            self._compressor_wait_sec = 0.0
+            if step_name in ["升温至目标温度", "降温至目标温度"] and not getattr(self, "_is_bypass_chamber", False):
+                self._compressor_waiting = True
+                self.write_plc_bit("V0.5", False, sync=False)
+                self.write_plc_bit("V0.6", True, sync=False)
+                logger.info(f"[老化引擎] 进入工步 '{step_name}'，触发压缩机保护：系统停机等待 1 分钟。")
+            else:
+                self._compressor_waiting = False
+            
             if step_name == "启动多通道测试":
                 logger.info("[老化引擎] 进入 '启动多通道测试'，触发主界面的多通道测试")
                 overview_tab = self.get_overview_tab()
@@ -1404,19 +1437,33 @@ class ChamberTab(QWidget):
                 step["hours"] = 0.0
                 self.steps_data[self.active_step_idx]["hours"] = 0.0
 
+        # --- 压缩机保护拦截器 ---
+        if getattr(self, "_compressor_waiting", False):
+            self._compressor_wait_sec += 1.0
+            if self._compressor_wait_sec < 60.0:
+                remain_sec = int(60 - self._compressor_wait_sec)
+                self.lbl_active_step.setText(f"当前阶段: {step_name} (压缩机停机保护: {remain_sec}s)")
+                self.lbl_step_time.setText("系统已停止，等待保护期结束...")
+                # 将倒计时状态写入表格中
+                self.steps_data[self.active_step_idx]["status"] = f"停机保护({remain_sec}s)"
+                self.refresh_steps_table()
+                return # 拦截，直接跳过下方所有的：温度下发、终止判定以及工步时间的扣除
+            else:
+                self._compressor_waiting = False
+                self.steps_data[self.active_step_idx]["status"] = "运行中..."
+                self.write_plc_bit("V0.5", True, sync=False)
+                self.write_plc_bit("V0.6", False, sync=False)
+                self.sync_plc_data()
+                logger.info(f"[老化引擎] 压缩机 1 分钟保护期结束，重新启动系统。")
+
         if not getattr(self, "_is_bypass_chamber", False):
             if step_name in ["启动多通道测试", "BMS带载工作", "老化完成取料"]:
-                # 维持设定温度，而不是使用实际温度。
+                # 绝对继承：忽略底层残余寄存器，直接向上追溯最近一次明确配置的工步温度
                 setting_temp = 25.0
-                if self.chamber:
-                    setting_temp = self.chamber.data_store.get("VD800", 0.0)
-                    if setting_temp <= 0.0:
-                        setting_temp = self.chamber.data_store.get("VD750", 25.0)
-                if setting_temp <= 0.0 or setting_temp == 25.0:
-                    for prev_idx in range(self.active_step_idx - 1, -1, -1):
-                        if self.steps_data[prev_idx]["name"] in ["升温至目标温度", "降温至目标温度", "维持温度"]:
-                            setting_temp = self.steps_data[prev_idx]["temp"]
-                            break
+                for prev_idx in range(self.active_step_idx - 1, -1, -1):
+                    if self.steps_data[prev_idx]["name"] in ["升温至目标温度", "降温至目标温度", "维持温度"]:
+                        setting_temp = self.steps_data[prev_idx]["temp"]
+                        break
                 
                 mode_heat = self.should_heat_step(step_name, setting_temp)
                 self.chamber.write_bit("V699.0", mode_heat)
@@ -1459,16 +1506,12 @@ class ChamberTab(QWidget):
         else:
             self.lbl_step_time.setText(f"工步耗时: {self.step_elapsed_sec:.3f} / 0.000 分钟 ({end_cond})")
             
-        # --- 新增加大屏信息传输接口，将当前运行的老化测试工步信息传给大屏 ---
+        # --- 新增加大屏信息传输接口，将当前运行的老化测试全局系统工步信息传给大屏 ---
         self._api_report_ticks = getattr(self, "_api_report_ticks", 0) + 1
         if self._api_report_ticks % 5 == 0:
             overview_tab = self.get_overview_tab()
             if overview_tab and hasattr(overview_tab, "engine") and overview_tab.engine:
-                selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
-                if selected_cids:
-                    elapsed_sec = int(self.step_elapsed_sec * 60)
-                    countdown_sec = int(max(0, (test_hours - self.step_elapsed_sec) * 60)) if test_hours > 0 else 0
-                    overview_tab.engine.report_step_info_to_all(selected_cids, self.active_step_idx, step_name, elapsed_sec, countdown_sec)
+                overview_tab.engine.report_system_step_info(self.active_step_idx, step_name)
         
         # --- 联动多通道测试控制逻辑 ---
         if hasattr(self, "chk_linkage") and self.chk_linkage.isChecked():
@@ -1648,6 +1691,15 @@ class ChamberTab(QWidget):
                 self.btn_run_seq.setEnabled(True)
                 self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; border-radius: 4px;")
                 
+                # 恢复预设区功能
+                self.btn_load_p.setEnabled(True)
+                self.btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
+                self.btn_save_p.setEnabled(True)
+                self.btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
+                self.btn_del_p.setEnabled(True)
+                self.btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
+                self.combo_presets.setEnabled(True)
+                
                 # 启用新增和删除工步按钮
                 self.btn_add.setEnabled(True)
                 self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
@@ -1684,6 +1736,16 @@ class ChamberTab(QWidget):
         self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_bypass_run.setEnabled(True)
         self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        
+        # 恢复预设区功能
+        self.btn_load_p.setEnabled(True)
+        self.btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
+        self.btn_save_p.setEnabled(True)
+        self.btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
+        self.btn_del_p.setEnabled(True)
+        self.btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
+        self.combo_presets.setEnabled(True)
+        
         self.btn_add.setEnabled(True)
         self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(True)
