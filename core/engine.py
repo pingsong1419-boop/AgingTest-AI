@@ -423,11 +423,10 @@ class ChannelWorker(QObject):
                     ch_match = re.search(r"CH:(\d+)", p_str)
                     if ch_match: target_ch = int(ch_match.group(1))
 
-                if "simulator" in device or "电池模拟器" in device:
+                if "simulator" in device or "电池模拟器" in device or "ngi83624a" in device:
                     target_sim = None
-                    if "1#" in device: target_sim = mgr.simulators[0]
-                    elif "2#" in device: target_sim = mgr.simulators[1]
-                    elif "3#" in device: target_sim = mgr.simulators[2]
+                    if "ngi83624a-1" in device or "1#" in device: target_sim = mgr.simulators[0] if len(mgr.simulators) > 0 else None
+                    elif "ngi83624a-2" in device or "2#" in device: target_sim = mgr.simulators[1] if len(mgr.simulators) > 1 else None
                     
                     if "快捷批量配置" in action:
                         volt = self._parse_numeric(p_str.split("V")[0])
@@ -460,9 +459,9 @@ class ChannelWorker(QObject):
                             else: success = False
                         return success, None
 
-                    ch_to_use = target_ch if target_ch is not None else self.channel_id
+                    ch_to_use = target_ch if target_ch is not None else 1
                     if target_sim:
-                        physical_ch = (ch_to_use - 1) % 18 + 1
+                        physical_ch = ch_to_use
                         if "V" in p_str: 
                             v_val = self._parse_numeric(p_str.split("V")[0])
                             success = success and target_sim.set_voltage(physical_ch, v_val, logger=hw_logger)
@@ -470,13 +469,8 @@ class ChannelWorker(QObject):
                         if "开启输出" in p_str: success = success and target_sim.output_control(physical_ch, True, logger=hw_logger)
                         elif "关闭输出" in p_str: success = success and target_sim.output_control(physical_ch, False, logger=hw_logger)
                     else:
-                        if "V" in p_str: 
-                            v_val = self._parse_numeric(p_str.split("V")[0])
-                            success = success and mgr.set_voltage(ch_to_use, v_val, logger=hw_logger)
-                            if success:
-                                sim, ch = mgr._get_sim_and_ch(ch_to_use)
-                                success = verify_and_wait(sim, v_val, ch=ch, threshold=0.002)
-                        if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
+                        success = False
+                        hw_logger(f"[!] 找不到目标电池模拟器: {device}")
 
                 elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device or "hv source" in device:
@@ -587,10 +581,9 @@ class ChannelWorker(QObject):
                 is_volt = "电压" in p_str or "volt" in p_str or "V" in p_str.upper()
                 
                 # 确定友好名称
-                if "1#" in device and "sim" in device: f_name = "1#电池模拟器"
-                elif "2#" in device and "sim" in device: f_name = "2#电池模拟器"
-                elif "3#" in device and "sim" in device: f_name = "3#电池模拟器"
-                elif "sim" in device: f_name = "电池模拟器"
+                if "1#" in device or "ngi83624a-1" in device: f_name = "NGI83624A-1"
+                elif "2#" in device or "ngi83624a-2" in device: f_name = "NGI83624A-2"
+                elif "sim" in device or "ngi83624a" in device: f_name = "电池模拟器"
                 elif "2#" in device: f_name = "2# AFE电源"
                 elif "3#" in device: f_name = "3# AFE电源"
                 elif "afe" in device: f_name = "AFE电源"
@@ -600,15 +593,16 @@ class ChannelWorker(QObject):
                 elif "ca550" in device: f_name = "CA550校准仪"
                 else: f_name = device.upper()
 
-                if "simulator" in device or "电池模拟器" in device:
-                    ch = target_ch if target_ch is not None else self.channel_id
+                if "simulator" in device or "电池模拟器" in device or "ngi83624a" in device:
+                    ch = target_ch if target_ch is not None else 1
                     target_sim = None
-                    if "1#" in device: target_sim = mgr.simulators[0]
-                    elif "2#" in device: target_sim = mgr.simulators[1]
-                    elif "3#" in device: target_sim = mgr.simulators[2]
+                    if "ngi83624a-1" in device or "1#" in device: target_sim = mgr.simulators[0] if len(mgr.simulators) > 0 else None
+                    elif "ngi83624a-2" in device or "2#" in device: target_sim = mgr.simulators[1] if len(mgr.simulators) > 1 else None
                     if target_sim:
-                        physical_ch = (ch - 1) % 18 + 1
+                        physical_ch = ch
                         if is_volt:
+                            # 根据协议，如果想读总电压，可以单独循环（如果通道0不返回逗号分隔的好解析的数据）
+                            # 暂定直接读通道0
                             total_v = 0.0
                             for i in range(1, target_sim.max_channels + 1):
                                 v = target_sim.measure_voltage(i, logger=hw_logger)
@@ -616,9 +610,11 @@ class ChannelWorker(QObject):
                             hw_logger(f"[1-{target_sim.max_channels}通道总和] 测得电压: {total_v:.2f}V")
                             result_value = total_v
                         else:
-                            result_value = target_sim.measure_current(physical_ch)
+                            result_value = target_sim.measure_current(physical_ch, logger=hw_logger)
                     else:
-                        result_value = mgr.measure_voltage(ch) if is_volt else mgr.measure_current(ch)
+                        success = False
+                        result_value = -1.0
+                        hw_logger(f"[!] 找不到目标电池模拟器: {device}")
                     success = result_value >= 0
                 elif any(x in device for x in ["afe", "main", "hv_source", "hv source", "control power", "控制板"]):
                     if "2#" in device: dev = mgr.afe_pwr_2

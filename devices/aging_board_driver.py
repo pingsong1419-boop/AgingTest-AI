@@ -96,9 +96,9 @@ class AgingBoardController:
                         return True
                 except Exception as e:
                     logger.warning(f"功能板 {self.ip} TCP 已连接，但 Modbus 握手失败: {e}")
-                    # 只要 TCP 通了，我们先认为是在线的，后续指令执行时会再次尝试
-                    self.is_connected = True
-                    return True
+                    # TCP 可能被代理拦截，必须严格要求 Modbus 协议握手成功
+                    self.is_connected = False
+                    return False
 
             return False
         except Exception as e:

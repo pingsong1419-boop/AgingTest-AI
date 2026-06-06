@@ -23,7 +23,7 @@ class ReadAllWorker(QThread):
         super().__init__()
         self.sim = simulator
     def run(self):
-        for i in range(1, 19):
+        for i in range(1, 25):
             v = self.sim.measure_voltage(i)
             self.progress.emit(i, v)
         self.finished.emit()
@@ -45,7 +45,7 @@ class SimulatorTab(QWidget):
         net_layout = QHBoxLayout()
         net_layout.addWidget(QLabel("设备:"))
         self.combo_unit = QComboBox()
-        self.combo_unit.addItems(["设备 #1 (CH 1-18)", "设备 #2 (CH 19-36)", "设备 #3 (CH 37-54)"])
+        self.combo_unit.addItems(["NGI83624A-1 (CH 1-24)", "NGI83624A-2 (CH 25-48)"])
         self.combo_unit.currentIndexChanged.connect(self.update_net_info)
         net_layout.addWidget(self.combo_unit)
         
@@ -76,11 +76,11 @@ class SimulatorTab(QWidget):
         
         # 2.1 左侧手动控制
         left_ctrl_layout = QVBoxLayout()
-        single_group = QGroupBox("单通道调试 (1-18)")
+        single_group = QGroupBox("单通道调试 (1-24)")
         single_layout = QGridLayout()
         single_layout.addWidget(QLabel("本地通道:"), 0, 0)
         self.spin_ch = QSpinBox()
-        self.spin_ch.setRange(1, 18)
+        self.spin_ch.setRange(1, 24)
         single_layout.addWidget(self.spin_ch, 0, 1)
         
         single_layout.addWidget(QLabel("设置电压(V):"), 1, 0)
@@ -125,12 +125,12 @@ class SimulatorTab(QWidget):
         mid_layout.addLayout(left_ctrl_layout, 1)
         
         # 2.2 右侧全通道回读表
-        table_group = QGroupBox("本台机 18 通道实时状态回读")
+        table_group = QGroupBox("本台机 24 通道实时状态回读")
         table_layout = QVBoxLayout()
-        self.table = QTableWidget(18, 2)
+        self.table = QTableWidget(24, 2)
         self.table.setHorizontalHeaderLabels(["通道", "设定电压 (V)"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        for i in range(18):
+        for i in range(24):
             self.table.setItem(i, 0, QTableWidgetItem(f"CH {i+1}"))
             self.table.setItem(i, 1, QTableWidgetItem("--.----"))
         table_layout.addWidget(self.table)
@@ -248,7 +248,7 @@ class SimulatorTab(QWidget):
                 self._notify_status(f"通道{ch} 回读超时")
 
     def read_all_channels(self):
-        """异步回读当前物理设备的所有 18 个通道"""
+        """异步回读当前物理设备的所有 24 个通道"""
         index = self.combo_unit.currentIndex()
         if not self.mgr: return
         sim = self.mgr.simulators[index]
@@ -256,7 +256,7 @@ class SimulatorTab(QWidget):
             self._notify_status("请先连接设备！")
             return
         
-        self.btn_read_all.setText("正在扫描 18 个通道...")
+        self.btn_read_all.setText("正在扫描 24 个通道...")
         self.btn_read_all.setEnabled(False)
         
         self.read_all_worker = ReadAllWorker(sim)

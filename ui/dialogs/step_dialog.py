@@ -963,7 +963,7 @@ class StepDialog(QDialog):
         elif sub_cat == "高压源":
             self.device_combo.addItems(["NGI 高压源 (HV Source)"])
         elif sub_cat == "模拟电池":
-            self.device_combo.addItems(["1# 电池模拟器 (Simulator 1)", "2# 电池模拟器 (Simulator 2)", "3# 电池模拟器 (Simulator 3)"])
+            self.device_combo.addItems(["NGI83624A-1", "NGI83624A-2"])
         elif sub_cat == "校准源":
             self.device_combo.addItems(["CA550 校准仪 (CA550)"])
         elif sub_cat == "直流源":

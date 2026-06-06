@@ -53,6 +53,16 @@ class ConfigTab(QWidget):
         self.topology_combo.addItems(["1主0从", "1主1从", "1主2从", "1主3从"])
         self.topology_combo.setCurrentText("1主3从") # 默认选项
         prop_layout.addWidget(self.topology_combo)
+        
+        prop_layout.addSpacing(20)
+        prop_layout.addWidget(QLabel("【绑定高低温箱配方】:"))
+        self.chamber_profile_combo = QComboBox()
+        self.chamber_profile_combo.setMinimumWidth(150)
+        # 加载环境箱配方列表
+        chamber_presets = self.db_manager.list_chamber_presets() if hasattr(self.db_manager, 'list_chamber_presets') else []
+        self.chamber_profile_combo.addItems(["未绑定 (手动选择)"] + chamber_presets)
+        prop_layout.addWidget(self.chamber_profile_combo)
+        
         prop_layout.addStretch()
         right_panel.addLayout(prop_layout)
         
@@ -176,16 +186,16 @@ class ConfigTab(QWidget):
         btn_save_recipe.clicked.connect(self.save_recipe)
         btn_save_recipe.setStyleSheet("background-color: #28A745; color: white;")
         
-        btn_dry_run = QPushButton("仿真运行 (Dry Run)")
-        btn_dry_run.clicked.connect(self.dry_run)
-        btn_dry_run.setStyleSheet("background-color: #FF8C00; color: white;")
+        btn_save_as = QPushButton("另存配方")
+        btn_save_as.clicked.connect(self.save_as_recipe)
+        btn_save_as.setStyleSheet("background-color: #17A2B8; color: white;")
         
         btn_layout.addWidget(btn_add_item)
         btn_layout.addWidget(btn_add_step)
         btn_layout.addWidget(btn_edit)
         btn_layout.addWidget(btn_del)
         btn_layout.addWidget(btn_save_recipe)
-        btn_layout.addWidget(btn_dry_run)
+        btn_layout.addWidget(btn_save_as)
         self.edit_layout.addLayout(btn_layout)
         
         right_panel.addWidget(self.edit_container)
@@ -526,6 +536,12 @@ class ConfigTab(QWidget):
         """将 JSON 数据还原到树状图中"""
         self.step_tree.clear()
         self.topology_combo.setCurrentText(data.get("topology", "1主3从"))
+        
+        chamber_recipe = data.get("chamber_recipe_name", "未绑定 (手动选择)")
+        # 确保列表里有这个项
+        if self.chamber_profile_combo.findText(chamber_recipe) == -1:
+            self.chamber_profile_combo.addItem(chamber_recipe)
+        self.chamber_profile_combo.setCurrentText(chamber_recipe)
         
         for item_data in data.get("items", []):
             sync_text = "--"
@@ -956,55 +972,32 @@ class ConfigTab(QWidget):
                 
             QMessageBox.information(self, "完成", f"批量修改完成，共影响 {count} 个测试项。子工步保持不动。")
 
-    def dry_run(self):
-        """仿真运行：使用 Mock 设备管理器运行当前编辑的配方"""
-        # 1. 序列化当前 UI 中的配方数据
-        items = []
-        for i in range(self.step_tree.topLevelItemCount()):
-            node = self.step_tree.topLevelItem(i)
-            item_data = {
-                "name": node.text(0),
-                "strategy": node.text(4),
-                "min": node.text(2),
-                "max": node.text(3),
-                "sub_steps": []
-            }
-            for j in range(node.childCount()):
-                sub = node.child(j)
-                item_data["sub_steps"].append({
-                    "name": sub.text(0).replace("  └─ ", ""),
-                    "type": sub.data(1, Qt.UserRole),
-                    "device": sub.data(0, Qt.UserRole),
-                    "action": sub.text(1),
-                    "params": sub.text(2),
-                    "is_judgment": sub.data(2, Qt.UserRole),
-                    "fail_strategy": sub.text(4)
-                })
-            items.append(item_data)
-            
-        if not items:
-            QMessageBox.warning(self, "提醒", "配方为空，无法运行仿真。")
+    def save_as_recipe(self):
+        """另存为新配方"""
+        if not self.current_recipe_name:
+            QMessageBox.warning(self, "提醒", "请先在左侧选择或新建一个配方。")
             return
-
-        # 2. 初始化 Mock 硬件和临时引擎
-        from devices.mock_manager import MockDeviceManager
-        from core.engine import TestEngine
-        from ui.dialogs.monitor_dialog import MonitorDialog
-        
-        mock_mgr = MockDeviceManager()
-        # 注意：这里我们不传真实 db_manager，防止仿真数据污染数据库
-        temp_engine = TestEngine(device_manager=mock_mgr, db_manager=None)
-        
-        # 3. 弹出监控窗口（使用通道 1 进行演示）
-        dialog = MonitorDialog(channel_id=1, engine=temp_engine, parent=self)
-        dialog.setWindowTitle("🧪 配方仿真运行 - 通道 1 (虚拟硬件)")
-        
-        # 启动测试
-        temp_engine.start_channel_test(1, items)
-        dialog.exec()
-        
-        # 结束后清理
-        temp_engine.stop_all()
+            
+        from PySide6.QtWidgets import QInputDialog
+        new_name, ok = QInputDialog.getText(self, "另存配方", "请输入新的配方名称:", text=self.current_recipe_name + "_副本")
+        if ok and new_name:
+            if new_name.strip() == "":
+                QMessageBox.warning(self, "错误", "配方名称不能为空！")
+                return
+            if new_name in self.db_manager.list_recipes():
+                QMessageBox.warning(self, "错误", "同名配方已存在，请换一个名称！")
+                return
+            
+            # 使用现有逻辑保存为新配方
+            original_name = self.current_recipe_name
+            
+            # 临时修改左侧树结构避免 save_recipe 逻辑错误（或者直接修改内部名字后调用 save_recipe）
+            item = QTreeWidgetItem([new_name])
+            self.recipe_tree.addTopLevelItem(item)
+            self.recipe_tree.setCurrentItem(item)
+            self.current_recipe_name = new_name
+            
+            self.save_recipe()
 
     def validate_recipe(self) -> List[str]:
         """逻辑校验：返回错误列表"""
@@ -1043,6 +1036,7 @@ class ConfigTab(QWidget):
         data = {
             "name": recipe_name,
             "topology": self.topology_combo.currentText(),
+            "chamber_recipe_name": self.chamber_profile_combo.currentText(),
             "items": []
         }
         

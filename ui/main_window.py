@@ -161,6 +161,21 @@ class MainWindow(QMainWindow):
         
         # 软件刚启动时，手动同步一次预设配方
         self.on_tab_changed(0)
+        
+        # 绑定多通道主控面板配方下拉框切换，自动加载对应的老化箱方案
+        self.tab_overview.combo_recipe.currentTextChanged.connect(self.on_bms_recipe_changed)
+
+    def on_bms_recipe_changed(self, recipe_name):
+        if not recipe_name or recipe_name == "无": return
+        # 加载配方 JSON 数据
+        recipe_data = self.db_manager.load_recipe_json(recipe_name)
+        if recipe_data:
+            chamber_recipe = recipe_data.get("chamber_recipe_name", "未绑定 (手动选择)")
+            if chamber_recipe and chamber_recipe != "未绑定 (手动选择)":
+                # 同步并加载该配方绑定的老化箱方案
+                self.tab_chamber.combo_presets.setCurrentText(chamber_recipe)
+                self.tab_chamber.load_preset_profile(chamber_recipe)
+                self.show_status(f"已根据配方自动加载环境箱方案: {chamber_recipe}")
 
     def show_status(self, message: str, timeout: int = 5000):
         """在状态栏显示信息"""

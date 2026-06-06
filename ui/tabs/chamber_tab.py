@@ -338,8 +338,9 @@ class ChamberTab(QWidget):
         """)
         progress_total_layout.addWidget(self.pbar_total)
         
-        # 新增：方案总运行时间显示
+        # 新增：方案总运行时间显示 (增加最小宽度预留1000+分钟的显示空间)
         self.lbl_total_time = QLabel("方案运行总时间: 0.00 分钟")
+        self.lbl_total_time.setMinimumWidth(180)
         self.lbl_total_time.setStyleSheet("color: #00E5FF; font-weight: bold; margin-left: 10px;")
         progress_total_layout.addWidget(self.lbl_total_time)
         

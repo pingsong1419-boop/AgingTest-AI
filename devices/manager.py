@@ -1,4 +1,4 @@
-from .lingtu_66100 import Lingtu66100
+from .ngi_83624a import NGI83624A
 from .ngi_n3618 import NGIN3618
 from .afe_power_ru36 import AFEPowerRU36
 from .mainboard_power_ru60 import MainboardPowerRU60
@@ -69,9 +69,8 @@ class DeviceManager:
         sim3_port = int(cfg.get("sim3_port", 5025))
         
         self.simulators = [
-            Lingtu66100(sim1_ip, sim1_port, max_channels=18),
-            Lingtu66100(sim2_ip, sim2_port, max_channels=18),
-            Lingtu66100(sim3_ip, sim3_port, max_channels=18)
+            NGI83624A(sim1_ip, sim1_port, max_channels=24),
+            NGI83624A(sim2_ip, sim2_port, max_channels=24)
         ]
         # BUG-11修复: 删除后台线程connect，避免与init_all_devices的串行connect产生竞态
 
@@ -131,49 +130,10 @@ class DeviceManager:
             ip = db_ips.get(i) or f"{base_ip}{start_suffix + i - 1}"
             self.boards[i] = ControlBoard(ip, i)
 
-    def _get_sim_and_ch(self, global_ch: int):
-        """
-        根据全局通道号 (1-48) 自动路由到具体的物理设备和物理通道
-        """
-        unit_index = (global_ch - 1) // 18
-        local_ch = (global_ch - 1) % 18 + 1
-        
-        if unit_index < len(self.simulators):
-            return self.simulators[unit_index], local_ch
-        return None, None
 
-    def set_voltage(self, global_ch: int, voltage: float, logger=None):
-        sim, ch = self._get_sim_and_ch(global_ch)
-        if sim: return sim.set_voltage(ch, voltage, logger)
-        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
-        return False
-
-    def set_current(self, global_ch: int, current: float, logger=None):
-        sim, ch = self._get_sim_and_ch(global_ch)
-        if sim: return sim.set_current_limit(ch, current, logger)
-        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
-        return False
-
-    def output_control(self, global_ch: int, state: bool, logger=None):
-        sim, ch = self._get_sim_and_ch(global_ch)
-        if sim: return sim.output_control(ch, state, logger)
-        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
-        return False
-
-    def measure_voltage(self, global_ch: int, logger=None) -> float:
-        sim, ch = self._get_sim_and_ch(global_ch)
-        if sim: return sim.measure_voltage(ch, logger)
-        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
-        return -1.0
-
-    def measure_current(self, global_ch: int, logger=None) -> float:
-        sim, ch = self._get_sim_and_ch(global_ch)
-        if sim: return sim.measure_current(ch, logger)
-        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
-        return -1.0
 
     def broadcast_voltage(self, voltage: float, logger=None) -> bool:
-        """全系统广播设置电压：对所有模拟器的 1-18 通道执行设置"""
+        """全系统广播设置电压：对所有模拟器的全通道执行设置"""
         if logger: logger(f"[*] 全系统同步设置电压: {voltage}V")
         success = True
         for i, sim in enumerate(self.simulators):
@@ -182,8 +142,8 @@ class DeviceManager:
         return success
 
     def broadcast_current(self, current: float, logger=None) -> bool:
-        """全系统广播设置电流：对所有模拟器的 1-18 通道执行设置"""
-        if logger: logger(f"[*] 全系统同步设置电流限制: {current}A")
+        """全系统广播设置电流：对所有模拟器的全通道执行设置"""
+        if logger: logger(f"[*] 全系统同步设置电流限制: {current}mA")
         success = True
         for i, sim in enumerate(self.simulators):
             if sim.is_connected:
@@ -191,7 +151,7 @@ class DeviceManager:
         return success
 
     def broadcast_range(self, range_str: str, logger=None) -> bool:
-        """全系统广播设置量程: HIGH / LOW"""
+        """全系统广播设置量程: 0/2/3"""
         if logger: logger(f"[*] 全系统同步设置量程: {range_str}")
         success = True
         for i, sim in enumerate(self.simulators):
