@@ -287,7 +287,8 @@ class DeviceManager:
                     time.sleep(0.5) 
                 else:
                     if logger: logger(f"[!] 警告: PLC 继电器 {i+1} 写入失败")
-            if logger: logger("[*] 分级上电指令发送完毕。")
+            if logger: logger("[*] 分级上电指令发送完毕，等待 5 秒以确保功能板启动完成...")
+            time.sleep(5.0)
         elif not power_ok:
             if logger: logger("[!] 由于控制板供电电源异常，已跳过 PLC 继电器分级上电流程。")
         
@@ -302,15 +303,38 @@ class DeviceManager:
                 return (idx, True, getattr(board, "ip", "Unknown IP"))
             return (idx, False, getattr(board, "ip", "Unknown IP"))
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
             results = list(executor.map(check_board, self.boards.items()))
-            online_count = sum(1 for _, ok, _ in results if ok)
-            offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
+            
+        res_dict = {idx: (ok, ip) for idx, ok, ip in results}
+        
+        import time
+        max_retries = 5
+        for retry_count in range(1, max_retries + 1):
+            offline_idx = [idx for idx, (ok, _) in res_dict.items() if not ok]
+            if not offline_idx:
+                break
+                
+            if logger: logger(f"[*] 第 {retry_count} 次扫描发现 {len(offline_idx)} 个通道离线，等待 3 秒后进行重连...")
+            time.sleep(3.0)
+            offline_tuples = [(idx, self.boards[idx]) for idx in offline_idx]
+            
+            with ThreadPoolExecutor(max_workers=4) as executor:
+                retry_results = list(executor.map(check_board, offline_tuples))
+            
+            # 更新重试结果
+            for idx, ok, ip in retry_results:
+                res_dict[idx] = (ok, ip)
+
+        results = [(idx, ok, ip) for idx, (ok, ip) in res_dict.items()]
+
+        online_count = sum(1 for _, ok, _ in results if ok)
+        offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
         
         if logger: 
             logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 48")
             if online_count < 48:
-                logger(f"[!] 警告: 有 {48 - online_count} 个通道目前处于离线状态")
+                logger(f"[!] 警告: 仍有 {48 - online_count} 个通道处于离线状态")
                 logger(f"[!] 离线通道详情: {', '.join(offline_details)}")
         return True
 
