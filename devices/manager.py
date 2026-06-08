@@ -1,4 +1,4 @@
-from .ngi_83624a import NGI83624A
+from .lingtu_66100 import Lingtu66100
 from .ngi_n3618 import NGIN3618
 from .afe_power_ru36 import AFEPowerRU36
 from .mainboard_power_ru60 import MainboardPowerRU60
@@ -41,25 +41,6 @@ class DeviceManager:
         if self.db_manager:
             cfg = self.db_manager.load_sys_config() or {}
 
-        # 0. 安全断开可能存在的旧实例
-        if getattr(self, 'chamber', None):
-            try: self.chamber.disconnect()
-            except: pass
-        if getattr(self, 'ca550', None):
-            try: self.ca550.disconnect()
-            except: pass
-        if getattr(self, 'easy320', None):
-            try: self.easy320.disconnect()
-            except: pass
-        for pwr in [getattr(self, 'hv_source', None), getattr(self, 'dut_power', None), getattr(self, 'ctrl_board_power', None), getattr(self, 'afe_power_1', None), getattr(self, 'afe_pwr_2', None), getattr(self, 'afe_pwr_3', None)]:
-            if pwr:
-                try: pwr.disconnect()
-                except: pass
-        for sim in getattr(self, 'simulators', []):
-            if sim:
-                try: sim.disconnect()
-                except: pass
-
         # 1. 模拟电池
         sim1_ip = cfg.get("sim1_ip", "192.168.1.210")
         sim1_port = int(cfg.get("sim1_port", 5025))
@@ -69,8 +50,9 @@ class DeviceManager:
         sim3_port = int(cfg.get("sim3_port", 5025))
         
         self.simulators = [
-            NGI83624A(sim1_ip, sim1_port, max_channels=24),
-            NGI83624A(sim2_ip, sim2_port, max_channels=24)
+            Lingtu66100(sim1_ip, sim1_port, max_channels=18),
+            Lingtu66100(sim2_ip, sim2_port, max_channels=18),
+            Lingtu66100(sim3_ip, sim3_port, max_channels=18)
         ]
         # BUG-11修复: 删除后台线程connect，避免与init_all_devices的串行connect产生竞态
 
@@ -130,10 +112,49 @@ class DeviceManager:
             ip = db_ips.get(i) or f"{base_ip}{start_suffix + i - 1}"
             self.boards[i] = ControlBoard(ip, i)
 
+    def _get_sim_and_ch(self, global_ch: int):
+        """
+        根据全局通道号 (1-48) 自动路由到具体的物理设备和物理通道
+        """
+        unit_index = (global_ch - 1) // 18
+        local_ch = (global_ch - 1) % 18 + 1
+        
+        if unit_index < len(self.simulators):
+            return self.simulators[unit_index], local_ch
+        return None, None
 
+    def set_voltage(self, global_ch: int, voltage: float, logger=None):
+        sim, ch = self._get_sim_and_ch(global_ch)
+        if sim: return sim.set_voltage(ch, voltage, logger)
+        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
+        return False
+
+    def set_current(self, global_ch: int, current: float, logger=None):
+        sim, ch = self._get_sim_and_ch(global_ch)
+        if sim: return sim.set_current_limit(ch, current, logger)
+        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
+        return False
+
+    def output_control(self, global_ch: int, state: bool, logger=None):
+        sim, ch = self._get_sim_and_ch(global_ch)
+        if sim: return sim.output_control(ch, state, logger)
+        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
+        return False
+
+    def measure_voltage(self, global_ch: int, logger=None) -> float:
+        sim, ch = self._get_sim_and_ch(global_ch)
+        if sim: return sim.measure_voltage(ch, logger)
+        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
+        return -1.0
+
+    def measure_current(self, global_ch: int, logger=None) -> float:
+        sim, ch = self._get_sim_and_ch(global_ch)
+        if sim: return sim.measure_current(ch, logger)
+        if logger: logger(f"错误: 找不到通道 {global_ch} 对应的模拟器")
+        return -1.0
 
     def broadcast_voltage(self, voltage: float, logger=None) -> bool:
-        """全系统广播设置电压：对所有模拟器的全通道执行设置"""
+        """全系统广播设置电压：对所有模拟器的 1-18 通道执行设置"""
         if logger: logger(f"[*] 全系统同步设置电压: {voltage}V")
         success = True
         for i, sim in enumerate(self.simulators):
@@ -142,8 +163,8 @@ class DeviceManager:
         return success
 
     def broadcast_current(self, current: float, logger=None) -> bool:
-        """全系统广播设置电流：对所有模拟器的全通道执行设置"""
-        if logger: logger(f"[*] 全系统同步设置电流限制: {current}mA")
+        """全系统广播设置电流：对所有模拟器的 1-18 通道执行设置"""
+        if logger: logger(f"[*] 全系统同步设置电流限制: {current}A")
         success = True
         for i, sim in enumerate(self.simulators):
             if sim.is_connected:
@@ -151,7 +172,7 @@ class DeviceManager:
         return success
 
     def broadcast_range(self, range_str: str, logger=None) -> bool:
-        """全系统广播设置量程: 0/2/3"""
+        """全系统广播设置量程: HIGH / LOW"""
         if logger: logger(f"[*] 全系统同步设置量程: {range_str}")
         success = True
         for i, sim in enumerate(self.simulators):
@@ -247,8 +268,7 @@ class DeviceManager:
                     time.sleep(0.5) 
                 else:
                     if logger: logger(f"[!] 警告: PLC 继电器 {i+1} 写入失败")
-            if logger: logger("[*] 分级上电指令发送完毕，等待 5 秒以确保功能板启动完成...")
-            time.sleep(5.0)
+            if logger: logger("[*] 分级上电指令发送完毕。")
         elif not power_ok:
             if logger: logger("[!] 由于控制板供电电源异常，已跳过 PLC 继电器分级上电流程。")
         
@@ -263,38 +283,15 @@ class DeviceManager:
                 return (idx, True, getattr(board, "ip", "Unknown IP"))
             return (idx, False, getattr(board, "ip", "Unknown IP"))
 
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor(max_workers=20) as executor:
             results = list(executor.map(check_board, self.boards.items()))
-            
-        res_dict = {idx: (ok, ip) for idx, ok, ip in results}
-        
-        import time
-        max_retries = 5
-        for retry_count in range(1, max_retries + 1):
-            offline_idx = [idx for idx, (ok, _) in res_dict.items() if not ok]
-            if not offline_idx:
-                break
-                
-            if logger: logger(f"[*] 第 {retry_count} 次扫描发现 {len(offline_idx)} 个通道离线，等待 3 秒后进行重连...")
-            time.sleep(3.0)
-            offline_tuples = [(idx, self.boards[idx]) for idx in offline_idx]
-            
-            with ThreadPoolExecutor(max_workers=4) as executor:
-                retry_results = list(executor.map(check_board, offline_tuples))
-            
-            # 更新重试结果
-            for idx, ok, ip in retry_results:
-                res_dict[idx] = (ok, ip)
-
-        results = [(idx, ok, ip) for idx, (ok, ip) in res_dict.items()]
-
-        online_count = sum(1 for _, ok, _ in results if ok)
-        offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
+            online_count = sum(1 for _, ok, _ in results if ok)
+            offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
         
         if logger: 
             logger(f"[*] 硬件初始化完成。在线老化板: {online_count} / 48")
             if online_count < 48:
-                logger(f"[!] 警告: 仍有 {48 - online_count} 个通道处于离线状态")
+                logger(f"[!] 警告: 有 {48 - online_count} 个通道目前处于离线状态")
                 logger(f"[!] 离线通道详情: {', '.join(offline_details)}")
         return True
 
@@ -332,33 +329,6 @@ class DeviceManager:
 
     def disconnect_all(self):
         """断开所有设备的连接并释放资源 (新增系统安全退出逻辑)"""
-        print("[DeviceManager] 正在执行系统安全退出下电流程...")
-        
-        # 1. 优先关闭分级供电的继电器 (Easy320)
-        if getattr(self, "easy320", None) and self.easy320.is_connected:
-            try:
-                for i in range(16):
-                    self.easy320.write_relay(i, False)
-                print("[DeviceManager] 已成功关闭分级供电的继电器。")
-            except Exception as e:
-                print(f"[DeviceManager] 继电器下电异常: {e}")
-                
-        # 2. 其次关闭控制板供电电源
-        if getattr(self, "ctrl_board_power", None) and self.ctrl_board_power.is_connected:
-            try:
-                self.ctrl_board_power.output_control(False)
-                print("[DeviceManager] 已成功关闭控制板供电电源。")
-            except Exception as e:
-                print(f"[DeviceManager] 控制板电源下电异常: {e}")
-
-        # 3. 关闭被测物供电电源 (DUT Power)
-        if getattr(self, "dut_power", None) and self.dut_power.is_connected:
-            try:
-                self.dut_power.output_control(False)
-                print("[DeviceManager] 已成功关闭被测物(DUT)供电电源。")
-            except Exception as e:
-                print(f"[DeviceManager] 被测物(DUT)电源下电异常: {e}")
-
         if getattr(self, "chamber", None):
             try: self.chamber.disconnect()
             except: pass

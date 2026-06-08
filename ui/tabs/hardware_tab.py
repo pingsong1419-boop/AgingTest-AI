@@ -84,9 +84,10 @@ class HardwareTab(QWidget):
         form_others.addRow("DUT供电 IP:", self.edit_dut_ip)
         form_others.addRow("NGI 高压 IP:", self.edit_hv_ip)
         
-        self.edit_sim1_ip = QLineEdit(); self.edit_sim2_ip = QLineEdit()
-        form_others.addRow("NGI83624A-1 IP:", self.edit_sim1_ip)
-        form_others.addRow("NGI83624A-2 IP:", self.edit_sim2_ip)
+        self.edit_sim1_ip = QLineEdit(); self.edit_sim2_ip = QLineEdit(); self.edit_sim3_ip = QLineEdit()
+        form_others.addRow("1# 模拟器 IP:", self.edit_sim1_ip)
+        form_others.addRow("2# 模拟器 IP:", self.edit_sim2_ip)
+        form_others.addRow("3# 模拟器 IP:", self.edit_sim3_ip)
 
         self.edit_ctrl_pwr_ip = QLineEdit(); self.edit_easy320_ip = QLineEdit()
         form_others.addRow("控制板供电 IP:", self.edit_ctrl_pwr_ip)
@@ -289,6 +290,7 @@ class HardwareTab(QWidget):
         self.edit_hv_ip.setText(cfg.get("hv_ip", "192.168.1.190"))
         self.edit_sim1_ip.setText(cfg.get("sim1_ip", "192.168.1.210"))
         self.edit_sim2_ip.setText(cfg.get("sim2_ip", "192.168.1.211"))
+        self.edit_sim3_ip.setText(cfg.get("sim3_ip", "192.168.1.212"))
         self.edit_ctrl_pwr_ip.setText(cfg.get("ctrl_pwr_ip", "192.168.1.202"))
         self.edit_easy320_ip.setText(cfg.get("easy320_ip", "192.168.1.88"))
         self.edit_ca550_com.setText(cfg.get("ca550_com", ""))
@@ -309,6 +311,7 @@ class HardwareTab(QWidget):
             "hv_ip": self.edit_hv_ip.text(),
             "sim1_ip": self.edit_sim1_ip.text(),
             "sim2_ip": self.edit_sim2_ip.text(),
+            "sim3_ip": self.edit_sim3_ip.text(),
             "ctrl_pwr_ip": self.edit_ctrl_pwr_ip.text(),
             "easy320_ip": self.edit_easy320_ip.text(),
             "ca550_com": self.edit_ca550_com.text(),

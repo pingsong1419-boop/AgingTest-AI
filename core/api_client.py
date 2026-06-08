@@ -4,6 +4,7 @@
 接口文档: POST_API_Documentation.md
 """
 import requests
+from requests.adapters import HTTPAdapter
 
 
 class AgingApiClient:
@@ -14,26 +15,47 @@ class AgingApiClient:
     def __init__(self, host: str = "127.0.0.1", port: int = 8008, logger=None):
         self.base_url = f"http://{host}:{port}"
         self.logger = logger
+        self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=64, pool_maxsize=64)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
+    def _summarize_body(self, path: str, body: dict) -> str:
+        if path == "/api/test-data":
+            return (
+                "test-data("
+                f"channel_id={body.get('channel_id')}, "
+                f"master={len(body.get('master_test_data') or [])}, "
+                f"slave1={len(body.get('slave_1_test_data') or [])}, "
+                f"slave2={len(body.get('slave_2_test_data') or [])}, "
+                f"slave3={len(body.get('slave_3_test_data') or [])})"
+            )
+        parts = []
+        for key, value in body.items():
+            text = str(value)
+            if len(text) > 120:
+                text = text[:117] + "..."
+            parts.append(f"{key}={text}")
+        return "{" + ", ".join(parts) + "}"
 
     def _post(self, path: str, body: dict) -> bool:
         """通用 POST，成功返回 True，失败返回 False。"""
         import json
         url = f"{self.base_url}{path}"
         if self.logger:
-            try:
-                body_str = json.dumps(body, ensure_ascii=False)
-            except:
-                body_str = str(body)
-            self.logger(f"[API REQ] POST {url} -> Body: {body_str}")
+            self.logger(f"[API REQ] POST {url} -> Body: {self._summarize_body(path, body)}")
         try:
-            resp = requests.post(
+            resp = self.session.post(
                 url,
                 json=body,
                 timeout=self.DEFAULT_TIMEOUT,
             )
             success = resp.status_code == 200 and resp.json().get("code") == 200
             if self.logger:
-                self.logger(f"[API RESP] {path} -> Status: {resp.status_code}, Body: {resp.text.strip()}")
+                resp_text = resp.text.strip()
+                if len(resp_text) > 300:
+                    resp_text = resp_text[:297] + "..."
+                self.logger(f"[API RESP] {path} -> Status: {resp.status_code}, Body: {resp_text}")
             return success
         except Exception as e:
             if self.logger:
@@ -76,16 +98,6 @@ class AgingApiClient:
         if lower_limit is not None: body["lowerLimit"] = lower_limit
         if index is not None:       body["index"] = index
         return self._post(f"/api/channels/{channel_id}/progress", body)
-
-    # ------------------------------------------------------------------ #
-    # 3.5 上报当前老化测试全局系统工步信息
-    # ------------------------------------------------------------------ #
-    def report_system_step(self, step_index: int, step_name: str) -> bool:
-        body = {
-            "step_index": step_index,
-            "step_name": step_name
-        }
-        return self._post("/api/system/step", body)
 
     # ------------------------------------------------------------------ #
     # 4. 心跳上报（全局，每 5 秒调用一次）

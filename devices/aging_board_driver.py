@@ -1,12 +1,15 @@
 from pymodbus.client import ModbusTcpClient
 from pymodbus.framer import FramerType
+import os
 import socket
 import logging
 import time
+import threading
 
 # 配置基础日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("AgingBoardDriver")
+logger.setLevel(logging.INFO if os.environ.get("AGING_DEBUG_AGING_BOARD") == "1" else logging.WARNING)
 
 class AgingBoardController:
     """
@@ -57,11 +60,29 @@ class AgingBoardController:
             timeout=2.0
         )
         self.is_connected = False
+        self._lock = threading.RLock()
+        self._next_retry_time = 0.0
+        self._last_error_log_time = 0.0
         # 初始化继电器状态追踪 (对齐参考项目)
         self.relay_states = {addr: False for addr in self.RELAY_MAP.values()}
 
+    def _can_retry_now(self) -> bool:
+        return time.monotonic() >= self._next_retry_time
+
+    def _mark_failure(self, cooldown: float = 5.0):
+        self.is_connected = False
+        self._next_retry_time = time.monotonic() + cooldown
+
+    def _log_error_throttled(self, message: str):
+        now = time.monotonic()
+        if now - self._last_error_log_time >= 5.0:
+            logger.error(message)
+            self._last_error_log_time = now
+
     def connect(self) -> bool:
         """建立 Modbus TCP 连接 (带物理探测与协议校验)"""
+        if not self._can_retry_now():
+            return False
         try:
             # 1. 物理探测，防止 Modbus 库在 IP 不通时长时间挂起
             with socket.create_connection((self.ip, self.port), timeout=0.8) as s:
@@ -96,20 +117,22 @@ class AgingBoardController:
                         return True
                 except Exception as e:
                     logger.warning(f"功能板 {self.ip} TCP 已连接，但 Modbus 握手失败: {e}")
-                    # TCP 可能被代理拦截，必须严格要求 Modbus 协议握手成功
-                    self.is_connected = False
-                    return False
+                    # 只要 TCP 通了，我们先认为是在线的，后续指令执行时会再次尝试
+                    self.is_connected = True
+                    return True
 
             return False
         except Exception as e:
-            logger.error(f"功能板 {self.ip} 连接失败: {e}")
+            self._mark_failure()
+            self._log_error_throttled(f"功能板 {self.ip} 连接失败: {e}")
             return False
 
     def disconnect(self):
         """断开连接"""
-        self.client.close()
-        self.is_connected = False
-        logger.info(f"功能板 {self.ip} 已断开连接")
+        with self._lock:
+            self.client.close()
+            self.is_connected = False
+            logger.info(f"功能板 {self.ip} 已断开连接")
 
     def set_relay_by_name(self, name: str, state: bool) -> bool:
         """根据继电器名称控制开关 (如 'KL15')"""
@@ -120,6 +143,8 @@ class AgingBoardController:
 
     def write_relay(self, address: int, state: bool) -> bool:
         """根据线圈地址写入单个继电器 (带自动重试与链路自愈)"""
+        if not self._can_retry_now():
+            return False
         for attempt in range(2): # 最多尝试 2 次
             try:
                 if not self.is_connected or not self.client.is_socket_open():
@@ -136,7 +161,8 @@ class AgingBoardController:
                 logger.warning(f"写入线圈 {address} 失败 (Modbus Error), 正在尝试重连重试...")
                 self.disconnect()
             except Exception as e:
-                logger.error(f"写入线圈 {address} 异常 (Attempt {attempt+1}): {e}")
+                self._mark_failure()
+                self._log_error_throttled(f"写入线圈 {address} 异常 (Attempt {attempt+1}): {e}")
                 self.disconnect() # 发生异常必须断开以触发下次重连
                 time.sleep(0.1)
         return False

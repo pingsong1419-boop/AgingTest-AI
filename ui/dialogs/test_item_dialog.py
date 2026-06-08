@@ -9,7 +9,7 @@ class TestItemDialog(QDialog):
     def __init__(self, parent=None, data=None):
         super().__init__(parent)
         self.setWindowTitle("编辑测试项 (判定条件)")
-        self.setFixedSize(420, 750)
+        self.setFixedSize(380, 600)
         self.setStyleSheet("""
             QDialog { background-color: #1F1F35; color: white; }
             QLabel { font-size: 13px; color: #B0B0B0; margin-top: 5px; }
@@ -20,7 +20,6 @@ class TestItemDialog(QDialog):
                 padding: 6px;
                 color: white;
                 font-size: 13px;
-                min-height: 25px;
             }
         """)
         
@@ -86,6 +85,10 @@ class TestItemDialog(QDialog):
         self.strategy_combo = QComboBox()
         self.strategy_combo.addItems(["任何NG停止", "关键NG停止", "NG继续"])
         layout.addWidget(self.strategy_combo)
+
+        self.cb_drop_on_ng = QCheckBox("测试项NG后剔除该通道（不再参与后续同步等待）")
+        self.cb_drop_on_ng.setToolTip("只对当前测试项生效；判NG后该通道立即结束为NG，其他通道不等它。")
+        layout.addWidget(self.cb_drop_on_ng)
         
         # 绑定类型切换逻辑
         self.type_combo.currentTextChanged.connect(self.on_type_changed)
@@ -102,6 +105,7 @@ class TestItemDialog(QDialog):
             self.cb_block_start.setChecked(data.get('is_block_start', False))
             self.cb_block_end.setChecked(data.get('is_block_end', False))
             self.target_combo.setCurrentText(data.get('target_board', '主机'))
+            self.cb_drop_on_ng.setChecked(data.get('drop_on_ng', False))
             self.strategy_combo.setCurrentText(data.get('strategy', '任何NG停止'))
             
             if data.get('has_sync_step', False):
@@ -164,6 +168,7 @@ class TestItemDialog(QDialog):
             'is_block_start': self.cb_block_start.isChecked(),
             'is_block_end': self.cb_block_end.isChecked(),
             'strategy': self.strategy_combo.currentText(),
+            'drop_on_ng': self.cb_drop_on_ng.isChecked(),
             'unit': unit_val if unit_val else "NULL",
             'target_board': self.target_combo.currentText()
         }

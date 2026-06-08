@@ -3,7 +3,7 @@ import threading
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                QLineEdit, QPushButton, QTextEdit, QGroupBox, 
                                QFormLayout, QGridLayout, QComboBox, QMessageBox, 
-                               QSpinBox, QDoubleSpinBox, QFrame, QScrollArea)
+                               QSpinBox, QDoubleSpinBox, QFrame)
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QFont, QColor
 
@@ -35,10 +35,6 @@ class ApiTab(QWidget):
         self.last_heartbeat_time = None
 
     def _init_ui(self):
-        self.setStyleSheet("""
-            QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox { min-height: 26px; }
-            QPushButton { min-height: 28px; }
-        """)
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(15)
@@ -165,12 +161,12 @@ class ApiTab(QWidget):
         buttons_grid.addWidget(btn_data, 2, 1)
 
         btn_reset = QPushButton("7. Reset (重置通道)")
-        btn_reset.setStyleSheet("QPushButton { background-color: #DC3545; color: white; min-height: 30px; }")
+        btn_reset.setStyleSheet("background-color: #DC3545; color: white;")
         btn_reset.clicked.connect(self.trigger_reset)
         buttons_grid.addWidget(btn_reset, 3, 0, 1, 2)
 
         btn_reset_all = QPushButton("8. Reset All (重置大屏所有通道)")
-        btn_reset_all.setStyleSheet("QPushButton { background-color: #C2185B; color: white; min-height: 30px; }")
+        btn_reset_all.setStyleSheet("background-color: #C2185B; color: white;")
         btn_reset_all.clicked.connect(self.trigger_reset_all)
         buttons_grid.addWidget(btn_reset_all, 4, 0, 1, 2)
 
@@ -179,18 +175,7 @@ class ApiTab(QWidget):
         left_layout.addWidget(debug_group)
 
         left_layout.addStretch()
-        
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
-        scroll_area.setStyleSheet("QScrollArea { background: transparent; } QWidget#scroll_widget { background: transparent; }")
-        
-        scroll_widget = QWidget()
-        scroll_widget.setObjectName("scroll_widget")
-        scroll_widget.setLayout(left_layout)
-        scroll_area.setWidget(scroll_widget)
-        
-        main_layout.addWidget(scroll_area, 2)
+        main_layout.addLayout(left_layout, 2)
 
         # ==========================================
         # 右半部分: 黑色科技感报文交互控制台 (3 权重)
@@ -203,6 +188,7 @@ class ApiTab(QWidget):
         
         self.txt_console = QTextEdit()
         self.txt_console.setReadOnly(True)
+        self.txt_console.document().setMaximumBlockCount(800)
         # 黑色主题 Consolas 字体
         self.txt_console.setStyleSheet("""
             background-color: #000000; 

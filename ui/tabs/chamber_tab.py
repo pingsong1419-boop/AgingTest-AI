@@ -1099,6 +1099,37 @@ class ChamberTab(QWidget):
 
         # 启动前必须先同步表格，否则刚编辑的工步类型/目标温度会被刷新覆盖。
         self._sync_table_to_data()
+
+        requires_multi_channel = any(
+            step.get("name", "") == "启动多通道测试"
+            for step in self.steps_data
+        )
+        linkage_enabled = bool(getattr(self, "chk_linkage", None) and self.chk_linkage.isChecked())
+        if requires_multi_channel and not linkage_enabled:
+            QMessageBox.warning(
+                self,
+                "警告",
+                "当前老化序列包含【启动多通道测试】，必须先勾选【联动多通道测试】。"
+            )
+            logger.warning("[老化引擎] 启动被拦截：序列包含多通道测试，但联动多通道测试未勾选。")
+            return
+
+        if requires_multi_channel:
+            has_selected_multi_channel = True
+            overview_tab = self.get_overview_tab()
+            if overview_tab and hasattr(overview_tab, "channel_widgets"):
+                has_selected_multi_channel = any(
+                    ch.isEnabled() and ch.chk_select.isChecked()
+                    for ch in overview_tab.channel_widgets
+                )
+            if not has_selected_multi_channel:
+                QMessageBox.warning(
+                    self,
+                    "警告",
+                    "当前老化序列包含【启动多通道测试】，请先勾选需要测试的通道。"
+                )
+                logger.warning("[老化引擎] 启动被拦截：序列包含多通道测试，但未勾选通道。")
+                return
             
         # 真正开启 PLC 系统启动指令（如果是升降温，暂不启动，交由 tick 中的压缩机保护处理）
         first_step_name = self.steps_data[0].get("name", "") if self.steps_data else ""
@@ -1114,6 +1145,7 @@ class ChamberTab(QWidget):
         self.active_step_idx = 0
         self.step_elapsed_sec = 0.0
         self.sequence_running = True
+        self._bms_load_follow_batch = False
         
         # 将所有工步设为等待，并把第1步设为运行中
         for i, step in enumerate(self.steps_data):
@@ -1440,6 +1472,42 @@ class ChamberTab(QWidget):
             self.stop_aging_sequence()
             QMessageBox.critical(self, "安全报警拦截", "PLC 底层自检监测到严重安全故障警报！老化测试工步已自动触发紧急安全中止！")
 
+    def apply_bms_load_for_channels(self, cids):
+        target_cids = sorted({int(cid) for cid in (cids or [])})
+        if not target_cids:
+            return
+
+        def _bms_task():
+            try:
+                if getattr(self, "mgr", None) and getattr(self.mgr, "dut_power", None):
+                    dut_power = self.mgr.dut_power
+                    if getattr(dut_power, "is_connected", False):
+                        dut_power.set_voltage(12.0)
+                        dut_power.set_current(200.0)
+                        dut_power.output_control(True)
+                    else:
+                        logger.info("[老化引擎] DUT供电电源未连接，跳过带载供电设置。")
+
+                if getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
+                    logger.info(f"[老化引擎] BMS带载继电器动作通道: {target_cids}")
+                    for cid in target_cids:
+                        board = self.mgr.boards.get(cid)
+                        if not board or not getattr(board, "relays", None):
+                            continue
+                        try:
+                            if not board.relays.is_connected:
+                                board.relays.connect()
+                            if board.relays.is_connected:
+                                board.relays.write_relay(0, True)
+                                board.relays.write_relay(10, True)
+                        except Exception as e:
+                            logger.warning(f"[老化引擎] CH-{cid} BMS带载继电器动作失败，已跳过：{e}")
+            except Exception as e:
+                logger.warning(f"[老化引擎] BMS带载工作执行异常，已跳过：{e}")
+
+        import threading
+        threading.Thread(target=_bms_task, daemon=True).start()
+
     def drive_aging_sequence_step(self):
         """老化测试工步计时执行逻辑机 (定时驱动器)"""
         # 如果已被挂起，直接停止倒计时和流转
@@ -1496,63 +1564,69 @@ class ChamberTab(QWidget):
                 self.refresh_steps_table()
 
             elif step_name == "BMS带载工作":
-                logger.info("[老化引擎] 进入 'BMS带载工作'，配置主机电源与老化板继电器")
-                
-                def _bms_task():
-                    if getattr(self, "mgr", None) and getattr(self.mgr, "dut_power", None):
-                        self.mgr.dut_power.set_voltage(12.0)
-                        self.mgr.dut_power.set_current(200.0)
-                        self.mgr.dut_power.output_control(True)
-                    
-                    # 按顺序控制勾选通道的老化功能板继电器的1，11继电器
-                    overview_tab = self.get_overview_tab()
-                    if overview_tab and getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
-                        selected_cids = [i + 1 for i, ch in enumerate(overview_tab.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
-                        for cid in selected_cids:
-                            if cid in self.mgr.boards:
-                                board = self.mgr.boards[cid]
-                                # 开启继电器连接并写入继电器 1 (索引为 0) 和继电器 11 (索引为 10)
-                                if not board.relays.is_connected:
-                                    board.relays.connect()
-                                board.relays.write_relay(0, True)
-                                board.relays.write_relay(10, True)
-                
-                import threading
-                threading.Thread(target=_bms_task, daemon=True).start()
+                logger.info("[老化引擎] 进入 'BMS带载工作'，后续按多通道批次配置主机电源与老化板继电器")
+                self._bms_load_follow_batch = True
+                overview_tab = self.get_overview_tab()
+                active_cids = []
+                if overview_tab and hasattr(overview_tab, "get_batch_completion_state"):
+                    batch_state = overview_tab.get_batch_completion_state()
+                    active_cids = sorted(batch_state.get("active_cids", set()))
+                if active_cids:
+                    self.apply_bms_load_for_channels(active_cids)
+                else:
+                    logger.info("[老化引擎] 尚无活动批次，BMS带载将在每批16个通道启动前执行。")
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0
                 self.steps_data[self.active_step_idx]["hours"] = 0.0
                 
             elif step_name == "老化完成取料":
-                logger.info("[老化引擎] 进入 '老化完成取料'，关闭所有电源、高压源、模拟电池及老化板继电器")
+                logger.info("[老化引擎] 进入 '老化完成取料'，关闭已连接电源、高压源、模拟电池及老化板继电器")
                 
                 def _finish_task():
-                    if getattr(self, "mgr", None):
-                        # 1. 断开高压源 output
-                        if getattr(self.mgr, "hv_source", None):
-                            self.mgr.hv_source.output_control(False)
-                            
-                        # 2. 断开模拟电池输出 (广播关闭所有模拟器通道)
-                        self.mgr.broadcast_output(False)
-                        
-                        # 3. 断开供电电源输出
-                        if getattr(self.mgr, "dut_power", None):
-                            self.mgr.dut_power.output_control(False)
-                        if getattr(self.mgr, "afe_power_1", None):
-                            self.mgr.afe_power_1.output_control(False)
-                        if getattr(self.mgr, "afe_pwr_2", None):
-                            self.mgr.afe_pwr_2.output_control(False)
-                        if getattr(self.mgr, "afe_pwr_3", None):
-                            self.mgr.afe_pwr_3.output_control(False)
-                            
-                        # 4. 关闭所有老化板继电器
-                        if hasattr(self.mgr, "boards"):
-                            for cid, board in self.mgr.boards.items():
-                                if not board.relays.is_connected:
-                                    board.relays.connect()
-                                if board.relays.is_connected:
-                                    board.relays.write_all_off()
+                    mgr = getattr(self, "mgr", None)
+                    if not mgr:
+                        return
+
+                    def safe_output_off(label, device):
+                        if not device:
+                            logger.info(f"[老化引擎] {label} 未配置，跳过关闭。")
+                            return
+                        if not getattr(device, "is_connected", False):
+                            logger.info(f"[老化引擎] {label} 未连接，跳过关闭。")
+                            return
+                        try:
+                            device.output_control(False)
+                        except Exception as e:
+                            logger.warning(f"[老化引擎] {label} 关闭失败，已跳过：{e}")
+
+                    safe_output_off("高压源", getattr(mgr, "hv_source", None))
+
+                    try:
+                        connected_sims = [sim for sim in getattr(mgr, "simulators", []) if getattr(sim, "is_connected", False)]
+                        if connected_sims:
+                            mgr.broadcast_output(False)
+                        else:
+                            logger.info("[老化引擎] 电池模拟器未连接，跳过广播关闭。")
+                    except Exception as e:
+                        logger.warning(f"[老化引擎] 电池模拟器广播关闭失败，已跳过：{e}")
+
+                    safe_output_off("DUT供电电源", getattr(mgr, "dut_power", None))
+                    safe_output_off("1# AFE供电电源", getattr(mgr, "afe_power_1", None))
+                    safe_output_off("2# AFE供电电源", getattr(mgr, "afe_pwr_2", None))
+                    safe_output_off("3# AFE供电电源", getattr(mgr, "afe_pwr_3", None))
+
+                    for cid, board in getattr(mgr, "boards", {}).items():
+                        relays = getattr(board, "relays", None)
+                        if not relays:
+                            continue
+                        if not getattr(relays, "is_connected", False):
+                            logger.info(f"[老化引擎] CH-{cid} 老化板继电器未连接，跳过关闭。")
+                            continue
+                        try:
+                            relays.write_all_off()
+                        except Exception as e:
+                            logger.warning(f"[老化引擎] CH-{cid} 老化板继电器关闭失败，已跳过：{e}")
                 
                 import threading
                 threading.Thread(target=_finish_task, daemon=True).start()
@@ -1756,15 +1830,29 @@ class ChamberTab(QWidget):
                     has_selected_channels = True
                     with overview_tab.engine._lock:
                         workers_keys = list(overview_tab.engine.workers.keys())
-                        all_checked_finished = all(cid not in overview_tab.engine.workers for cid in selected_cids)
+                        batch_state = overview_tab.get_batch_completion_state() if hasattr(overview_tab, "get_batch_completion_state") else {}
+                        batch_all = set(batch_state.get("all_cids", set()))
+                        finished_cids = set(batch_state.get("finished_cids", set()))
+                        active_cids = set(batch_state.get("active_cids", set()))
+                        pending_batches = list(batch_state.get("pending_batches", []))
+                        advancing = bool(batch_state.get("advancing", False))
+
+                        expected_cids = batch_all if batch_all else set(selected_cids)
+                        relevant_workers = set(workers_keys) & expected_cids
+                        all_checked_finished = (
+                            bool(expected_cids)
+                            and finished_cids >= expected_cids
+                            and not active_cids
+                            and not pending_batches
+                            and not advancing
+                            and not relevant_workers
+                        )
                     if int(self.step_elapsed_sec * 3600) % 5 == 0:
-                        print(f"[Aging Debug] Step '{step_name}': test_hours={test_hours}, selected_cids={selected_cids}, workers={workers_keys}, all_checked_finished={all_checked_finished}")
+                        print(f"[Aging Debug] Step '{step_name}': test_hours={test_hours}, selected_cids={selected_cids}, expected_cids={sorted(expected_cids)}, workers={workers_keys}, all_checked_finished={all_checked_finished}")
 
         # 终止条件判断逻辑
         if end_cond == "测试结束终止":
             time_met = True
-            if test_hours > 0:
-                time_met = (self.step_elapsed_sec >= test_hours)
             
             test_met = True
             if has_selected_channels:

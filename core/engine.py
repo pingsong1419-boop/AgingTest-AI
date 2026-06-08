@@ -1,9 +1,13 @@
 from enum import Enum
+import os
 import re
 import threading
 from typing import List, Dict, Optional, Any
 from PySide6.QtCore import QObject, Signal, QThread, QTimer, Slot
 from core.api_client import AgingApiClient
+from core.debug_trace import trace
+
+BIG_SCREEN_REPORTING_ENABLED = False
 
 class NGStrategy(Enum):
     STOP_ON_ANY = "任何NG停止"
@@ -56,6 +60,7 @@ class TestStep:
         self.skip_runtime = False
         self.exec_mode = "并行执行"
         self.target_board = "主机"
+        self.drop_on_ng = False
 
     def add_sub_step(self, sub_step: SubStep):
         self.sub_steps.append(sub_step)
@@ -68,6 +73,7 @@ class ChannelWorker(QObject):
     test_finished = Signal(int, bool)
     log_message = Signal(int, str)
     reached_barrier = Signal(int, object)
+    MAX_LOG_HISTORY = 500
 
     def __init__(self, channel_id: int, steps: List[TestStep], device_manager=None, db_manager=None, engine=None):
         super().__init__()
@@ -90,7 +96,6 @@ class ChannelWorker(QObject):
         self.is_suspended = False
         self.master_barcode = ""
         self.slave_barcodes = []
-        self.last_reported_progress = None
         
         # 绑定信号以自动在内存中存留全部状态以供监控窗口调阅
         self.log_history = []
@@ -101,8 +106,11 @@ class ChannelWorker(QObject):
         self.step_start_times = {}
         def _on_log_msg(_, msg):
             self.log_history.append(msg)
-            import datetime
-            print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [CH-{self.channel_id:02d}] {msg}")
+            if len(self.log_history) > self.MAX_LOG_HISTORY:
+                del self.log_history[:len(self.log_history) - self.MAX_LOG_HISTORY]
+            if os.environ.get("AGING_DEBUG_CHANNEL_LOG") == "1":
+                import datetime
+                print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [CH-{self.channel_id:02d}] {msg}")
         self.log_message.connect(_on_log_msg)
         self.step_finished.connect(lambda _, name, is_pass, val: (self.step_statuses.__setitem__(name, is_pass), self.step_measured_values.__setitem__(name, val)))
         self.sub_step_finished.connect(lambda _, step_idx, sub_idx, status, result: self.sub_step_statuses.__setitem__((step_idx, sub_idx), (status, result)))
@@ -112,6 +120,7 @@ class ChannelWorker(QObject):
         self.test_id = test_id
 
     def start(self):
+        trace("CHANNEL_START", self.channel_id, test_id=self.test_id, steps=len(self.steps), master=self.master_barcode)
         self.is_running = True
         self.is_waiting_for_sync = False
         self.current_step_index = 0
@@ -135,31 +144,26 @@ class ChannelWorker(QObject):
             
         self.run_next_step()
 
-    def stop(self):
+    def stop(self, final_status="STOPPED"):
+        trace("CHANNEL_STOP_REQUEST", self.channel_id, test_id=self.test_id, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index, final_status=final_status)
         self.is_running = False
         self.is_waiting_for_sync = False
         if self.engine:
             self.engine.release_resource("ca550", self.channel_id)
+            self.engine.release_resource("hv_source", self.channel_id)
             self.engine.release_resource("seq_step_lock", self.channel_id)
             self.engine.release_resource("seq_block_lock", self.channel_id)
         self.log_message.emit(self.channel_id, "[!] 收到停止指令")
         
         # 立即关闭相关硬件输出
-        try:
-            if self.device_manager:
-                sim, ch = self.device_manager._get_sim_and_ch(self.channel_id)
-                if sim:
-                    sim.output_control(ch, False)
-                board = self.device_manager.boards.get(self.channel_id)
-                if board:
-                    board.relays.all_off()
-        except Exception:
-            pass
-
         if self.db_manager and self.test_id != -1:
             tid = self.test_id
             self.test_id = -1
-            self.db_manager.finish_test(tid, "STOPPED")
+            try:
+                self.db_manager.finish_test(tid, final_status)
+            except Exception as e:
+                trace("DB_FINISH_TEST_ERROR", self.channel_id, test_id=tid, error=str(e))
+                self.log_message.emit(self.channel_id, f"[WARN] 数据库停止写入超时/失败: {e}")
 
         # 触发大屏数据上报与通道重置
         self._upload_final_data_and_reset(False)
@@ -211,6 +215,7 @@ class ChannelWorker(QObject):
 
     def run_next_step(self):
         if not self.is_running or self.is_waiting_for_sync:
+            trace("RUN_NEXT_STEP_SKIPPED", self.channel_id, running=self.is_running, waiting=self.is_waiting_for_sync, step_idx=self.current_step_index)
             return
 
         if self.current_step_index >= len(self.steps):
@@ -221,13 +226,21 @@ class ChannelWorker(QObject):
                 if not is_pass:
                     has_ng = True
                     break
+            trace("CHANNEL_FINISH_BEGIN", self.channel_id, test_id=self.test_id, has_ng=has_ng, step_count=len(self.steps))
             
             if self.db_manager and self.test_id != -1:
                 tid = self.test_id
                 self.test_id = -1
                 final_status = "FAIL" if has_ng else "PASS"
-                self.db_manager.finish_test(tid, final_status if self.is_running else "STOPPED")
+                trace("DB_FINISH_TEST_BEGIN", self.channel_id, test_id=tid, final_status=final_status if self.is_running else "STOPPED")
+                try:
+                    self.db_manager.finish_test(tid, final_status if self.is_running else "STOPPED")
+                    trace("DB_FINISH_TEST_END", self.channel_id, test_id=tid)
+                except Exception as e:
+                    trace("DB_FINISH_TEST_ERROR", self.channel_id, test_id=tid, error=str(e))
+                    self.log_message.emit(self.channel_id, f"[WARN] 数据库完成写入超时/失败，通道状态继续完成: {e}")
                 
+            trace("CHANNEL_FINISH_EMIT", self.channel_id, success=not has_ng)
             self.test_finished.emit(self.channel_id, not has_ng)
             self._upload_final_data_and_reset(not has_ng)
             return
@@ -239,6 +252,7 @@ class ChannelWorker(QObject):
                 break
             
             # 瞬间在 0ms 内完成当前项及其所有子步骤的状态登记与跳过广播！
+            trace("STEP_SKIP", self.channel_id, step_idx=self.current_step_index, step=step.name)
             self.step_started.emit(self.channel_id, step.name)
             self.step_statuses[step.name] = True
             self.step_finished.emit(self.channel_id, step.name, True, "跳过")
@@ -255,6 +269,7 @@ class ChannelWorker(QObject):
             return
             
         step = self.steps[self.current_step_index]
+        trace("STEP_START", self.channel_id, step_idx=self.current_step_index, step=step.name, sub_steps=len(step.sub_steps))
         self.step_started.emit(self.channel_id, step.name)
         import time
         self.step_start_times[step.name] = time.time()
@@ -263,11 +278,15 @@ class ChannelWorker(QObject):
         self.run_next_sub_step()
 
     def run_next_sub_step(self):
-        if not self.is_running or self.is_waiting_for_sync: return
+        if not self.is_running or self.is_waiting_for_sync:
+            trace("RUN_NEXT_SUBSTEP_SKIPPED", self.channel_id, running=self.is_running, waiting=self.is_waiting_for_sync, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index)
+            return
         step = self.steps[self.current_step_index]
         if self.current_sub_step_index >= len(step.sub_steps):
+            trace("STEP_SUBSTEPS_DONE", self.channel_id, step_idx=self.current_step_index, step=step.name)
             if self.engine:
                 self.engine.release_resource("ca550", self.channel_id)
+                self.engine.release_resource("hv_source", self.channel_id)
             self.on_step_complete()
             return
         sub_step = step.sub_steps[self.current_sub_step_index]
@@ -377,12 +396,33 @@ class ChannelWorker(QObject):
         params = sub_step.params
         retry_tag = f" [重试 {self._retry_count}]" if self._retry_count > 0 else ""
         self.log_message.emit(self.channel_id, f"-> {sub_step.type.value}{retry_tag}: {params.get('device', '')} {params.get('action', '')}")
+        trace(
+            "SUBSTEP_LOGIC_BEGIN",
+            self.channel_id,
+            step_idx=self.current_step_index,
+            sub_idx=self.current_sub_step_index,
+            type=sub_step.type.value,
+            device=params.get("device", ""),
+            action=params.get("action", ""),
+            params=params.get("params", ""),
+            retry=self._retry_count,
+            ignore_sync=ignore_sync,
+        )
         success, result_value = True, None
         try:
             if not mgr: raise ValueError("设备管理器未初始化")
             def hw_logger(msg):
                 self.last_hw_log = msg
-                self.log_message.emit(self.channel_id, f"      {msg}")
+                text = str(msg)
+                noisy_prefixes = (
+                    "[DEBUG]", "CAN TX", "CAN RX", "CAN REQ", "Waiting for EOL",
+                    "[EEPROM CONFIG]", "[EEPROM STEP", "[EEPROM VERIFY]", "[EEPROM CLEANUP]"
+                )
+                is_noisy = text.startswith(noisy_prefixes)
+                if os.environ.get("AGING_TRACE_HW_LOG") == "1" or not is_noisy:
+                    trace("HW_LOG", self.channel_id, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index, message=text)
+                if os.environ.get("AGING_DEBUG_HW_LOG") == "1" or not is_noisy:
+                    self.log_message.emit(self.channel_id, f"      {text}")
 
             if sub_step.type == SubStepType.BARRIER:
                 self.is_waiting_for_sync = True
@@ -418,15 +458,22 @@ class ChannelWorker(QObject):
                         self.log_message.emit(self.channel_id, "[#] CA550 资源忙，进入排队等待...")
                         return True, None
                 
+                if any(x in device for x in ["hv_source", "hv source", "ngi", "高压源"]) and self.engine:
+                    if not self.engine.request_resource("hv_source", self.channel_id):
+                        self.is_waiting_for_sync = True
+                        self.log_message.emit(self.channel_id, "[#] 高压源资源忙，进入排队等待...")
+                        return True, None
+
                 target_ch = None
                 if "CH:" in p_str:
                     ch_match = re.search(r"CH:(\d+)", p_str)
                     if ch_match: target_ch = int(ch_match.group(1))
 
-                if "simulator" in device or "电池模拟器" in device or "ngi83624a" in device:
+                if "simulator" in device or "电池模拟器" in device:
                     target_sim = None
-                    if "ngi83624a-1" in device or "1#" in device: target_sim = mgr.simulators[0] if len(mgr.simulators) > 0 else None
-                    elif "ngi83624a-2" in device or "2#" in device: target_sim = mgr.simulators[1] if len(mgr.simulators) > 1 else None
+                    if "1#" in device: target_sim = mgr.simulators[0]
+                    elif "2#" in device: target_sim = mgr.simulators[1]
+                    elif "3#" in device: target_sim = mgr.simulators[2]
                     
                     if "快捷批量配置" in action:
                         volt = self._parse_numeric(p_str.split("V")[0])
@@ -459,9 +506,9 @@ class ChannelWorker(QObject):
                             else: success = False
                         return success, None
 
-                    ch_to_use = target_ch if target_ch is not None else 1
+                    ch_to_use = target_ch if target_ch is not None else self.channel_id
                     if target_sim:
-                        physical_ch = ch_to_use
+                        physical_ch = (ch_to_use - 1) % 18 + 1
                         if "V" in p_str: 
                             v_val = self._parse_numeric(p_str.split("V")[0])
                             success = success and target_sim.set_voltage(physical_ch, v_val, logger=hw_logger)
@@ -469,8 +516,13 @@ class ChannelWorker(QObject):
                         if "开启输出" in p_str: success = success and target_sim.output_control(physical_ch, True, logger=hw_logger)
                         elif "关闭输出" in p_str: success = success and target_sim.output_control(physical_ch, False, logger=hw_logger)
                     else:
-                        success = False
-                        hw_logger(f"[!] 找不到目标电池模拟器: {device}")
+                        if "V" in p_str: 
+                            v_val = self._parse_numeric(p_str.split("V")[0])
+                            success = success and mgr.set_voltage(ch_to_use, v_val, logger=hw_logger)
+                            if success:
+                                sim, ch = mgr._get_sim_and_ch(ch_to_use)
+                                success = verify_and_wait(sim, v_val, ch=ch, threshold=0.002)
+                        if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
 
                 elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device or "hv source" in device:
@@ -581,9 +633,10 @@ class ChannelWorker(QObject):
                 is_volt = "电压" in p_str or "volt" in p_str or "V" in p_str.upper()
                 
                 # 确定友好名称
-                if "1#" in device or "ngi83624a-1" in device: f_name = "NGI83624A-1"
-                elif "2#" in device or "ngi83624a-2" in device: f_name = "NGI83624A-2"
-                elif "sim" in device or "ngi83624a" in device: f_name = "电池模拟器"
+                if "1#" in device and "sim" in device: f_name = "1#电池模拟器"
+                elif "2#" in device and "sim" in device: f_name = "2#电池模拟器"
+                elif "3#" in device and "sim" in device: f_name = "3#电池模拟器"
+                elif "sim" in device: f_name = "电池模拟器"
                 elif "2#" in device: f_name = "2# AFE电源"
                 elif "3#" in device: f_name = "3# AFE电源"
                 elif "afe" in device: f_name = "AFE电源"
@@ -593,16 +646,15 @@ class ChannelWorker(QObject):
                 elif "ca550" in device: f_name = "CA550校准仪"
                 else: f_name = device.upper()
 
-                if "simulator" in device or "电池模拟器" in device or "ngi83624a" in device:
-                    ch = target_ch if target_ch is not None else 1
+                if "simulator" in device or "电池模拟器" in device:
+                    ch = target_ch if target_ch is not None else self.channel_id
                     target_sim = None
-                    if "ngi83624a-1" in device or "1#" in device: target_sim = mgr.simulators[0] if len(mgr.simulators) > 0 else None
-                    elif "ngi83624a-2" in device or "2#" in device: target_sim = mgr.simulators[1] if len(mgr.simulators) > 1 else None
+                    if "1#" in device: target_sim = mgr.simulators[0]
+                    elif "2#" in device: target_sim = mgr.simulators[1]
+                    elif "3#" in device: target_sim = mgr.simulators[2]
                     if target_sim:
-                        physical_ch = ch
+                        physical_ch = (ch - 1) % 18 + 1
                         if is_volt:
-                            # 根据协议，如果想读总电压，可以单独循环（如果通道0不返回逗号分隔的好解析的数据）
-                            # 暂定直接读通道0
                             total_v = 0.0
                             for i in range(1, target_sim.max_channels + 1):
                                 v = target_sim.measure_voltage(i, logger=hw_logger)
@@ -610,11 +662,9 @@ class ChannelWorker(QObject):
                             hw_logger(f"[1-{target_sim.max_channels}通道总和] 测得电压: {total_v:.2f}V")
                             result_value = total_v
                         else:
-                            result_value = target_sim.measure_current(physical_ch, logger=hw_logger)
+                            result_value = target_sim.measure_current(physical_ch)
                     else:
-                        success = False
-                        result_value = -1.0
-                        hw_logger(f"[!] 找不到目标电池模拟器: {device}")
+                        result_value = mgr.measure_voltage(ch) if is_volt else mgr.measure_current(ch)
                     success = result_value >= 0
                 elif any(x in device for x in ["afe", "main", "hv_source", "hv source", "control power", "控制板"]):
                     if "2#" in device: dev = mgr.afe_pwr_2
@@ -736,6 +786,7 @@ class ChannelWorker(QObject):
                 return True, "OK"
 
         except Exception as e:
+            trace("SUBSTEP_EXCEPTION", self.channel_id, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index, error=str(e))
             self.log_message.emit(self.channel_id, f"[!] 执行异常: {str(e)}"); success = False
 
         # 无条件收集每一个子工步的执行结果与数据，由最终提取层进行智能精细化提取
@@ -749,11 +800,14 @@ class ChannelWorker(QObject):
             
         self.current_step_results.append((val, bool(sub_step.params.get("is_judgment", False))))
 
+        trace("SUBSTEP_LOGIC_END", self.channel_id, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index, success=success, result=result_value)
         self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "PASS" if success else "FAIL", result_value)
         return success, result_value
 
     def execute_sub_step(self, sub_step: SubStep, ignore_sync: bool = False):
-        if not self.is_running: return
+        if not self.is_running:
+            trace("SUBSTEP_EXEC_SKIPPED", self.channel_id, running=self.is_running, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index)
+            return
         
         # --- 联动挂起暂停检测 ---
         if getattr(self, "is_suspended", False):
@@ -764,10 +818,24 @@ class ChannelWorker(QObject):
         params = sub_step.params
         is_sync = bool(params.get("sync_exec", False))
         is_seq = bool(params.get("seq_exec", False))
+        trace(
+            "SUBSTEP_START",
+            self.channel_id,
+            step_idx=self.current_step_index,
+            sub_idx=self.current_sub_step_index,
+            type=sub_step.type.value,
+            device=params.get("device", ""),
+            action=params.get("action", ""),
+            params=params.get("params", ""),
+            sync=is_sync,
+            seq=is_seq,
+            ignore_sync=ignore_sync,
+        )
         if sub_step.type == SubStepType.WAIT:
             is_sync = False
         if (is_sync or is_seq) and not ignore_sync:
             self.is_waiting_for_sync = True
+            trace("SUBSTEP_WAIT_SYNC", self.channel_id, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index, sync=is_sync, seq=is_seq)
             self.log_message.emit(self.channel_id, f"      [{'同步' if is_sync else '顺序'}] 等待所有活跃通道集齐...")
             # 提前发射“同步等待中”的状态广播，防止前台显示待命/卡死
             self.sub_step_finished.emit(self.channel_id, self.current_step_index, self.current_sub_step_index, "同步等待", None)
@@ -775,6 +843,7 @@ class ChannelWorker(QObject):
             return
 
         success, result_value = self._execute_sub_step_logic(sub_step, ignore_sync)
+        trace("SUBSTEP_EXEC_RESULT", self.channel_id, step_idx=self.current_step_index, sub_idx=self.current_sub_step_index, success=success, result=result_value, waiting=self.is_waiting_for_sync)
         
         # 核心修复：如果是异步工步（延时）或正在等待同步，不在此处触发推进
         if sub_step.type == SubStepType.WAIT or self.is_waiting_for_sync:
@@ -784,6 +853,10 @@ class ChannelWorker(QObject):
             self._retry_count = 0
             self.on_sub_step_complete()
         else:
+            if bool(sub_step.params.get("drop_on_fail", False)) and self.engine:
+                reason = sub_step.params.get("name") or sub_step.params.get("action") or sub_step.type.value
+                self.engine.fail_channel_test(self.channel_id, f"???????????: {reason}")
+                return
             if sub_step.fail_strategy == SubStepFailStrategy.RETRY_3 and self._retry_count < 3:
                 self._retry_count += 1
                 self.log_message.emit(self.channel_id, f"[!] 子工步执行失败，第 {self._retry_count} 次重试...")
@@ -808,6 +881,7 @@ class ChannelWorker(QObject):
         if self.engine:
             try: 
                 self.engine.release_resource("ca550", self.channel_id)
+                self.engine.release_resource("hv_source", self.channel_id)
                 self.engine.release_resource("seq_step_lock", self.channel_id)
             except: pass
             
@@ -949,19 +1023,6 @@ class ChannelWorker(QObject):
                     unit_str = getattr(step, "unit", None)
                     if unit_str == "NULL": 
                         unit_str = None
-                    
-                    # 缓存最后的进度数据以便重连时重新发送
-                    self.last_reported_progress = {
-                        "barcode": barcode,
-                        "name": step.name,
-                        "test_value": test_value_str,
-                        "result": result_str,
-                        "unit": unit_str,
-                        "upper_limit": upper_limit_str,
-                        "lower_limit": lower_limit_str,
-                        "index": str(self.current_step_index + 1)
-                    }
-                    
                     self.engine.api_client.report_progress(
                         channel_id=self.channel_id,
                         barcode=barcode,
@@ -975,8 +1036,10 @@ class ChannelWorker(QObject):
                     )
                 threading.Thread(target=run_progress, daemon=True).start()
             
+        trace("STEP_DONE", self.channel_id, step_idx=self.current_step_index, step=step.name, pass_status=is_pass, value=val_to_log, duration=duration)
         self.step_finished.emit(self.channel_id, step.name, is_pass, val_to_log)
-        if not is_pass and step.ng_strategy == NGStrategy.STOP_ON_ANY:
+        if not is_pass and (step.ng_strategy == NGStrategy.STOP_ON_ANY or getattr(step, "drop_on_ng", False)):
+            trace("STEP_NG_STOP", self.channel_id, step_idx=self.current_step_index, step=step.name, value=val_to_log)
             self.log_message.emit(self.channel_id, f"[!] 触发NG停止策略: {step.name}")
             if self.db_manager and self.test_id != -1:
                 tid = self.test_id
@@ -1105,27 +1168,27 @@ class TestEngine(QObject):
     def __init__(self, device_manager=None, db_manager=None):
         super().__init__()
         self.device_manager, self.db_manager = device_manager, db_manager
-        self.workers, self.threads, self.zombie_threads = {}, {}, []
+        self.workers, self.threads, self.zombie_threads, self.zombie_workers = {}, {}, [], []
         self._lock = threading.RLock()
         self.sync_barrier_channels = set()
         self.sync_groups = {}
-        self.resource_locks = {"ca550": None, "seq_step_lock": None, "seq_block_lock": None}
-        self.resource_queues = {"ca550": [], "seq_step_lock": [], "seq_block_lock": []}
+        self.resource_locks = {"ca550": None, "hv_source": None, "seq_step_lock": None, "seq_block_lock": None}
+        self.resource_queues = {"ca550": [], "hv_source": [], "seq_step_lock": [], "seq_block_lock": []}
         self.batch_starting = False
         self._current_barrier_sub_step = {}
+        self._barrier_watchdog_armed = set()
+        self.sync_barrier_wait_timeout_ms = int(os.environ.get("AGING_SYNC_BARRIER_WAIT_TIMEOUT_MS", "60000"))
 
-        # 初始化 API 客户端
+        # API 客户端与后台心跳默认保持关闭，按配置或环境变量启用。
+        self.heartbeat_running = False
+        self.heartbeat_thread = None
         self.api_client = None
         self.update_api_client()
-        self.big_screen_online = True # 大屏在线状态标志
-
-        # 启动后台心跳守护线程
-        self.heartbeat_running = True
-        self.heartbeat_thread = threading.Thread(target=self._heartbeat_worker, daemon=True)
-        self.heartbeat_thread.start()
 
     def log_api_call(self, msg: str):
         """API 日志输出并触发 Qt 信号"""
+        if os.environ.get("AGING_DEBUG_API_LOG") != "1":
+            return
         import datetime
         print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [TestEngine-API] {msg}")
         self.api_log_message.emit(msg)
@@ -1134,12 +1197,33 @@ class TestEngine(QObject):
         """动态加载配置并更新 API 客户端"""
         with self._lock:
             cfg = self.db_manager.load_sys_config() if self.db_manager else {}
+            if not self._is_big_screen_reporting_enabled(cfg):
+                self.api_client = None
+                self._stop_heartbeat_locked()
+                return
             host = cfg.get("api_host", "127.0.0.1")
             try:
                 port = int(cfg.get("api_port", 8008))
             except:
                 port = 8008
             self.api_client = AgingApiClient(host, port, logger=self.log_api_call)
+            self._start_heartbeat_locked()
+
+    def _is_big_screen_reporting_enabled(self, cfg: dict) -> bool:
+        value = os.environ.get("AGING_BIG_SCREEN_REPORTING", cfg.get("big_screen_reporting_enabled", BIG_SCREEN_REPORTING_ENABLED))
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in ("1", "true", "yes", "on", "enabled")
+
+    def _start_heartbeat_locked(self):
+        if self.heartbeat_running:
+            return
+        self.heartbeat_running = True
+        self.heartbeat_thread = threading.Thread(target=self._heartbeat_worker, daemon=True)
+        self.heartbeat_thread.start()
+
+    def _stop_heartbeat_locked(self):
+        self.heartbeat_running = False
 
     def _heartbeat_worker(self):
         """后台心跳工作线程，每 5 秒上报一次老化箱实时温度"""
@@ -1151,21 +1235,10 @@ class TestEngine(QObject):
                 if self.device_manager and getattr(self.device_manager, 'chamber', None):
                     temp = self.device_manager.chamber.data_store.get("VD720", 25.0)
                 
-                # 发送心跳并检测连接状态
-                success = False
+                # 发送心跳
                 if self.api_client:
-                    success = self.api_client.heartbeat(temp)
-                
-                if success:
-                    # 如果之前是离线，现在重连成功，则重新上报所有当前运行通道的状态及条码信息
-                    if not getattr(self, "big_screen_online", True):
-                        self.log_api_call("[API Restored] 检测到大屏连接已恢复，开始重新发送当前测试通道的条码信息及测试状态...")
-                        self.resend_active_channels_status()
-                    self.big_screen_online = True
-                else:
-                    self.big_screen_online = False
+                    self.api_client.heartbeat(temp)
             except Exception as e:
-                self.big_screen_online = False
                 self.log_api_call(f"[API ERR] 心跳后台上报出现异常: {str(e)}")
             
             # 定时 5 秒
@@ -1173,107 +1246,6 @@ class TestEngine(QObject):
                 if not self.heartbeat_running:
                     break
                 time.sleep(0.1)
-
-    def resend_active_channels_status(self):
-        """当检测到大屏重新连接后，遍历所有勾选及运行中的通道，重新上报其条码信息、启动状态以及最后的测试进度"""
-        def run_resend():
-            # 获取所有勾选的通道（无论是否在 workers 中）
-            selected_infos = []
-            if getattr(self, "get_selected_channel_barcodes_callback", None):
-                try:
-                    selected_infos = self.get_selected_channel_barcodes_callback()
-                except Exception as e:
-                    self.log_api_call(f"[API Restored ERR] 获取勾选通道信息失败: {e}")
-
-            with self._lock:
-                active_workers = {w.channel_id: w for w in self.workers.values()}
-
-            if not selected_infos and not active_workers:
-                return
-
-            self.log_api_call(f"[API Restored] 正在后台重新向大屏发送通道条码和状态...")
-            
-            # 记录已处理的 cid 集合
-            processed_cids = set()
-
-            for info in selected_infos:
-                cid = info["cid"]
-                master = info["master"]
-                slaves = info["slaves"]
-                s1 = slaves[0] if len(slaves) > 0 else None
-                s2 = slaves[1] if len(slaves) > 1 else None
-                s3 = slaves[2] if len(slaves) > 2 else None
-                
-                # 重新发送条码绑定 (prepare)
-                self.log_api_call(f"[API Restored] 重新发送勾选通道 {cid} 条码绑定: {master}")
-                self.api_client.prepare(cid, master, s1, s2, s3)
-                processed_cids.add(cid)
-                
-                # 如果这个通道也在 workers 并且在运行中，发送状态
-                worker = active_workers.get(cid)
-                if worker and getattr(worker, "is_running", False):
-                    # 发送 start-test
-                    self.log_api_call(f"[API Restored] 重新发送运行中通道 {cid} 开始测试状态")
-                    self.api_client.start_test(cid)
-                    
-                    # 重新发送进度
-                    last_progress = getattr(worker, "last_reported_progress", None)
-                    if last_progress:
-                        self.log_api_call(f"[API Restored] 重新发送通道 {cid} 进度: {last_progress.get('name')}")
-                        self.api_client.report_progress(
-                            channel_id=cid,
-                            barcode=last_progress.get("barcode"),
-                            name=last_progress.get("name"),
-                            test_value=last_progress.get("test_value"),
-                            result=last_progress.get("result"),
-                            unit=last_progress.get("unit"),
-                            upper_limit=last_progress.get("upper_limit"),
-                            lower_limit=last_progress.get("lower_limit"),
-                            index=last_progress.get("index")
-                        )
-
-            # 补偿：如果 worker 里有没被勾选的通道
-            for cid, worker in active_workers.items():
-                if cid not in processed_cids and getattr(worker, "is_running", False):
-                    slaves = getattr(worker, "slave_barcodes", []) or []
-                    s1 = slaves[0] if len(slaves) > 0 else None
-                    s2 = slaves[1] if len(slaves) > 1 else None
-                    s3 = slaves[2] if len(slaves) > 2 else None
-                    master = getattr(worker, "master_barcode", "")
-                    self.log_api_call(f"[API Restored] 重新发送运行中通道 {cid} 条码绑定: {master}")
-                    self.api_client.prepare(cid, master, s1, s2, s3)
-                    self.log_api_call(f"[API Restored] 重新发送运行中通道 {cid} 开始测试状态")
-                    self.api_client.start_test(cid)
-                    last_progress = getattr(worker, "last_reported_progress", None)
-                    if last_progress:
-                        self.log_api_call(f"[API Restored] 重新发送通道 {cid} 进度: {last_progress.get('name')}")
-                        self.api_client.report_progress(
-                            channel_id=cid,
-                            barcode=last_progress.get("barcode"),
-                            name=last_progress.get("name"),
-                            test_value=last_progress.get("test_value"),
-                            result=last_progress.get("result"),
-                            unit=last_progress.get("unit"),
-                            upper_limit=last_progress.get("upper_limit"),
-                            lower_limit=last_progress.get("lower_limit"),
-                            index=last_progress.get("index")
-                        )
-        
-        threading.Thread(target=run_resend, daemon=True).start()
-
-    def report_system_step_info(self, step_index: int, step_name: str):
-        """异步将当前工步信息上报给大屏全局系统"""
-        if not getattr(self, "api_client", None):
-            return
-            
-        def run_report():
-            try:
-                self.api_client.report_system_step(step_index, step_name)
-            except Exception:
-                pass
-        
-        threading.Thread(target=run_report, daemon=True).start()
-
 
     def begin_batch_start(self):
         with self._lock: self.batch_starting = True
@@ -1323,8 +1295,42 @@ class TestEngine(QObject):
             if group_key not in self._current_barrier_sub_step:
                 self._current_barrier_sub_step[group_key] = sub_step
             self.sync_barrier_channels.add(cid)
+            if group_key not in self._barrier_watchdog_armed:
+                self._barrier_watchdog_armed.add(group_key)
+                timeout_ms = max(5000, int(getattr(self, "sync_barrier_wait_timeout_ms", 60000)))
+                QTimer.singleShot(timeout_ms, self, lambda g=group_key: self._check_barrier_wait_timeout(g))
             self.channel_sync_status_changed.emit(cid, True)
             self._check_and_release_barrier()
+
+
+    def _check_barrier_wait_timeout(self, group_key):
+        """Drop only channels whose recipe explicitly enables dropout for this wait."""
+        missing = []
+        sub_name = "unknown"
+        with self._lock:
+            if group_key not in self._barrier_watchdog_armed:
+                return
+            waiting_set = {cid for cid in self.sync_barrier_channels if frozenset(self.sync_groups.get(cid) or {cid}) == group_key}
+            active_in_group = [cid for cid in group_key if cid in self.workers]
+            candidates = [cid for cid in active_in_group if cid not in waiting_set]
+            sub = self._current_barrier_sub_step.get(group_key)
+            if sub and hasattr(sub, "params"):
+                sub_name = sub.params.get("name", sub.type.value)
+            for cid in candidates:
+                worker = self.workers.get(cid)
+                step_drop = False
+                if worker and 0 <= getattr(worker, "current_step_index", -1) < len(getattr(worker, "steps", [])):
+                    step_drop = bool(getattr(worker.steps[worker.current_step_index], "drop_on_ng", False))
+                sub_drop = bool(sub and hasattr(sub, "params") and sub.params.get("drop_on_fail", False))
+                if step_drop or sub_drop:
+                    missing.append(cid)
+            if not missing:
+                return
+
+        trace("SYNC_BARRIER_TIMEOUT_DROP", group=list(group_key), missing=missing, sub=sub_name, timeout_ms=getattr(self, "sync_barrier_wait_timeout_ms", None))
+        for cid in missing:
+            self.fail_channel_test(cid, f"?????????????: {sub_name}")
+        self._check_and_release_barrier()
 
     def _check_and_release_barrier(self):
         """BUG-04修复: 按同步组分组判定，防止不同组通道互相绑定导致死锁"""
@@ -1346,7 +1352,7 @@ class TestEngine(QObject):
                 
                 # 诊断日志：打印各组屏障等待状态，精确定位未到达的通道
                 not_reached = [cid for cid in active_in_group if cid not in waiting_set]
-                if not_reached:
+                if not_reached and os.environ.get("AGING_DEBUG_SYNC_LOG") == "1":
                     sub_obj = self._current_barrier_sub_step.get(group_key)
                     sub_name = sub_obj.params.get("name", sub_obj.type.value) if (sub_obj and hasattr(sub_obj, "params")) else "未知屏障"
                     print(f"[TestEngine 诊断] 同步组 {list(group_key)} 正在等待屏障 '{sub_name}'。已到达: {list(waiting_set)}, 未到达: {not_reached}")
@@ -1360,6 +1366,7 @@ class TestEngine(QObject):
                         self.sync_barrier_channels.discard(cid)
                     exec_cid = channels_to_release[0]  # 取最小 cid 为执行主体
                     sub = self._current_barrier_sub_step.pop(group_key, None)
+                    self._barrier_watchdog_armed.discard(group_key)
 
                     def run_sync_op(exec_cid=exec_cid, channels_to_release=channels_to_release,
                                    sub=sub, total=total):
@@ -1416,6 +1423,7 @@ class TestEngine(QObject):
         except Exception as e: print(f"Global action error: {e}")
 
     def start_channel_test(self, cid, recipe_data, test_id=-1, sync_group=None, master_barcode="", slaves=None):
+        trace("ENGINE_START_CHANNEL_BEGIN", cid, test_id=test_id, recipe_items=len(recipe_data or []), sync_group=sync_group, master=master_barcode)
         if sync_group:
             with self._lock:
                 # 记录该通道所属的同步组 (即所有勾选的通道集合)
@@ -1439,6 +1447,7 @@ class TestEngine(QObject):
             step.unit = item.get('unit', "NULL")
             step.exec_mode = item.get('exec_mode', "并行执行")
             step.target_board = item.get('target_board', '主机')
+            step.drop_on_ng = bool(item.get('drop_on_ng', False))
             is_block_start = item.get('is_block_start', False)
             is_block_end = item.get('is_block_end', False)
             
@@ -1494,22 +1503,43 @@ class TestEngine(QObject):
                 
             steps.append(step)
         with self._lock:
-            if cid in self.workers: self.stop_channel_test(cid)
+            if cid in self.workers:
+                trace("ENGINE_START_CHANNEL_EXISTING_WORKER", cid)
+                self.stop_channel_test(cid)
         t = QThread(); w = ChannelWorker(cid, steps, self.device_manager, self.db_manager, engine=self)
         w.master_barcode = master_barcode
         w.slave_barcodes = slaves or []
         w.set_test_info(test_id); w.moveToThread(t); w.reached_barrier.connect(self.handle_barrier_reached)
         w.step_started.connect(self.channel_step_started)
-        w.test_finished.connect(self.channel_test_finished)
         t.started.connect(w.start); from PySide6.QtCore import Qt
         w.test_finished.connect(self._on_worker_test_finished, Qt.QueuedConnection)
-        self.workers[cid], self.threads[cid] = w, t; t.start()
+        self.workers[cid], self.threads[cid] = w, t
+        trace("ENGINE_START_CHANNEL_THREAD_START", cid, steps=len(steps))
+        t.start()
 
     @Slot(int, bool)
     def _on_worker_test_finished(self, cid, success):
-        self.stop_channel_test(cid)
+        trace("ENGINE_WORKER_FINISHED", cid, success=success)
+        self.channel_test_finished.emit(cid, success)
+        self.stop_channel_test(cid, request_stop=False)
 
-    def stop_channel_test(self, cid):
+
+    def fail_channel_test(self, cid, reason="测试异常，已剔除"):
+        trace("ENGINE_FAIL_CHANNEL_TEST", cid, reason=reason)
+        with self._lock:
+            worker = self.workers.get(cid)
+            if worker:
+                try:
+                    worker.log_message.emit(cid, f"[!] {reason}，通道判定NG并剔除同步等待。")
+                except Exception:
+                    pass
+            if cid in self.sync_barrier_channels:
+                self.sync_barrier_channels.discard(cid)
+        self.channel_test_finished.emit(cid, False)
+        self.stop_channel_test(cid, request_stop=True, final_status="NG")
+
+    def stop_channel_test(self, cid, request_stop=True, final_status="STOPPED"):
+        trace("ENGINE_STOP_CHANNEL_BEGIN", cid, request_stop=request_stop, final_status=final_status)
         with self._lock:
             if cid in self.sync_barrier_channels:
                 self.sync_barrier_channels.remove(cid)
@@ -1517,15 +1547,28 @@ class TestEngine(QObject):
                 t, w = self.threads[cid], self.workers[cid]
                 try: w.test_finished.disconnect()
                 except: pass
-                w.stop(); t.quit()
-                del self.workers[cid]; del self.threads[cid]; self.zombie_threads.append(t)
+                t.finished.connect(w.deleteLater)
+                t.finished.connect(t.deleteLater)
+                t.finished.connect(lambda tt=t: self._cleanup_zombie(tt))
+                if request_stop:
+                    w.stop(final_status)
+                t.quit()
+                if not t.wait(2000):
+                    self.zombie_threads.append(t)
+                    self.zombie_workers.append((t, w))
+                    trace("ENGINE_STOP_CHANNEL_TIMEOUT", cid)
+                    self.log_api_call(f"[WARN] Channel {cid} worker thread did not stop within 2s; keep zombie reference")
+                else:
+                    trace("ENGINE_STOP_CHANNEL_THREAD_STOPPED", cid)
+                del self.workers[cid]; del self.threads[cid]
                 if cid in self.sync_groups: del self.sync_groups[cid]
-                t.finished.connect(t.deleteLater); t.finished.connect(lambda tt=t: self._cleanup_zombie(tt)); w.deleteLater()
             self._check_and_release_barrier() # 剔除 channel worker 后再检查集齐条件，防止死锁
+        trace("ENGINE_STOP_CHANNEL_END", cid)
 
     def _cleanup_zombie(self, t):
         with self._lock:
             if t in self.zombie_threads: self.zombie_threads.remove(t)
+            self.zombie_workers = [(zt, zw) for zt, zw in self.zombie_workers if zt is not t]
 
     def stop_all(self):
         self.heartbeat_running = False

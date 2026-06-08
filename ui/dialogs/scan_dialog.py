@@ -31,7 +31,6 @@ class ScanDialog(QDialog):
         self.shelf_code = ""
         self.master_code = ""
         self.slave_codes = []
-        self.global_barcode_map = {}
 
         # 加载全局配置的条码规则
         sys_cfg = self.db_manager.load_sys_config() if self.db_manager else {}
@@ -199,27 +198,6 @@ class ScanDialog(QDialog):
                     
         return -1
 
-    def _build_global_barcode_pool(self):
-        """构建全局已用条码池，剔除当前正在扫描的目标通道的旧条码"""
-        self.global_barcode_map = {}
-        parent_tab = self.parent()
-        if not hasattr(parent_tab, 'channel_widgets'):
-            return
-            
-        for w in parent_tab.channel_widgets:
-            if getattr(w, 'channel_id', -1) == self.target_channel:
-                continue
-                
-            # 收集该通道已绑定的主机和从机码
-            master = getattr(w, 'master_barcode', "")
-            if master:
-                self.global_barcode_map[master] = w.channel_id
-                
-            slaves = getattr(w, 'slave_barcodes', [])
-            for slave in slaves:
-                if slave:
-                    self.global_barcode_map[slave] = w.channel_id
-
     def _update_step_prompt(self):
         """根据当前状态更新顶部提示语并进行语音播报"""
         if self.target_channel == -1:
@@ -260,19 +238,11 @@ class ScanDialog(QDialog):
         self.scan_input.clear()
         if not code: return
         
-        # --- 防重复扫码校验 (局部) ---
+        # --- 防重复扫码校验 ---
         if code == self.master_code or code in self.slave_codes:
-            self.lbl_step.setText(f"❌ 局部重码！请勿重复扫描同一实物")
+            self.lbl_step.setText(f"❌ 条码重复！请勿重复扫描同一实物")
             self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
             self.speak_text("条码重复")
-            return
-            
-        # --- 防重复扫码校验 (全局) ---
-        if code in self.global_barcode_map:
-            conflict_ch = self.global_barcode_map[code]
-            self.lbl_step.setText(f"❌ 全局重码！该条码已被通道 CH-{conflict_ch:02d} 占用")
-            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
-            self.speak_text("条码已被占用")
             return
             
         # --- 智能识别逻辑 ---
@@ -305,9 +275,6 @@ class ScanDialog(QDialog):
             self.lbl_ch_info.setText(f"测试通道: CH-{self.target_channel:02d}")
             self.slot_shelf.val_input.setText(code)
             self._highlight_slot(self.slot_shelf)
-            
-            # 扫入货架码后，立即构建全局重码池（自动剔除当前目标通道的旧数据）
-            self._build_global_barcode_pool()
             
         elif is_master and not self.master_code:
             self.master_code = code
@@ -418,7 +385,6 @@ class ScanDialog(QDialog):
         self.shelf_code = ""
         self.master_code = ""
         self.slave_codes = []
-        self.global_barcode_map = {}
         
         self.lbl_ch_info.setText("测试通道: --")
         

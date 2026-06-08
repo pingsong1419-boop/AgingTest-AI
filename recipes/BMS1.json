@@ -1,0 +1,867 @@
+{
+    "name": "BMS1",
+    "topology": "1主3从",
+    "items": [
+        {
+            "name": "1#模拟电池输出",
+            "mode": "范围判定",
+            "min": "3.7",
+            "max": "3.9",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "1# 电池模拟器 (Simulator 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "1#模拟电池关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "1# 电池模拟器 (Simulator 1)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "1# 电池模拟器 (Simulator 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#模拟电池输出",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#模拟电池关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "2# 电池模拟器 (Simulator 2)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "2# 电池模拟器 (Simulator 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#模拟电池输出",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / ON / Range:HIGH / CH:ALL",
+                    "device": "3# 电池模拟器 (Simulator 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#模拟电池关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "3# 电池模拟器 (Simulator 3)-快捷批量配置 (3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL) [同步]",
+                    "action": "快捷批量配置",
+                    "params": "3.8V / 1000.0mA / OFF / Range:HIGH / CH:ALL",
+                    "device": "3# 电池模拟器 (Simulator 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "1#AFE电源开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 开启输出) [同步]",
+                    "action": "设置参数",
+                    "params": "100.0V / 36.0A / 开启输出",
+                    "device": "1# AFE 电源 (AFE 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "1#AFE电源关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "1# AFE 电源 (AFE 1)-设置参数 (100.0V / 36.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "100.0V / 36.0A / 关闭输出",
+                    "device": "1# AFE 电源 (AFE 1)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#AFE电源开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 开启输出) [同步]",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 开启输出",
+                    "device": "2# AFE 电源 (AFE 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "2#AFE电源关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "2# AFE 电源 (AFE 2)-设置参数 (100.0V / 12.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 关闭输出",
+                    "device": "2# AFE 电源 (AFE 2)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "重试3次"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#AFE电源开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 开启输出) [同步]",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 开启输出",
+                    "device": "3# AFE 电源 (AFE 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (5000ms)",
+                    "action": "固定延时",
+                    "params": "5000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "3#AFE电源关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "3# AFE 电源 (AFE 3)-设置参数 (100.0V / 12.0A / 关闭输出) [同步]",
+                    "action": "设置参数",
+                    "params": "100.0V / 12.0A / 关闭输出",
+                    "device": "3# AFE 电源 (AFE 3)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": true,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "CA550输出",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "CA550 校准仪 (CA550)-参数设置 (Type:V / Val:5.0 / Range:10V / Output:开启输出)",
+                    "action": "参数设置",
+                    "params": "Type:V / Val:5.0 / Range:10V / Output:开启输出",
+                    "device": "CA550 校准仪 (CA550)",
+                    "type": "校准仪设置",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "CA550关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "CA550 校准仪 (CA550)-参数设置 (Type:V / Val:5.0 / Range:10V / Output:关闭输出)",
+                    "action": "参数设置",
+                    "params": "Type:V / Val:5.0 / Range:10V / Output:关闭输出",
+                    "device": "CA550 校准仪 (CA550)",
+                    "type": "校准仪设置",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "主机板供电开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "主机板电源 (Main Power)-设置参数 (12.0V / 200.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 200.0A / 开启输出",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "主机板供电回读",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "主机板电源 (Main Power)-回读数据 (读取电压)",
+                    "action": "回读数据",
+                    "params": "读取电压",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "读取仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "主机板供电关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "主机板电源 (Main Power)-设置参数 (12.0V / 200.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 200.0A / 关闭输出",
+                    "device": "主机板电源 (Main Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "功能板供电开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "控制板供电电源 (Control Power)-设置参数 (24.0V / 40.0A / 开启输出)",
+                    "action": "设置参数",
+                    "params": "24.0V / 40.0A / 开启输出",
+                    "device": "控制板供电电源 (Control Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "功能板供电回读",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "控制板供电电源 (Control Power)-回读数据 (读取电压)",
+                    "action": "回读数据",
+                    "params": "读取电压",
+                    "device": "控制板供电电源 (Control Power)",
+                    "type": "读取仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "功能板供电关闭",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "控制板供电电源 (Control Power)-设置参数 (12.0V / 40.0A / 关闭输出)",
+                    "action": "设置参数",
+                    "params": "12.0V / 40.0A / 关闭输出",
+                    "device": "控制板供电电源 (Control Power)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "Easy320继电器开启",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "Easy320 继电器 (Easy320)-闭合勾选通道 (1)",
+                    "action": "闭合勾选通道",
+                    "params": "1",
+                    "device": "Easy320 继电器 (Easy320)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "Easy320继电器断开",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "Easy320 继电器 (Easy320)-断开勾选通道 (1)",
+                    "action": "断开勾选通道",
+                    "params": "1",
+                    "device": "Easy320 继电器 (Easy320)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "老化功能板闭合",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "老化功能板继电器 (Aging Board)-闭合勾选通道 (1,11)",
+                    "action": "闭合勾选通道",
+                    "params": "1,11",
+                    "device": "老化功能板继电器 (Aging Board)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "老化功能板断开",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "等待 (Wait)-固定延时 (2000ms)",
+                    "action": "固定延时",
+                    "params": "2000ms",
+                    "device": "等待 (Wait)",
+                    "type": "等待",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                },
+                {
+                    "name": "老化功能板继电器 (Aging Board)-断开勾选通道 (1,11)",
+                    "action": "断开勾选通道",
+                    "params": "1,11",
+                    "device": "老化功能板继电器 (Aging Board)",
+                    "type": "继电器控制",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "单体电压读取_01",
+            "mode": "范围判定",
+            "min": "2.497",
+            "max": "2.503",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "3.5HEOL协议-0x07 CSC控制读取 (EOL:0x07 CSC控制读取 / PARAM1:0x0E / PARAM2:0x00 / PARAM3:0 / PARAM4:0 / OP:0x0E / INDEX:0x00 / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8)",
+                    "action": "0x07 CSC控制读取",
+                    "params": "EOL:0x07 CSC控制读取 / PARAM1:0x0E / PARAM2:0x00 / PARAM3:0 / PARAM4:0 / OP:0x0E / INDEX:0x00 / TIMEOUT:1000 / CH:0 / TYPE:0 / DLC:8 / TX_ID:0x7F0 / RX_ID:0x7F8",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "CAN发送",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "CAN 交互-发送指令 (ID:0x7F0 / DATA:00 00 00 00 00 00 00 00 / TYPE:0 / DLC:8 / CH:0)",
+                    "action": "发送指令",
+                    "params": "ID:0x7F0 / DATA:00 00 00 00 00 00 00 00 / TYPE:0 / DLC:8 / CH:0",
+                    "device": "CAN 交互",
+                    "type": "CAN发送",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        },
+        {
+            "name": "#3.5H协议发送",
+            "mode": "范围判定",
+            "min": "0.0",
+            "max": "0.0",
+            "strategy": "任何NG停止",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "NULL",
+            "exec_mode": "并行执行",
+            "sub_steps": [
+                {
+                    "name": "3.5HEOL协议-执行EOL操作 (EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1)",
+                    "action": "执行EOL操作",
+                    "params": "EOL:0x10_read_host_temp / 0 / TIMEOUT:1000 / CH:1",
+                    "device": "3.5HEOL协议",
+                    "type": "3.5HEOL协议",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "fail_strategy": "失败停止"
+                }
+            ]
+        }
+    ]
+}

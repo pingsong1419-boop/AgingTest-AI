@@ -17,9 +17,12 @@ class DBManager:
         
         # 异步写入队列与后台线程
         self.queue = queue.Queue()
+        self.report_queue = queue.Queue()
         self.is_running = True
         self.worker_thread = threading.Thread(target=self._db_worker, daemon=True)
         self.worker_thread.start()
+        self.report_worker_thread = threading.Thread(target=self._report_worker, daemon=True)
+        self.report_worker_thread.start()
 
     def _init_db(self):
         """初始化数据库表结构"""
@@ -85,6 +88,27 @@ class DBManager:
         conn.commit()
         conn.close()
 
+    def _report_worker(self):
+        """串行生成测试报告，避免多通道同时结束时并发写文件卡住界面。"""
+        while self.is_running or not self.report_queue.empty():
+            try:
+                try:
+                    test_id = self.report_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+
+                if test_id is None:
+                    break
+                try:
+                    self.export_to_xtml(test_id)
+                    self.generate_report(test_id)
+                except Exception as e:
+                    print(f"[-] 后台生成报表失败(test_id={test_id}): {e}")
+                finally:
+                    self.report_queue.task_done()
+            except Exception as e:
+                print(f"[-] 报表后台线程严重错误: {e}")
+
     def _db_worker(self):
         """后台数据库写入线程"""
         # 在同一个线程内保持一个长连接，提高性能并避免多线程冲突
@@ -133,8 +157,11 @@ class DBManager:
         """BUG-09修复: 先投入哨兵信号唤醒工作线程，再 join，防止大量队列时卡住"""
         self.is_running = False
         self.queue.put((None, None, None, None))  # 哨兵信号
+        self.report_queue.put(None)
         if self.worker_thread.is_alive():
             self.worker_thread.join(timeout=5.0)
+        if self.report_worker_thread.is_alive():
+            self.report_worker_thread.join(timeout=10.0)
 
     def _execute_async(self, sql: str, params: tuple = (), wait: bool = False) -> Any:
         """内部通用异步执行方法"""
@@ -186,13 +213,15 @@ class DBManager:
         now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sql = 'UPDATE test_main SET end_time = ?, result = ? WHERE test_id = ?'
         params = (now, result, test_id)
-        self._execute_async(sql, params, wait=True)
+        try:
+            self._execute_async(sql, params, wait=True)
+        except Exception as e:
+            print(f"[WARN] finish_test database update delayed/failed for test_id={test_id}: {e}")
         
-        # 测试结束后生成本地备份文件
-        self.export_to_xtml(test_id)
-        
-        # 自动生成用户要求的报表报告 CSV / HTML
-        self.generate_report(test_id)
+        # 报表生成放入后台队列串行处理，避免多通道同时结束时卡顿。
+        self.report_queue.put(test_id)
+
+        self.report_queue.put(test_id)
 
     def generate_report(self, test_id: int):
         """生成详细测试报表 CSV 和 premium HTML 报告"""

@@ -1,10 +1,14 @@
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox,
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, QPushButton, QComboBox, QCheckBox, QMessageBox,
 
                                QLabel, QScrollArea, QFrame)
 
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot, QTimer
 
 import re
+import os
+import json
+import datetime
+from core.debug_trace import trace
 
 
 
@@ -13,7 +17,6 @@ class ChannelWidget(QFrame):
     def __init__(self, channel_id):
 
         super().__init__()
-        self.channel_id = channel_id
 
         # 初始化条码缓存属性
 
@@ -166,6 +169,10 @@ class ChannelWidget(QFrame):
 
     def set_status(self, status_text, color):
 
+        if getattr(self, "_last_status_text", None) == status_text and getattr(self, "_last_status_color", None) == color:
+            return
+        self._last_status_text = status_text
+        self._last_status_color = color
         self.status_label.setText(status_text)
 
         self.status_label.setStyleSheet(f"font-size: 15px; font-weight: bold; color: {color}; padding: 2px;")
@@ -253,25 +260,22 @@ class OverviewTab(QWidget):
         self.engine = engine
 
         self.db_manager = db_manager
+        self.channel_batch_size = 16
+        self._pending_channel_batches = []
+        self._active_channel_batch = set()
+        self._completed_channel_batch = set()
+        self._batch_all_cids = set()
+        self._batch_finished_cids = set()
+        self._batch_advancing = False
+        self._batch_recipe_name = ""
+        self._batch_generation = 0
+        self._stopping_tests = False
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.scan_cache_path = os.path.join(base_dir, "data", "last_scan_barcodes.json")
 
         self._init_ui()
 
-        if self.engine:
-            self.engine.get_selected_channel_barcodes_callback = self.get_selected_channel_barcodes
-
         
-
-    def get_selected_channel_barcodes(self):
-        result = []
-        if hasattr(self, 'channel_widgets'):
-            for i, ch in enumerate(self.channel_widgets):
-                if ch.isEnabled() and ch.chk_select.isChecked():
-                    result.append({
-                        "cid": i + 1,
-                        "master": ch.master_barcode,
-                        "slaves": ch.slave_barcodes
-                    })
-        return result
 
     def _init_ui(self):
 
@@ -323,6 +327,14 @@ class OverviewTab(QWidget):
         self.btn_start.clicked.connect(self.open_scan_dialog)
 
         control_panel.addWidget(self.btn_start)
+
+        self.btn_restore_scan = QPushButton("恢复上次扫码")
+
+        self.btn_restore_scan.setStyleSheet("background-color: #6F42C1; border-color: #59359A;")
+
+        self.btn_restore_scan.clicked.connect(self.restore_last_scan_barcodes)
+
+        control_panel.addWidget(self.btn_restore_scan)
 
         
 
@@ -705,6 +717,7 @@ class OverviewTab(QWidget):
             ch_widget.set_barcodes(shelf, master, slaves)
             ch_widget.set_status("就绪(可测试)", "#00E5FF")
             print(f"[DEBUG] Channel {target_channel} barcodes and status updated successfully.")
+            self._save_last_scan_cache(target_channel)
             self.speak_text(f"通道 {target_channel} 扫码完成")
 
         else:
@@ -714,6 +727,87 @@ class OverviewTab(QWidget):
         self.is_scan_completed = True
 
 
+
+    def _load_last_scan_cache(self):
+        try:
+            if not os.path.exists(self.scan_cache_path):
+                return {}
+            with open(self.scan_cache_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception as e:
+            trace("UI_SCAN_CACHE_LOAD_FAILED", error=str(e))
+            return {}
+
+    def _save_last_scan_cache(self, changed_channel=None):
+        try:
+            data = self._load_last_scan_cache()
+            channels = data.get("channels", {}) if isinstance(data.get("channels", {}), dict) else {}
+            for cid, ch_widget in enumerate(self.channel_widgets, start=1):
+                if changed_channel is not None and cid != changed_channel:
+                    continue
+                shelf = getattr(ch_widget, "shelf_barcode", "") or ""
+                master = getattr(ch_widget, "master_barcode", "") or ""
+                slaves = [s for s in getattr(ch_widget, "slave_barcodes", []) if s]
+                if shelf or master or slaves:
+                    channels[str(cid)] = {
+                        "shelf": shelf,
+                        "master": master,
+                        "slaves": slaves,
+                    }
+            data = {
+                "version": 1,
+                "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                "channels": channels,
+            }
+            os.makedirs(os.path.dirname(self.scan_cache_path), exist_ok=True)
+            with open(self.scan_cache_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            trace("UI_SCAN_CACHE_SAVED", changed_channel=changed_channel, count=len(channels))
+        except Exception as e:
+            trace("UI_SCAN_CACHE_SAVE_FAILED", changed_channel=changed_channel, error=str(e))
+
+    def restore_last_scan_barcodes(self):
+        selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+        if not selected_cids:
+            QMessageBox.warning(self, "未选择通道", "请先勾选需要恢复扫码的通道。")
+            return
+        data = self._load_last_scan_cache()
+        channels = data.get("channels", {}) if isinstance(data.get("channels", {}), dict) else {}
+        if not channels:
+            QMessageBox.information(self, "无扫码记录", "没有找到上次扫码导入记录。")
+            return
+
+        restored = []
+        missing = []
+        for cid in selected_cids:
+            item = channels.get(str(cid))
+            if not item:
+                missing.append(cid)
+                continue
+            shelf = item.get("shelf", "") or ""
+            master = item.get("master", "") or ""
+            slaves = item.get("slaves", []) or []
+            if not (shelf and master):
+                missing.append(cid)
+                continue
+            ch_widget = self.channel_widgets[cid - 1]
+            ch_widget.set_barcodes(shelf, master, slaves)
+            ch_widget.set_status("已恢复扫码", "#00E5FF")
+            restored.append(cid)
+
+        if restored:
+            self.is_scan_completed = True
+            self.update_button_states()
+            self._save_last_scan_cache()
+            msg = "已恢复通道: " + ", ".join(map(str, restored))
+            if missing:
+                msg += "\n未找到记录或记录不完整的通道: " + ", ".join(map(str, missing))
+            QMessageBox.information(self, "恢复完成", msg)
+            trace("UI_SCAN_CACHE_RESTORED", restored=restored, missing=missing)
+        else:
+            QMessageBox.warning(self, "恢复失败", "当前勾选通道没有可恢复的完整扫码记录。")
+            trace("UI_SCAN_CACHE_RESTORE_EMPTY", selected=selected_cids, missing=missing)
 
     def speak_text(self, text):
 
@@ -921,21 +1015,20 @@ class OverviewTab(QWidget):
 
 
 
-        # 7. 通过全部校验，立即下发对应通道的条码信息到大屏 (prepare)
-        if self.engine and self.engine.api_client:
-            def send_barcodes_async():
-                for cid in selected_cids:
-                    ch_widget = self.channel_widgets[cid - 1]
-                    master = ch_widget.master_barcode
-                    slaves = [s for s in ch_widget.slave_barcodes if s]
-                    s1 = slaves[0] if len(slaves) > 0 else None
-                    s2 = slaves[1] if len(slaves) > 1 else None
-                    s3 = slaves[2] if len(slaves) > 2 else None
-                    self.engine.api_client.prepare(cid, master, s1, s2, s3)
-            import threading
-            threading.Thread(target=send_barcodes_async, daemon=True).start()
+        # 7. 通过全部校验，准备进入老化箱界面
+
+        if not self.engine:
+
+            from PySide6.QtWidgets import QMessageBox
+
+            QMessageBox.critical(self, "错误", "测试引擎未初始化！")
+
+            return
+
+
 
         # 不再弹窗选择，直接跳转到“高低温老化箱”通讯控制界面，等待用户加载配方并点击“启动老化测试工步”
+
         parent_widget = self.parentWidget()
 
         while parent_widget:
@@ -964,6 +1057,12 @@ class OverviewTab(QWidget):
         import datetime
         print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Overview] 老化箱触发多通道并发测试")
 
+        if getattr(self, "_stopping_tests", False):
+            trace("UI_MULTI_START_IGNORED_STOPPING")
+            return
+        self._batch_generation += 1
+        batch_generation = self._batch_generation
+
         selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
 
         if not selected_cids:
@@ -973,74 +1072,122 @@ class OverviewTab(QWidget):
             
 
         recipe_name = self.combo_recipe.currentText()
+        runnable_cids = [cid for cid in selected_cids if cid in getattr(self, 'channel_recipes', {})]
+        missing_recipe_cids = [cid for cid in selected_cids if cid not in getattr(self, 'channel_recipes', {})]
+        if missing_recipe_cids:
+            for cid in missing_recipe_cids:
+                self.channel_widgets[cid - 1].set_status("未配置配方(NG)", "#DC3545")
+            trace("UI_MULTI_START_MISSING_RECIPE", missing=missing_recipe_cids, selected=selected_cids, recipe=recipe_name)
+            if not runnable_cids:
+                QMessageBox.warning(self, "无法启动", "勾选通道均未下发配方，已取消多通道测试。")
+                return
+            QMessageBox.warning(self, "部分通道未启动", f"以下通道未下发配方，已跳过：{missing_recipe_cids}")
 
-        
+        trace("UI_MULTI_START_REQUEST", selected=selected_cids, runnable=runnable_cids, recipe=recipe_name, batch_size=self.channel_batch_size)
+        self._batch_recipe_name = recipe_name
+        self._pending_channel_batches = [
+            runnable_cids[i:i + self.channel_batch_size]
+            for i in range(0, len(runnable_cids), self.channel_batch_size)
+        ]
+        self._active_channel_batch = set()
+        self._completed_channel_batch = set()
+        self._batch_all_cids = set(runnable_cids)
+        self._batch_finished_cids = set()
+        self._batch_advancing = False
 
-        # 使用异步启动机制，防止多通道连续写库导致的主界面卡死
+        for cid in runnable_cids[self.channel_batch_size:]:
+            self.channel_widgets[cid - 1].set_status("排队等待", "#FFD700")
 
-        from PySide6.QtCore import QTimer
+        self._start_next_channel_batch(batch_generation)
+        return
 
-        
+
+
+    def _start_next_channel_batch(self, generation=None):
+
+        if generation is not None and generation != getattr(self, "_batch_generation", 0):
+            trace("UI_BATCH_START_IGNORED_OLD_GENERATION", generation=generation, current=getattr(self, "_batch_generation", 0))
+            return
+        if getattr(self, "_stopping_tests", False):
+            trace("UI_BATCH_START_IGNORED_STOPPING")
+            return
+
+        if not self._pending_channel_batches:
+            trace("UI_BATCH_NONE_PENDING")
+            self._active_channel_batch = set()
+            self._completed_channel_batch = set()
+            return
+
+        batch_cids = self._pending_channel_batches.pop(0)
+        trace("UI_BATCH_START", batch=batch_cids, pending_batches=len(self._pending_channel_batches))
+        self._active_channel_batch = set(batch_cids)
+        self._completed_channel_batch = set()
+        self._batch_advancing = False
+
+        chamber_tab = self.get_chamber_tab()
+        if chamber_tab and getattr(chamber_tab, "_bms_load_follow_batch", False):
+            chamber_tab.apply_bms_load_for_channels(batch_cids)
 
         if self.engine:
-
             self.engine.begin_batch_start()
 
-        
-
-        def _start_next_channel(cids):
-
-            if not cids:
-
+        def _start_next_channel(cids, generation=generation):
+            if generation is not None and generation != getattr(self, "_batch_generation", 0):
+                trace("UI_CHANNEL_START_IGNORED_OLD_GENERATION", generation=generation, current=getattr(self, "_batch_generation", 0))
                 if self.engine:
-
                     self.engine.end_batch_start()
-
+                return
+            if getattr(self, "_stopping_tests", False):
+                trace("UI_CHANNEL_START_IGNORED_STOPPING")
+                if self.engine:
+                    self.engine.end_batch_start()
+                return
+            if not cids:
+                if self.engine:
+                    self.engine.end_batch_start()
                 return
 
-            
-
             cid = cids.pop(0)
-
-            # 如果某通道没有准备好配方，则跳过
-
             if cid in getattr(self, 'channel_recipes', {}):
-
+                trace("UI_CHANNEL_START_REQUEST", cid, batch=batch_cids)
                 recipe_items = self.channel_recipes[cid]
-
                 ch_widget = self.channel_widgets[cid - 1]
-
                 shelf = ch_widget.shelf_barcode
-
                 master = ch_widget.master_barcode
-
                 slaves = [s for s in ch_widget.slave_barcodes if s]
 
-                
-
                 test_id = -1
+                try:
+                    if self.db_manager:
+                        test_id = self.db_manager.start_new_test(cid, shelf, master, slaves, self._batch_recipe_name)
 
-                if self.db_manager:
+                    if not self.engine:
+                        raise RuntimeError("测试引擎未初始化")
 
-                    test_id = self.db_manager.start_new_test(cid, shelf, master, slaves, recipe_name)
+                    self.engine.start_channel_test(
+                        cid,
+                        recipe_items,
+                        test_id=test_id,
+                        sync_group=batch_cids,
+                        master_barcode=master,
+                        slaves=slaves,
+                    )
+                    trace("UI_CHANNEL_START_DONE", cid, test_id=test_id)
+                    self.channel_widgets[cid - 1].set_status("测试中", "#28A745")
+                except Exception as e:
+                    trace("UI_CHANNEL_START_FAILED", cid, test_id=test_id, error=str(e))
+                    self.channel_widgets[cid - 1].set_status("启动失败(NG)", "#DC3545")
+                    if self.db_manager and test_id != -1:
+                        try:
+                            self.db_manager.finish_test(test_id, "NG")
+                        except Exception as db_e:
+                            trace("UI_CHANNEL_START_FAIL_DB_FINISH_ERROR", cid, test_id=test_id, error=str(db_e))
+                    self._mark_channel_batch_done(cid)
 
-                    
+            QTimer.singleShot(80, lambda gen=generation: _start_next_channel(cids, gen))
 
-                self.engine.start_channel_test(cid, recipe_items, test_id=test_id, sync_group=selected_cids, master_barcode=master, slaves=slaves)
-
-                self.channel_widgets[cid - 1].set_status("测试中", "#28A745")
-
-                
-
-            # 延迟 10ms 启动下一个，让出主线程事件循环以刷新 UI
-
-            QTimer.singleShot(10, lambda: _start_next_channel(cids))
-
-            
-
-        _start_next_channel(selected_cids.copy())
-
-
+        _start_next_channel(batch_cids.copy(), generation)
+        QTimer.singleShot(3000, lambda gen=generation: self._check_active_batch_progress(gen))
 
     def get_chamber_tab(self):
 
@@ -1073,6 +1220,7 @@ class OverviewTab(QWidget):
     @Slot(int, bool)
 
     def on_channel_test_finished(self, cid, success):
+        trace("UI_CHANNEL_FINISHED", cid, success=success)
 
         idx = cid - 1
 
@@ -1084,80 +1232,134 @@ class OverviewTab(QWidget):
 
             self.channel_widgets[idx].set_status(status, color)
 
+        self._mark_channel_batch_done(cid)
+    def _mark_channel_batch_done(self, cid):
+        if cid not in self._active_channel_batch:
+            trace("UI_BATCH_MARK_IGNORED", cid, active=list(self._active_channel_batch))
+            return
+        self._completed_channel_batch.add(cid)
+        self._batch_finished_cids.add(cid)
+        trace("UI_BATCH_MARK_DONE", cid, active=list(self._active_channel_batch), completed=list(self._completed_channel_batch), finished=list(self._batch_finished_cids), total=list(self._batch_all_cids))
+        self._advance_batch_if_ready()
 
+    def _advance_batch_if_ready(self):
+        trace("UI_BATCH_ADVANCE_CHECK", active=list(self._active_channel_batch), completed=list(self._completed_channel_batch), pending=len(self._pending_channel_batches), advancing=self._batch_advancing)
+        if not self._active_channel_batch:
+            return
+        if self._batch_advancing:
+            return
+        if not self._completed_channel_batch >= self._active_channel_batch:
+            return
+        self._batch_advancing = True
+        if self._pending_channel_batches:
+            next_batch = self._pending_channel_batches[0]
+            trace("UI_BATCH_NEXT_SCHEDULED", next_batch=next_batch)
+            for next_cid in next_batch:
+                self.channel_widgets[next_cid - 1].set_status("即将启动", "#00E5FF")
+            generation = getattr(self, "_batch_generation", 0)
+            QTimer.singleShot(1000, lambda gen=generation: self._start_next_channel_batch(gen))
+        else:
+            trace("UI_BATCH_ALL_DONE")
+            self._active_channel_batch = set()
+            self._completed_channel_batch = set()
+            self._batch_advancing = False
+
+    def get_batch_completion_state(self):
+        return {
+            "all_cids": set(getattr(self, "_batch_all_cids", set())),
+            "finished_cids": set(getattr(self, "_batch_finished_cids", set())),
+            "active_cids": set(getattr(self, "_active_channel_batch", set())),
+            "pending_batches": list(getattr(self, "_pending_channel_batches", [])),
+            "advancing": bool(getattr(self, "_batch_advancing", False)),
+            "generation": int(getattr(self, "_batch_generation", 0)),
+        }
+
+    def _check_active_batch_progress(self, generation=None):
+        if generation is not None and generation != getattr(self, "_batch_generation", 0):
+            trace("UI_BATCH_WATCHDOG_IGNORED_OLD_GENERATION", generation=generation, current=getattr(self, "_batch_generation", 0))
+            return
+        if getattr(self, "_stopping_tests", False):
+            trace("UI_BATCH_WATCHDOG_IGNORED_STOPPING")
+            return
+        trace("UI_BATCH_WATCHDOG_CHECK", active=list(self._active_channel_batch), completed=list(self._completed_channel_batch), advancing=self._batch_advancing)
+        if not self._active_channel_batch or self._batch_advancing:
+            return
+        running = set(getattr(self.engine, "workers", {}).keys()) if self.engine else set()
+        missing = self._active_channel_batch - self._completed_channel_batch
+        trace("UI_BATCH_WATCHDOG_STATE", running=list(running), missing=list(missing))
+        for cid in list(missing):
+            if cid not in running:
+                trace("UI_BATCH_WATCHDOG_MARK_NG", cid)
+                self.channel_widgets[cid - 1].set_status("启动异常(NG)", "#DC3545")
+                self._completed_channel_batch.add(cid)
+                self._batch_finished_cids.add(cid)
+        self._advance_batch_if_ready()
+        if self._active_channel_batch and not self._batch_advancing:
+            generation = getattr(self, "_batch_generation", 0)
+            QTimer.singleShot(3000, lambda gen=generation: self._check_active_batch_progress(gen))
 
     def stop_selected_tests(self):
 
-        """强制停止选中的测试通道"""
-        import datetime
-        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Overview] 收到“停止测试”指令")
+        """Stop selected tests once; ignore repeated clicks while shutdown is running."""
+        if getattr(self, "_stopping_tests", False):
+            trace("UI_STOP_SELECTED_IGNORED_REENTRANT")
+            return
 
-        selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
+        self._stopping_tests = True
+        self._batch_generation += 1
+        if hasattr(self, "btn_stop"):
+            self.btn_stop.setEnabled(False)
 
-        
+        try:
+            import datetime
+            print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Overview] 收到停止测试指令")
 
-        from PySide6.QtWidgets import QMessageBox
+            self._pending_channel_batches = []
+            self._active_channel_batch = set()
+            self._completed_channel_batch = set()
+            self._batch_all_cids = set()
+            self._batch_finished_cids = set()
+            self._batch_advancing = False
 
-        if not selected_cids:
+            selected_cids = [i + 1 for i, ch in enumerate(self.channel_widgets) if ch.isEnabled() and ch.chk_select.isChecked()]
 
-            if self.engine and self.engine.workers:
-
-                reply = QMessageBox.question(
-
-                    self, 
-
-                    "停止所有测试", 
-
-                    "当前未勾选任何通道，是否要强制停止**所有**正在运行的通道测试？",
-
-                    QMessageBox.Yes | QMessageBox.No,
-
-                    QMessageBox.No
-
-                )
-
-                if reply == QMessageBox.Yes:
-
-                    selected_cids = list(self.engine.workers.keys())
-
+            if not selected_cids:
+                if self.engine and self.engine.workers:
+                    reply = QMessageBox.question(
+                        self,
+                        "停止所有测试",
+                        "当前未勾选任何通道，是否要强制停止所有正在运行的通道测试？",
+                        QMessageBox.Yes | QMessageBox.No,
+                        QMessageBox.No,
+                    )
+                    if reply == QMessageBox.Yes:
+                        selected_cids = list(self.engine.workers.keys())
+                    else:
+                        return
                 else:
-
+                    QMessageBox.warning(self, "停止测试失败", "请先勾选需要停止测试的通道。")
                     return
 
-            else:
+            stopped_cids = []
+            if self.engine:
+                for cid in list(selected_cids):
+                    try:
+                        self.engine.stop_channel_test(cid)
+                    except Exception as e:
+                        trace("UI_STOP_CHANNEL_ERROR", cid, error=str(e))
+                    if 1 <= cid <= len(self.channel_widgets):
+                        self.channel_widgets[cid - 1].set_status("已停止", "#DC3545")
+                    stopped_cids.append(cid)
 
-                QMessageBox.warning(self, "停止测试失败", "请先勾选需要停止测试的通道！")
+            chamber_tab = self.get_chamber_tab()
+            if chamber_tab and getattr(chamber_tab, 'sequence_running', False):
+                chamber_tab.stop_aging_sequence()
 
-                return
-
-            
-
-        if self.engine:
-
-            for cid in selected_cids:
-
-                self.engine.stop_channel_test(cid)
-
-                ch_widget = self.channel_widgets[cid - 1]
-
-                ch_widget.set_status("已停止", "#DC3545")
-
-                
-
-        # 联动停止老化箱工步
-
-        chamber_tab = self.get_chamber_tab()
-
-        if chamber_tab and getattr(chamber_tab, 'sequence_running', False):
-
-            chamber_tab.stop_aging_sequence()
-
-                
-
-        from PySide6.QtWidgets import QMessageBox
-
-        QMessageBox.information(self, "停止成功", f"已成功停止 {len(selected_cids)} 个通道的电池老化测试并复位老化箱！")
-
+            QMessageBox.information(self, "停止成功", f"已停止 {len(stopped_cids)} 个通道的测试。")
+        finally:
+            self._stopping_tests = False
+            if hasattr(self, "btn_stop"):
+                QTimer.singleShot(500, lambda: self.btn_stop.setEnabled(True))
 
 
     def stop_single_channel_test(self, channel_id):
@@ -1167,6 +1369,7 @@ class OverviewTab(QWidget):
         if self.engine:
 
             self.engine.stop_channel_test(channel_id)
+            self._mark_channel_batch_done(channel_id)
 
             self.channel_widgets[channel_id - 1].set_status("已停止", "#DC3545")
 
@@ -1359,6 +1562,10 @@ class OverviewTab(QWidget):
     def update_sync_status(self, waiting, total):
 
         """更新全局同步指示器"""
+        state = (waiting, total)
+        if getattr(self, "_last_sync_status", None) == state:
+            return
+        self._last_sync_status = state
 
         if waiting > 0:
 
@@ -1410,6 +1617,10 @@ class OverviewTab(QWidget):
 
     def update_seq_status(self, executing_cid, queue_len):
         """更新顺序排队状态指示器"""
+        state = (executing_cid, queue_len)
+        if getattr(self, "_last_seq_status", None) == state:
+            return
+        self._last_seq_status = state
         if executing_cid != -1:
             self.lbl_seq_status.setText(f"顺序排队: CH{executing_cid} 执行, {queue_len} 人排队")
             self.lbl_seq_status.setStyleSheet("""
@@ -1438,6 +1649,10 @@ class OverviewTab(QWidget):
     def on_channel_sync_changed(self, channel_id, is_waiting):
 
         """处理单个通道的同步状态变化"""
+        active_count = len(getattr(self, "_active_channel_batch", set()) or [])
+        worker_count = len(getattr(self.engine, "workers", {})) if self.engine else 0
+        if is_waiting and max(active_count, worker_count) > 12:
+            return
 
         idx = channel_id - 1
 

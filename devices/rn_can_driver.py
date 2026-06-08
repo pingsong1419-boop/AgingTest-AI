@@ -2,6 +2,7 @@ import socket
 import struct
 import threading
 import time
+import os
 import queue
 from collections import deque
 from typing import Optional, Callable
@@ -185,7 +186,7 @@ class RNCANDriver:
                     buffer = buffer[total_frame_size:]
                     
             except Exception as e:
-                if not self._stop_event.is_set():
+                if not self._stop_event.is_set() and os.environ.get("AGING_DEBUG_RNCAN") == "1":
                     print(f"[RNCAN] Receive error: {e}")
                 self.is_connected = False
                 break
@@ -262,13 +263,19 @@ class RNCANDriver:
             self.is_connected = False
             return False
 
-    def clear_rx_history(self, can_id: Optional[int] = None):
+    def clear_rx_history(self, can_id: Optional[int] = None, channel_id: Optional[int] = None):
         with self._rx_condition:
-            if can_id is None:
+            if can_id is None and channel_id is None:
                 self._rx_history.clear()
             else:
                 self._rx_history = deque(
-                    (msg for msg in self._rx_history if msg.get('can_id') != can_id),
+                    (
+                        msg for msg in self._rx_history
+                        if not (
+                            (can_id is None or msg.get('can_id') == can_id)
+                            and (channel_id is None or msg.get('channel') == channel_id)
+                        )
+                    ),
                     maxlen=self._rx_history.maxlen
                 )
 

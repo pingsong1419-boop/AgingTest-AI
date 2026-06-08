@@ -452,6 +452,10 @@ class StepDialog(QDialog):
         self.cb_judgment = QCheckBox("结果输出并参与最终判定")
         self.cb_judgment.setStyleSheet("color: #00E5FF; font-weight: bold;")
         policy_layout.addRow("", self.cb_judgment)
+
+        self.cb_drop_on_fail = QCheckBox("失败/同步超时时剔除该通道")
+        self.cb_drop_on_fail.setToolTip("开启后，该子工步执行失败或迟迟未到达同步点时，通道判NG并移出同步等待。")
+        policy_layout.addRow("", self.cb_drop_on_fail)
         
         self.cb_sync = QCheckBox("同步执行 (多通道集齐后执行一次)")
         self.cb_seq = QCheckBox("顺序执行 (多通道集齐后排队逐个执行)")
@@ -963,7 +967,7 @@ class StepDialog(QDialog):
         elif sub_cat == "高压源":
             self.device_combo.addItems(["NGI 高压源 (HV Source)"])
         elif sub_cat == "模拟电池":
-            self.device_combo.addItems(["NGI83624A-1", "NGI83624A-2"])
+            self.device_combo.addItems(["1# 电池模拟器 (Simulator 1)", "2# 电池模拟器 (Simulator 2)", "3# 电池模拟器 (Simulator 3)"])
         elif sub_cat == "校准源":
             self.device_combo.addItems(["CA550 校准仪 (CA550)"])
         elif sub_cat == "直流源":
@@ -1238,6 +1242,7 @@ class StepDialog(QDialog):
             'type': step_type,
             'is_judgment': self.cb_judgment.isChecked(),
             'sync_exec': self.cb_sync.isChecked(),
+            'drop_on_fail': self.cb_drop_on_fail.isChecked(),
             'fail_strategy': self.fail_strategy_combo.currentText(),
             'name': f"{device}-{action} ({params_str})" + (" [同步]" if self.cb_sync.isChecked() else "")
         }

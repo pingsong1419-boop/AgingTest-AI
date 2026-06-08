@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                                QProgressBar, QTreeWidget, QTreeWidgetItem, QTextEdit, 
                                QPushButton, QFrame)
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, Slot, QTimer
 from PySide6.QtGui import QColor
 
 class MonitorDialog(QDialog):
@@ -57,6 +57,11 @@ class MonitorDialog(QDialog):
         self.step_items = {} # 用于快速索引树节点 (step_idx -> item)
         self.sub_step_items = {} # (step_idx, sub_idx) -> item
         self.originally_disabled_names = set() # 记录配方配置中原本就禁用的项
+        self._pending_log_messages = []
+        self._log_flush_timer = QTimer(self)
+        self._log_flush_timer.setInterval(200)
+        self._log_flush_timer.timeout.connect(self._flush_log_messages)
+        self._log_flush_timer.start()
         
         self._init_ui()
         self._connect_signals()
@@ -95,6 +100,7 @@ class MonitorDialog(QDialog):
         layout.addWidget(QLabel("实时执行日志:"))
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
+        self.log_text.document().setMaximumBlockCount(500)
         layout.addWidget(self.log_text)
         
         # 5. 按钮
@@ -259,7 +265,7 @@ class MonitorDialog(QDialog):
             
             # 还原历史日志，防止重复追加
             self.log_text.clear()
-            for msg in worker.log_history:
+            for msg in worker.log_history[-500:]:
                 self.log_text.append(msg)
                 
             # 还原进度条
@@ -388,7 +394,7 @@ class MonitorDialog(QDialog):
                     child.setForeground(0, QColor("#FFD700"))
                 parent.addChild(child)
                 self.sub_step_items[(i, j)] = child
-        self.step_tree.expandAll()
+        self.step_tree.collapseAll()
 
     def load_steps_from_data(self, steps_data):
         """加载原始 JSON 数据列表"""
@@ -438,7 +444,7 @@ class MonitorDialog(QDialog):
                     child.setForeground(0, QColor("#FFD700"))
                 parent.addChild(child)
                 self.sub_step_items[(i, j)] = child
-        self.step_tree.expandAll()
+        self.step_tree.collapseAll()
 
     @Slot(int, str)
     def on_step_started(self, ch_id, step_name):
@@ -498,7 +504,16 @@ class MonitorDialog(QDialog):
     @Slot(int, str)
     def on_log_message(self, ch_id, message):
         if ch_id != self.channel_id: return
-        self.log_text.append(message)
+        self._pending_log_messages.append(message)
+        if len(self._pending_log_messages) > 200:
+            self._pending_log_messages = self._pending_log_messages[-200:]
+
+    def _flush_log_messages(self):
+        if not self._pending_log_messages:
+            return
+        messages = self._pending_log_messages
+        self._pending_log_messages = []
+        self.log_text.append("\n".join(messages))
 
     @Slot(int, float, dict)
     def on_progress_updated(self, ch_id, progress, data):

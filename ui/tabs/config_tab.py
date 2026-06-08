@@ -53,16 +53,6 @@ class ConfigTab(QWidget):
         self.topology_combo.addItems(["1主0从", "1主1从", "1主2从", "1主3从"])
         self.topology_combo.setCurrentText("1主3从") # 默认选项
         prop_layout.addWidget(self.topology_combo)
-        
-        prop_layout.addSpacing(20)
-        prop_layout.addWidget(QLabel("【绑定高低温箱配方】:"))
-        self.chamber_profile_combo = QComboBox()
-        self.chamber_profile_combo.setMinimumWidth(150)
-        # 加载环境箱配方列表
-        chamber_presets = self.db_manager.list_chamber_presets() if hasattr(self.db_manager, 'list_chamber_presets') else []
-        self.chamber_profile_combo.addItems(["未绑定 (手动选择)"] + chamber_presets)
-        prop_layout.addWidget(self.chamber_profile_combo)
-        
         prop_layout.addStretch()
         right_panel.addLayout(prop_layout)
         
@@ -186,16 +176,16 @@ class ConfigTab(QWidget):
         btn_save_recipe.clicked.connect(self.save_recipe)
         btn_save_recipe.setStyleSheet("background-color: #28A745; color: white;")
         
-        btn_save_as = QPushButton("另存配方")
-        btn_save_as.clicked.connect(self.save_as_recipe)
-        btn_save_as.setStyleSheet("background-color: #17A2B8; color: white;")
+        btn_save_as_recipe = QPushButton("配方另存为")
+        btn_save_as_recipe.clicked.connect(self.save_recipe_as)
+        btn_save_as_recipe.setStyleSheet("background-color: #0D6EFD; color: white;")
         
         btn_layout.addWidget(btn_add_item)
         btn_layout.addWidget(btn_add_step)
         btn_layout.addWidget(btn_edit)
         btn_layout.addWidget(btn_del)
         btn_layout.addWidget(btn_save_recipe)
-        btn_layout.addWidget(btn_save_as)
+        btn_layout.addWidget(btn_save_as_recipe)
         self.edit_layout.addLayout(btn_layout)
         
         right_panel.addWidget(self.edit_container)
@@ -537,12 +527,6 @@ class ConfigTab(QWidget):
         self.step_tree.clear()
         self.topology_combo.setCurrentText(data.get("topology", "1主3从"))
         
-        chamber_recipe = data.get("chamber_recipe_name", "未绑定 (手动选择)")
-        # 确保列表里有这个项
-        if self.chamber_profile_combo.findText(chamber_recipe) == -1:
-            self.chamber_profile_combo.addItem(chamber_recipe)
-        self.chamber_profile_combo.setCurrentText(chamber_recipe)
-        
         for item_data in data.get("items", []):
             sync_text = "--"
             if item_data.get("is_block_start"): sync_text = "块起点"
@@ -565,6 +549,7 @@ class ConfigTab(QWidget):
             parent.setData(3, Qt.UserRole, item_data.get("exec_mode", "并行执行"))
             parent.setData(4, Qt.UserRole, item_data.get("is_block_start", False))
             parent.setData(5, Qt.UserRole, item_data.get("is_block_end", False))
+            parent.setData(6, Qt.UserRole, item_data.get("drop_on_ng", False))
             
             if item_data['name'].strip().startswith("#"):
                 parent.setForeground(0, QColor("#808080"))
@@ -590,6 +575,7 @@ class ConfigTab(QWidget):
                 child.setData(1, Qt.UserRole, sub_data.get("type"))
                 child.setData(2, Qt.UserRole, sub_data.get("is_judgment"))
                 child.setData(3, Qt.UserRole, sub_data.get("sync_exec", False))
+                child.setData(4, Qt.UserRole, sub_data.get("drop_on_fail", False))
                 
                 if sub_data['name'].strip().startswith("#"):
                     child.setForeground(0, QColor("#808080"))
@@ -972,32 +958,55 @@ class ConfigTab(QWidget):
                 
             QMessageBox.information(self, "完成", f"批量修改完成，共影响 {count} 个测试项。子工步保持不动。")
 
-    def save_as_recipe(self):
-        """另存为新配方"""
-        if not self.current_recipe_name:
-            QMessageBox.warning(self, "提醒", "请先在左侧选择或新建一个配方。")
+    def dry_run(self):
+        """仿真运行：使用 Mock 设备管理器运行当前编辑的配方"""
+        # 1. 序列化当前 UI 中的配方数据
+        items = []
+        for i in range(self.step_tree.topLevelItemCount()):
+            node = self.step_tree.topLevelItem(i)
+            item_data = {
+                "name": node.text(0),
+                "strategy": node.text(4),
+                "min": node.text(2),
+                "max": node.text(3),
+                "sub_steps": []
+            }
+            for j in range(node.childCount()):
+                sub = node.child(j)
+                item_data["sub_steps"].append({
+                    "name": sub.text(0).replace("  └─ ", ""),
+                    "type": sub.data(1, Qt.UserRole),
+                    "device": sub.data(0, Qt.UserRole),
+                    "action": sub.text(1),
+                    "params": sub.text(2),
+                    "is_judgment": sub.data(2, Qt.UserRole),
+                    "fail_strategy": sub.text(4)
+                })
+            items.append(item_data)
+            
+        if not items:
+            QMessageBox.warning(self, "提醒", "配方为空，无法运行仿真。")
             return
-            
-        from PySide6.QtWidgets import QInputDialog
-        new_name, ok = QInputDialog.getText(self, "另存配方", "请输入新的配方名称:", text=self.current_recipe_name + "_副本")
-        if ok and new_name:
-            if new_name.strip() == "":
-                QMessageBox.warning(self, "错误", "配方名称不能为空！")
-                return
-            if new_name in self.db_manager.list_recipes():
-                QMessageBox.warning(self, "错误", "同名配方已存在，请换一个名称！")
-                return
-            
-            # 使用现有逻辑保存为新配方
-            original_name = self.current_recipe_name
-            
-            # 临时修改左侧树结构避免 save_recipe 逻辑错误（或者直接修改内部名字后调用 save_recipe）
-            item = QTreeWidgetItem([new_name])
-            self.recipe_tree.addTopLevelItem(item)
-            self.recipe_tree.setCurrentItem(item)
-            self.current_recipe_name = new_name
-            
-            self.save_recipe()
+
+        # 2. 初始化 Mock 硬件和临时引擎
+        from devices.mock_manager import MockDeviceManager
+        from core.engine import TestEngine
+        from ui.dialogs.monitor_dialog import MonitorDialog
+        
+        mock_mgr = MockDeviceManager()
+        # 注意：这里我们不传真实 db_manager，防止仿真数据污染数据库
+        temp_engine = TestEngine(device_manager=mock_mgr, db_manager=None)
+        
+        # 3. 弹出监控窗口（使用通道 1 进行演示）
+        dialog = MonitorDialog(channel_id=1, engine=temp_engine, parent=self)
+        dialog.setWindowTitle("🧪 配方仿真运行 - 通道 1 (虚拟硬件)")
+        
+        # 启动测试
+        temp_engine.start_channel_test(1, items)
+        dialog.exec()
+        
+        # 结束后清理
+        temp_engine.stop_all()
 
     def validate_recipe(self) -> List[str]:
         """逻辑校验：返回错误列表"""
@@ -1036,7 +1045,6 @@ class ConfigTab(QWidget):
         data = {
             "name": recipe_name,
             "topology": self.topology_combo.currentText(),
-            "chamber_recipe_name": self.chamber_profile_combo.currentText(),
             "items": []
         }
         
@@ -1066,6 +1074,7 @@ class ConfigTab(QWidget):
                 "exec_mode": item_node.data(3, Qt.UserRole) or "并行执行",
                 "is_block_start": item_node.data(4, Qt.UserRole) or False,
                 "is_block_end": item_node.data(5, Qt.UserRole) or False,
+                "drop_on_ng": item_node.data(6, Qt.UserRole) or False,
                 "target_board": item_node.text(7) if item_node.text(7) else "主机",
                 "sub_steps": []
             }
@@ -1081,6 +1090,7 @@ class ConfigTab(QWidget):
                     "type": sub_node.data(1, Qt.UserRole),
                     "is_judgment": sub_node.data(2, Qt.UserRole),
                     "sync_exec": sub_node.data(3, Qt.UserRole),
+                    "drop_on_fail": sub_node.data(4, Qt.UserRole) or False,
                     "fail_strategy": sub_node.text(4)
                 }
                 item_data["sub_steps"].append(sub_data)
@@ -1098,6 +1108,88 @@ class ConfigTab(QWidget):
                     break
         else:
             QMessageBox.critical(self, "错误", "配方保存失败，请检查日志。")
+
+    def save_recipe_as(self):
+        """Save the current recipe tree as a new recipe file."""
+        errors = self.validate_recipe()
+        if errors:
+            msg = "配方校验发现以下问题：\n\n" + "\n".join(errors[:5])
+            if len(errors) > 5:
+                msg += f"\n...等共 {len(errors)} 个问题"
+            QMessageBox.warning(self, "校验未通过", msg)
+            return
+
+        recipe_item = self.recipe_tree.currentItem()
+        if not recipe_item:
+            QMessageBox.warning(self, "提醒", "请先在左侧选择一个配方，再执行另存为。")
+            return
+
+        from PySide6.QtWidgets import QInputDialog
+        current_name = recipe_item.text(0).strip()
+        default_name = f"{current_name}_副本" if current_name else "新配方"
+        recipe_name, ok = QInputDialog.getText(self, "配方另存为", "请输入新配方名称:", text=default_name)
+        recipe_name = recipe_name.strip() if ok else ""
+        if not recipe_name:
+            return
+        if recipe_name in self.db_manager.list_recipes():
+            QMessageBox.warning(self, "名称重复", f"配方【{recipe_name}】已存在，请换一个名称。")
+            return
+
+        data = self._collect_recipe_data(recipe_name)
+        if self.db_manager.save_recipe_json(recipe_name, data):
+            self.current_recipe_name = recipe_name
+            QMessageBox.information(self, "成功", f"配方【{recipe_name}】已另存。")
+            self.refresh_recipe_list()
+            for i in range(self.recipe_tree.topLevelItemCount()):
+                item = self.recipe_tree.topLevelItem(i)
+                if item.text(0) == recipe_name:
+                    self.recipe_tree.setCurrentItem(item)
+                    self.on_recipe_selected(item, 0)
+                    break
+        else:
+            QMessageBox.critical(self, "错误", "配方另存失败，请检查文件权限。")
+
+    def _collect_recipe_data(self, recipe_name):
+        data = {"name": recipe_name, "topology": self.topology_combo.currentText(), "items": []}
+        for i in range(self.step_tree.topLevelItemCount()):
+            item_node = self.step_tree.topLevelItem(i)
+            has_sync = False
+            for j in range(item_node.childCount()):
+                if item_node.child(j).data(3, Qt.UserRole):
+                    has_sync = True
+                    break
+            if has_sync:
+                item_node.setData(1, Qt.UserRole, "不复测")
+                item_node.setText(4, "任何NG停止")
+            item_data = {
+                "name": item_node.text(0), "mode": item_node.text(1),
+                "min": item_node.text(2), "max": item_node.text(3),
+                "strategy": item_node.text(4),
+                "standard_type": item_node.data(0, Qt.UserRole) or "数值",
+                "retry_count": item_node.data(1, Qt.UserRole) or "不复测",
+                "unit": item_node.data(2, Qt.UserRole) or "NULL",
+                "exec_mode": item_node.data(3, Qt.UserRole) or "并行执行",
+                "is_block_start": item_node.data(4, Qt.UserRole) or False,
+                "is_block_end": item_node.data(5, Qt.UserRole) or False,
+                "drop_on_ng": item_node.data(6, Qt.UserRole) or False,
+                "target_board": item_node.text(7) if item_node.text(7) else "主机",
+                "sub_steps": []
+            }
+            for j in range(item_node.childCount()):
+                sub_node = item_node.child(j)
+                sub_data = {
+                    "name": sub_node.text(0).replace("  └─ ", ""),
+                    "action": sub_node.text(1), "params": sub_node.text(2),
+                    "device": sub_node.data(0, Qt.UserRole),
+                    "type": sub_node.data(1, Qt.UserRole),
+                    "is_judgment": sub_node.data(2, Qt.UserRole),
+                    "sync_exec": sub_node.data(3, Qt.UserRole),
+                    "drop_on_fail": sub_node.data(4, Qt.UserRole) or False,
+                    "fail_strategy": sub_node.text(4)
+                }
+                item_data["sub_steps"].append(sub_data)
+            data["items"].append(item_data)
+        return data
 
     def add_test_item(self):
         if not self.current_recipe_name:
@@ -1130,6 +1222,7 @@ class ConfigTab(QWidget):
             item.setData(3, Qt.UserRole, data.get('exec_mode', '并行执行'))
             item.setData(4, Qt.UserRole, data.get('is_block_start', False))
             item.setData(5, Qt.UserRole, data.get('is_block_end', False))
+            item.setData(6, Qt.UserRole, data.get('drop_on_ng', False))
             
             item.setForeground(0, QColor("#00E5FF"))
             font = item.font(0)
@@ -1178,6 +1271,7 @@ class ConfigTab(QWidget):
             item.setData(1, Qt.UserRole, data['type'])
             item.setData(2, Qt.UserRole, data['is_judgment'])
             item.setData(3, Qt.UserRole, data.get('sync_exec', False))
+            item.setData(4, Qt.UserRole, data.get('drop_on_fail', False))
             
             if data['is_judgment']:
                 item.setForeground(0, QColor("#FFD700"))
@@ -1242,6 +1336,7 @@ class ConfigTab(QWidget):
                 item.setData(3, Qt.UserRole, new_data.get('exec_mode', '并行执行'))
                 item.setData(4, Qt.UserRole, new_data.get('is_block_start', False))
                 item.setData(5, Qt.UserRole, new_data.get('is_block_end', False))
+                item.setData(6, Qt.UserRole, new_data.get('drop_on_ng', False))
         else:
             # 这是一个『子工步』(Child)
             from ui.dialogs.step_dialog import StepDialog
@@ -1254,6 +1349,7 @@ class ConfigTab(QWidget):
                 'type': item.data(1, Qt.UserRole) or "",
                 'is_judgment': item.data(2, Qt.UserRole) or False,
                 'sync_exec': item.data(3, Qt.UserRole) or False,
+                'drop_on_fail': item.data(4, Qt.UserRole) or False,
                 'fail_strategy': item.text(4)
             }
             parent = item.parent()
@@ -1274,6 +1370,7 @@ class ConfigTab(QWidget):
                 item.setData(1, Qt.UserRole, new_data['type'])
                 item.setData(2, Qt.UserRole, new_data['is_judgment'])
                 item.setData(3, Qt.UserRole, new_data.get('sync_exec', False))
+                item.setData(4, Qt.UserRole, new_data.get('drop_on_fail', False))
                 
                 if new_data['is_judgment']:
                     item.setForeground(0, QColor("#FFD700"))

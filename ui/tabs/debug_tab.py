@@ -110,7 +110,9 @@ class DebugTab(QWidget):
         # 设置 Tab 样式为左侧显示或顶部显示（根据用户习惯，通常顶部更直观）
         self.sub_tabs.setTabPosition(QTabWidget.North)
         
-        # 1. BMS单通道调试已应要求删除
+        # 1. 原始的单通道调试 (CAN/BMS)
+        self.tab_single_ch = SingleChannelDebugTab()
+        self.sub_tabs.addTab(self.tab_single_ch, "BMS 单通道调试")
         
         layout.addWidget(self.sub_tabs)
 
