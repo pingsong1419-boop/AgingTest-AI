@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         from PySide6.QtWidgets import QDialog
         import sys
         
-        dialog = StartupCheckDialog(self.device_manager, self)
+        dialog = StartupCheckDialog(self.device_manager, None)
         if dialog.exec() != QDialog.Accepted:
             # 用户选择退出程序或强制关闭弹窗
             self.device_manager.disconnect_all()

@@ -690,9 +690,17 @@ class OverviewTab(QWidget):
 
             
 
+        occupied_barcodes = self._build_occupied_barcode_map()
         # 实例化扫码核心对话框
 
-        dialog = ScanDialog(self, db_manager=self.db_manager, slaves_count=slaves_count, checked_channels=checked_channels, already_completed=already_completed)
+        dialog = ScanDialog(
+            self,
+            db_manager=self.db_manager,
+            slaves_count=slaves_count,
+            checked_channels=checked_channels,
+            already_completed=already_completed,
+            occupied_barcodes=occupied_barcodes,
+        )
 
         # 连接扫码完成的自定义信号到当前界面的刷新函数
 
@@ -713,6 +721,12 @@ class OverviewTab(QWidget):
         # 找到对应的通道 UI 并更新数据 (target_channel 是 1-48)
         idx = target_channel - 1
         if 0 <= idx < len(self.channel_widgets):
+            duplicate = self._find_global_barcode_duplicate(target_channel, shelf, master, slaves)
+            if duplicate:
+                code, other_cid = duplicate
+                self.speak_text("条码重复")
+                QMessageBox.warning(self, "条码重复", f"条码 {code} 已被 CH-{other_cid:02d} 使用，禁止重复绑定。")
+                return
             ch_widget = self.channel_widgets[idx]
             ch_widget.set_barcodes(shelf, master, slaves)
             ch_widget.set_status("就绪(可测试)", "#00E5FF")
@@ -725,6 +739,37 @@ class OverviewTab(QWidget):
             print(f"[DEBUG] Target Channel index {idx} out of range (0-59)!")
             
         self.is_scan_completed = True
+
+    def _build_occupied_barcode_map(self):
+        occupied = {}
+        for cid, ch_widget in enumerate(self.channel_widgets, start=1):
+            entries = [
+                ("货架", getattr(ch_widget, "shelf_barcode", "") or ""),
+                ("主机", getattr(ch_widget, "master_barcode", "") or ""),
+            ]
+            entries.extend((f"从机{i+1}", code) for i, code in enumerate(getattr(ch_widget, "slave_barcodes", []) or []))
+            for role, code in entries:
+                code = str(code or "").strip()
+                if code:
+                    occupied[code] = {"channel": cid, "role": role}
+        return occupied
+
+    def _find_global_barcode_duplicate(self, target_channel, shelf, master, slaves):
+        seen = set()
+        for code in [shelf, master] + list(slaves or []):
+            code = str(code or "").strip()
+            if not code:
+                continue
+            if code in seen:
+                return code, target_channel
+            seen.add(code)
+
+        occupied = self._build_occupied_barcode_map()
+        for code in seen:
+            info = occupied.get(code)
+            if info and info.get("channel") != target_channel:
+                return code, int(info.get("channel", 0) or 0)
+        return None
 
 
 

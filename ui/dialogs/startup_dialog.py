@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
                                QLabel, QTextEdit, QPushButton, QProgressBar, QApplication)
-from PySide6.QtCore import Qt, QThread, Signal, Slot
+from PySide6.QtCore import Qt, QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QColor, QTextCursor
 
 class InitWorker(QThread):
@@ -38,6 +38,12 @@ class StartupCheckDialog(QDialog):
         
         self._init_ui()
         self._start_check()
+        QTimer.singleShot(0, self._bring_to_front)
+
+    def _bring_to_front(self):
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def _init_ui(self):
         layout = QVBoxLayout(self)

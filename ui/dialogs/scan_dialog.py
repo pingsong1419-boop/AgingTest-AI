@@ -14,12 +14,13 @@ class ScanDialog(QDialog):
     """
     scan_completed = Signal(int, str, str, object) # channel_id, shelf, master, slaves
 
-    def __init__(self, parent=None, db_manager=None, slaves_count=0, checked_channels=None, already_completed=None):
+    def __init__(self, parent=None, db_manager=None, slaves_count=0, checked_channels=None, already_completed=None, occupied_barcodes=None):
         super().__init__(parent)
         self.db_manager = db_manager
         self.slaves_count = slaves_count
         self.checked_channels = checked_channels or []
         self.completed_channels = set(already_completed or [])
+        self.occupied_barcodes = dict(occupied_barcodes or {})
         
         self.setWindowTitle("扫码入站绑定")
         # 增加整体宽高，留出充裕的垂直视觉空间，防止拥挤
@@ -41,6 +42,58 @@ class ScanDialog(QDialog):
         
         self._init_ui()
         self._update_step_prompt()
+
+    def _current_codes(self):
+        codes = [self.shelf_code, self.master_code]
+        codes.extend(self.slave_codes)
+        return [str(c).strip() for c in codes if str(c).strip()]
+
+    def _show_duplicate_error(self, code, detail=""):
+        msg = f"❌ 条码重复：{code}"
+        if detail:
+            msg += f"（{detail}）"
+        self.lbl_step.setText(msg)
+        self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+        self.speak_text("条码重复")
+        self.scan_input.setFocus()
+
+    def _release_channel_from_global(self, channel_id):
+        """重新扫描某货架/通道时，释放该通道旧条码，避免旧记录阻止重扫。"""
+        to_remove = [
+            code for code, info in self.occupied_barcodes.items()
+            if isinstance(info, dict) and info.get("channel") == channel_id
+        ]
+        for code in to_remove:
+            self.occupied_barcodes.pop(code, None)
+
+    def _reserve_code_global(self, code, channel_id, role):
+        code = str(code or "").strip()
+        if not code:
+            return True
+        info = self.occupied_barcodes.get(code)
+        if info and info.get("channel") != channel_id:
+            self._show_duplicate_error(code, f"已被 CH-{info.get('channel'):02d} 使用")
+            return False
+        self.occupied_barcodes[code] = {"channel": channel_id, "role": role}
+        return True
+
+    def _validate_global_duplicates_for_submit(self, channel_id, shelf, master, slaves):
+        codes = [("货架", shelf), ("主机", master)]
+        codes.extend((f"从机{i+1}", sv) for i, sv in enumerate(slaves))
+        seen = {}
+        for role, code in codes:
+            code = str(code or "").strip()
+            if not code:
+                continue
+            if code in seen:
+                self._show_duplicate_error(code, f"当前通道内 {seen[code]} 与 {role} 重复")
+                return False
+            seen[code] = role
+            info = self.occupied_barcodes.get(code)
+            if info and info.get("channel") != channel_id:
+                self._show_duplicate_error(code, f"已被 CH-{info.get('channel'):02d} 使用")
+                return False
+        return True
         
     def _init_ui(self):
         layout = QVBoxLayout(self)
@@ -238,11 +291,9 @@ class ScanDialog(QDialog):
         self.scan_input.clear()
         if not code: return
         
-        # --- 防重复扫码校验 ---
-        if code == self.master_code or code in self.slave_codes:
-            self.lbl_step.setText(f"❌ 条码重复！请勿重复扫描同一实物")
-            self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
-            self.speak_text("条码重复")
+        # --- 当前通道内防重复扫码校验 ---
+        if code in self._current_codes():
+            self._show_duplicate_error(code, "当前通道内重复")
             return
             
         # --- 智能识别逻辑 ---
@@ -269,14 +320,30 @@ class ScanDialog(QDialog):
                 self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
                 self.speak_text("该通道未勾选")
                 return
+
+            # 重新扫描该货架/通道时，释放该通道旧的全局条码占用；其它通道仍不能复用这些码。
+            info = self.occupied_barcodes.get(code)
+            if info and info.get("channel") != ch_id:
+                self._show_duplicate_error(code, f"已被 CH-{info.get('channel'):02d} 使用")
+                return
+            self._release_channel_from_global(ch_id)
             
             self.target_channel = ch_id
             self.shelf_code = code
+            if not self._reserve_code_global(code, ch_id, "货架"):
+                return
             self.lbl_ch_info.setText(f"测试通道: CH-{self.target_channel:02d}")
             self.slot_shelf.val_input.setText(code)
             self._highlight_slot(self.slot_shelf)
             
         elif is_master and not self.master_code:
+            if self.target_channel == -1:
+                self.lbl_step.setText("❌ 请先扫描【货架二维码】定位通道！")
+                self.lbl_step.setStyleSheet("color: #FF4D4D; font-size: 20px;")
+                self.speak_text("请先扫描货架")
+                return
+            if not self._reserve_code_global(code, self.target_channel, "主机"):
+                return
             self.master_code = code
             self.slot_master.val_input.setText(code)
             self._highlight_slot(self.slot_master)
@@ -288,6 +355,8 @@ class ScanDialog(QDialog):
             return
             
         elif is_slave and len(self.slave_codes) < self.slaves_count:
+            if not self._reserve_code_global(code, self.target_channel, f"从机{len(self.slave_codes)+1}"):
+                return
             idx = len(self.slave_codes)
             self.slave_codes.append(code)
             self.slave_slots[idx].val_input.setText(code)
@@ -352,6 +421,18 @@ class ScanDialog(QDialog):
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.warning(self, "校验失败", f"通道 CH-{ch_id:02d} 未勾选，无法入站！")
             return
+
+        if not self._validate_global_duplicates_for_submit(ch_id, shelf, master, slaves):
+            return
+
+        self._release_channel_from_global(ch_id)
+        if not self._reserve_code_global(shelf, ch_id, "货架"):
+            return
+        if not self._reserve_code_global(master, ch_id, "主机"):
+            return
+        for i, sv in enumerate(slaves, start=1):
+            if not self._reserve_code_global(sv, ch_id, f"从机{i}"):
+                return
             
         self.target_channel = ch_id
 

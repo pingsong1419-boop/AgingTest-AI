@@ -1323,12 +1323,12 @@ class TestEngine(QObject):
                 groups_waiting.setdefault(group_key, set()).add(cid)
 
             for group_key, waiting_set in groups_waiting.items():
-                active_in_group = [cid for cid in group_key if cid in self.workers]
-                total = len(active_in_group)
+                expected_in_group = sorted(group_key)
+                total = len(expected_in_group)
                 waiting = len(waiting_set)
                 
                 # 诊断日志：打印各组屏障等待状态，精确定位未到达的通道
-                not_reached = [cid for cid in active_in_group if cid not in waiting_set]
+                not_reached = [cid for cid in expected_in_group if cid not in waiting_set]
                 if not_reached and os.environ.get("AGING_DEBUG_SYNC_LOG") == "1":
                     sub_obj = self._current_barrier_sub_step.get(group_key)
                     sub_name = sub_obj.params.get("name", sub_obj.type.value) if (sub_obj and hasattr(sub_obj, "params")) else "未知屏障"
@@ -1338,7 +1338,9 @@ class TestEngine(QObject):
 
                 if waiting >= total > 0:
                     # 该组已集齐，准备释放
-                    channels_to_release = sorted(waiting_set)  # 排序保证确定性
+                    channels_to_release = [cid for cid in expected_in_group if cid in waiting_set and cid in self.workers]
+                    if not channels_to_release:
+                        continue
                     for cid in channels_to_release:
                         self.sync_barrier_channels.discard(cid)
                     exec_cid = channels_to_release[0]  # 取最小 cid 为执行主体
@@ -1538,7 +1540,16 @@ class TestEngine(QObject):
                 else:
                     trace("ENGINE_STOP_CHANNEL_THREAD_STOPPED", cid)
                 del self.workers[cid]; del self.threads[cid]
-                if cid in self.sync_groups: del self.sync_groups[cid]
+                if cid in self.sync_groups:
+                    del self.sync_groups[cid]
+                for member, group in list(self.sync_groups.items()):
+                    if cid in group:
+                        new_group = set(group)
+                        new_group.discard(cid)
+                        if new_group:
+                            self.sync_groups[member] = new_group
+                        else:
+                            del self.sync_groups[member]
             self._check_and_release_barrier() # 剔除 channel worker 后再检查集齐条件，防止死锁
         trace("ENGINE_STOP_CHANNEL_END", cid)
 
