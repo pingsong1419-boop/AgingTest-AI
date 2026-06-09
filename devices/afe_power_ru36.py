@@ -29,9 +29,12 @@ class AFEPowerRU36:
         )
         self.lock = threading.RLock()
         self.is_connected = False
+        self.last_error = ""
 
     def connect(self) -> bool:
         with self.lock:
+            if self.is_connected:
+                return True
             try:
                 if self.client.comm_params.host != self.ip or self.client.comm_params.port != self.port:
                     try: self.client.close()
@@ -48,13 +51,17 @@ class AFEPowerRU36:
                     result = self.client.read_input_registers(100, count=1, device_id=self.unit_id)
                     if result and not result.isError():
                         self.is_connected = True
+                        self.last_error = ""
                         return True
                     else:
                         self.client.close()
                         self.is_connected = False
+                        self.last_error = f"TCP已连接，但读取输入寄存器100失败: {result}"
                         return False
+                self.last_error = f"TCP连接失败: {self.ip}:{self.port}"
                 return False
-            except Exception:
+            except Exception as e:
+                self.last_error = str(e)
                 self.is_connected = False
                 return False
 

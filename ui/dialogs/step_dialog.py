@@ -762,6 +762,7 @@ class StepDialog(QDialog):
             self.cb_judgment.setChecked(data.get('is_judgment', False))
             self.cb_sync.setChecked(data.get('sync_exec', False))
             self.cb_seq.setChecked(data.get('seq_exec', False))
+            self.cb_drop_on_fail.setChecked(data.get('drop_on_fail', False))
             self.fail_strategy_combo.setCurrentText(data.get('fail_strategy', "失败停止"))
             
             category = self.category_combo.currentText()
@@ -967,7 +968,7 @@ class StepDialog(QDialog):
         elif sub_cat == "高压源":
             self.device_combo.addItems(["NGI 高压源 (HV Source)"])
         elif sub_cat == "模拟电池":
-            self.device_combo.addItems(["1# 电池模拟器 (Simulator 1)", "2# 电池模拟器 (Simulator 2)", "3# 电池模拟器 (Simulator 3)"])
+            self.device_combo.addItems(["电池模拟器 (NGI 83624A Simulator)"])
         elif sub_cat == "校准源":
             self.device_combo.addItems(["CA550 校准仪 (CA550)"])
         elif sub_cat == "直流源":

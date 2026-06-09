@@ -1,0 +1,200 @@
+import socket
+import time
+import struct
+import threading
+
+class NGI83624:
+    """
+    NGI 83624 单/全通道 电池模拟器驱动 (基于 SCPI 协议)
+    """
+    def __init__(self, ip: str, port: int = 7000, max_channels: int = 24):
+        self.ip = ip
+        self.port = port
+        self.max_channels = max_channels
+        self.sock = None
+        self.is_connected = False
+        self._lock = threading.Lock()
+
+    def connect(self) -> bool:
+        if self.is_connected:
+            self.disconnect()
+
+        try:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0))
+            self.sock.settimeout(2.0)
+            self.sock.connect((self.ip, self.port))
+            self.sock.sendall(b"*IDN?\n")
+            identity = self.sock.recv(1024).decode(errors="ignore").strip()
+            if not identity:
+                raise TimeoutError("TCP端口可连接，但设备未响应 *IDN? 查询")
+            self.is_connected = True
+            print(f"[*] NGI 83624A ({self.ip}) 通讯握手成功: {identity}")
+            return True
+        except Exception as e:
+            print(f"[NGI83624] 通讯握手失败 ({self.ip}): {e}")
+            try:
+                if self.sock:
+                    self.sock.close()
+            except:
+                pass
+            self.sock = None
+            self.is_connected = False
+            return False
+
+    def disconnect(self):
+        if self.sock:
+            try:
+                self.sock.shutdown(socket.SHUT_RDWR)
+                self.sock.close()
+            except:
+                pass
+        self.sock = None
+        self.is_connected = False
+
+    def _ensure_connected(self) -> bool:
+        if self.is_connected and self.sock:
+            return True
+        return self.connect()
+
+    def _safe_send(self, cmd_bytes: bytes, retries: int = 2, logger=None) -> bool:
+        for i in range(retries + 1):
+            try:
+                if not self._ensure_connected(): continue
+                self._clear_buffer()
+                cmd_str = cmd_bytes.decode().strip()
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd_str}")
+                self.sock.send(cmd_bytes)
+                return True
+            except Exception as e:
+                print(f"[NGI83624] 发送失败 (尝试 {i+1}): {e}")
+                self.is_connected = False
+                time.sleep(0.2)
+        return False
+
+    def set_voltage(self, channel: int, voltage: float, logger=None) -> bool:
+        with self._lock:
+            try:
+                if channel == 0:
+                    ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
+                    cmd = f"SOUR:VOLT {voltage}(@{ch_str})\n"
+                else:
+                    cmd = f"SOUR{channel}:VOLT {voltage}\n"
+                
+                if not self._safe_send(cmd.encode(), logger=logger): return False
+                time.sleep(0.02) 
+                
+                if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] 设置所有通道电压: {voltage}V")
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 设置电压异常: {e}")
+                return False
+
+    def set_current_limit(self, channel: int, current: float, logger=None):
+        with self._lock:
+            if not self._ensure_connected():
+                return False
+            try:
+                if channel == 0:
+                    ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
+                    cmd = f"SOUR:OUTCURR {current}(@{ch_str})\n"
+                else:
+                    cmd = f"SOUR{channel}:OUTCURR {current}\n"
+                
+                self._safe_send(cmd.encode(), logger=logger)
+                time.sleep(0.02)
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 设置电流异常: {e}")
+                self.is_connected = False
+                return False
+
+    def set_range(self, channel: int, range_str: str, logger=None) -> bool:
+        with self._lock:
+            if not self._ensure_connected():
+                return False
+            try:
+                range_val = "0"
+                if "LOW" in range_str.upper():
+                    range_val = "2"
+                elif "AUTO" in range_str.upper():
+                    range_val = "3"
+                    
+                if channel == 0:
+                    ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
+                    cmd = f"SOUR:RANG {range_val}(@{ch_str})\n"
+                else:
+                    cmd = f"SOUR{channel}:RANG {range_val}\n"
+                    
+                self._safe_send(cmd.encode(), logger=logger)
+                time.sleep(0.02)
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 设置量程异常: {e}")
+                self.is_connected = False
+                return False
+
+    def output_control(self, channel: int, state: bool, logger=None) -> bool:
+        with self._lock:
+            try:
+                val = 1 if state else 0
+                if channel == 0:
+                    ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
+                    cmd = f"OUTP:ONOFF {val}(@{ch_str})\n"
+                else:
+                    cmd = f"OUTP{channel}:ONOFF {val}\n"
+                    
+                if not self._safe_send(cmd.encode(), logger=logger): return False
+                time.sleep(0.02) 
+                
+                if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
+                return True
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
+                return False
+
+    def _clear_buffer(self):
+        if not self.sock: return
+        self.sock.setblocking(False)
+        try:
+            while True: self.sock.recv(4096)
+        except: pass
+        self.sock.settimeout(2.0)
+
+    def measure_voltage(self, channel: int, logger=None) -> float:
+        with self._lock:
+            if not self._ensure_connected():
+                if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+                return -1.0
+            self._clear_buffer()
+            try:
+                if channel == 0: return -1.0
+                cmd = f"MEAS{channel}:VOLT?\n"
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
+                self.sock.send(cmd.encode())
+                data = self.sock.recv(1024).decode().strip()
+                if logger: logger(f"[IP: {self.ip}] [RX] {data} V")
+                return float(data)
+            except Exception as e:
+                self.is_connected = False
+                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电压异常: {e}")
+                return -1.0
+
+    def measure_current(self, channel: int, logger=None) -> float:
+        with self._lock:
+            if not self._ensure_connected():
+                if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+                return -1.0
+            self._clear_buffer()
+            try:
+                if channel == 0: return -1.0
+                cmd = f"MEAS{channel}:CURR?\n"
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
+                self.sock.send(cmd.encode())
+                data = self.sock.recv(1024).decode().strip()
+                if logger: logger(f"[IP: {self.ip}] [RX] {data} mA")
+                return float(data)
+            except Exception as e:
+                self.is_connected = False
+                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电流异常: {e}")
+                return -1.0

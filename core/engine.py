@@ -202,6 +202,14 @@ class ChannelWorker(QObject):
             self.stop_sync_timeout()
             if self.is_waiting_for_sync:
                 self.log_message.emit(self.channel_id, "[!] 同步/顺序执行等待超时！看门狗强制释放通道，防止整机卡死。")
+                if hasattr(self, "current_step_index") and hasattr(self, "current_sub_step_index"):
+                    try:
+                        sub_step = self.steps[self.current_step_index].sub_steps[self.current_sub_step_index]
+                        if bool(sub_step.params.get("drop_on_fail", False)) and self.engine:
+                            self.engine.fail_channel_test(self.channel_id, "同步/顺序等待超时")
+                            return
+                    except Exception:
+                        pass
                 self.resume_from_sync(advance=True)
 
     def resume_from_sync(self, advance=True):
@@ -470,11 +478,6 @@ class ChannelWorker(QObject):
                     if ch_match: target_ch = int(ch_match.group(1))
 
                 if "simulator" in device or "电池模拟器" in device:
-                    target_sim = None
-                    if "1#" in device: target_sim = mgr.simulators[0]
-                    elif "2#" in device: target_sim = mgr.simulators[1]
-                    elif "3#" in device: target_sim = mgr.simulators[2]
-                    
                     if "快捷批量配置" in action:
                         volt = self._parse_numeric(p_str.split("V")[0])
                         curr_ma = float(re.search(r"([\d\.]+)mA", p_str).group(1)) if "mA" in p_str else 0.0
@@ -482,47 +485,40 @@ class ChannelWorker(QObject):
                         range_str = "HIGH" if "Range:HIGH" in p_str else "LOW"
                         ch_str = p_str.split("CH:")[-1].strip().upper() if "CH:" in p_str else "ALL"
                         
-                        if target_sim:
-                            if ch_str == "ALL":
-                                target_sim.set_voltage(0, volt, logger=hw_logger)
-                                target_sim.set_current_limit(0, curr_ma/1000.0, logger=hw_logger)
-                                target_sim.set_range(0, range_str, logger=hw_logger)
-                                success = target_sim.output_control(0, output_on, logger=hw_logger)
-                                if success and output_on: success = verify_and_wait(target_sim, volt, ch=1, threshold=0.002)
-                            else:
-                                try:
-                                    target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
-                                    for ch in target_channels:
-                                        if 1 <= ch <= target_sim.max_channels:
-                                            target_sim.set_voltage(ch, volt)
-                                            target_sim.output_control(ch, output_on)
-                                            if output_on: success = success and verify_and_wait(target_sim, volt, ch=ch, threshold=0.002)
-                                except: success = False
+                        if ch_str == "ALL":
+                            mgr.broadcast_voltage(volt, logger=hw_logger)
+                            mgr.broadcast_current(curr_ma/1000.0, logger=hw_logger)
+                            mgr.broadcast_range(range_str, logger=hw_logger)
+                            success = mgr.broadcast_output(output_on, logger=hw_logger)
+                            sim, ch = mgr._get_sim_and_ch(self.channel_id)
+                            if success and output_on: success = verify_and_wait(sim, volt, ch=ch, threshold=0.002)
                         else:
-                            if ch_str == "ALL":
-                                mgr.broadcast_voltage(volt, logger=hw_logger)
-                                success = mgr.broadcast_output(output_on, logger=hw_logger)
-                                if success and output_on: success = verify_and_wait(mgr.simulators[0], volt, ch=1, threshold=0.002)
-                            else: success = False
+                            try:
+                                target_channels = [int(p.strip()) for p in ch_str.replace("，", ",").split(",") if p.strip()]
+                                for ch in target_channels:
+                                    success = success and mgr.set_voltage(ch, volt, logger=hw_logger)
+                                    success = success and mgr.set_current(ch, curr_ma/1000.0, logger=hw_logger)
+                                    sim, local_ch = mgr._get_sim_and_ch(ch)
+                                    if sim and hasattr(sim, "set_range"):
+                                        success = success and sim.set_range(local_ch, range_str, logger=hw_logger)
+                                    success = success and mgr.output_control(ch, output_on, logger=hw_logger)
+                                    if output_on:
+                                        success = success and verify_and_wait(sim, volt, ch=local_ch, threshold=0.002)
+                            except:
+                                success = False
                         return success, None
 
                     ch_to_use = target_ch if target_ch is not None else self.channel_id
-                    if target_sim:
-                        physical_ch = (ch_to_use - 1) % 18 + 1
-                        if "V" in p_str: 
-                            v_val = self._parse_numeric(p_str.split("V")[0])
-                            success = success and target_sim.set_voltage(physical_ch, v_val, logger=hw_logger)
-                            if success: success = verify_and_wait(target_sim, v_val, ch=physical_ch, threshold=0.002)
-                        if "开启输出" in p_str: success = success and target_sim.output_control(physical_ch, True, logger=hw_logger)
-                        elif "关闭输出" in p_str: success = success and target_sim.output_control(physical_ch, False, logger=hw_logger)
-                    else:
-                        if "V" in p_str: 
-                            v_val = self._parse_numeric(p_str.split("V")[0])
-                            success = success and mgr.set_voltage(ch_to_use, v_val, logger=hw_logger)
-                            if success:
-                                sim, ch = mgr._get_sim_and_ch(ch_to_use)
-                                success = verify_and_wait(sim, v_val, ch=ch, threshold=0.002)
-                        if "开启输出" in p_str: success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
+                    if "V" in p_str: 
+                        v_val = self._parse_numeric(p_str.split("V")[0])
+                        success = success and mgr.set_voltage(ch_to_use, v_val, logger=hw_logger)
+                        if success:
+                            sim, ch = mgr._get_sim_and_ch(ch_to_use)
+                            success = verify_and_wait(sim, v_val, ch=ch, threshold=0.002)
+                    if "开启输出" in p_str:
+                        success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
+                    elif "关闭输出" in p_str:
+                        success = success and mgr.output_control(ch_to_use, False, logger=hw_logger)
 
                 elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
                     if "hv_source" in device or "hv source" in device:
@@ -633,10 +629,7 @@ class ChannelWorker(QObject):
                 is_volt = "电压" in p_str or "volt" in p_str or "V" in p_str.upper()
                 
                 # 确定友好名称
-                if "1#" in device and "sim" in device: f_name = "1#电池模拟器"
-                elif "2#" in device and "sim" in device: f_name = "2#电池模拟器"
-                elif "3#" in device and "sim" in device: f_name = "3#电池模拟器"
-                elif "sim" in device: f_name = "电池模拟器"
+                if "sim" in device: f_name = "电池模拟器"
                 elif "2#" in device: f_name = "2# AFE电源"
                 elif "3#" in device: f_name = "3# AFE电源"
                 elif "afe" in device: f_name = "AFE电源"
@@ -648,23 +641,7 @@ class ChannelWorker(QObject):
 
                 if "simulator" in device or "电池模拟器" in device:
                     ch = target_ch if target_ch is not None else self.channel_id
-                    target_sim = None
-                    if "1#" in device: target_sim = mgr.simulators[0]
-                    elif "2#" in device: target_sim = mgr.simulators[1]
-                    elif "3#" in device: target_sim = mgr.simulators[2]
-                    if target_sim:
-                        physical_ch = (ch - 1) % 18 + 1
-                        if is_volt:
-                            total_v = 0.0
-                            for i in range(1, target_sim.max_channels + 1):
-                                v = target_sim.measure_voltage(i, logger=hw_logger)
-                                if v >= 0: total_v += v
-                            hw_logger(f"[1-{target_sim.max_channels}通道总和] 测得电压: {total_v:.2f}V")
-                            result_value = total_v
-                        else:
-                            result_value = target_sim.measure_current(physical_ch)
-                    else:
-                        result_value = mgr.measure_voltage(ch) if is_volt else mgr.measure_current(ch)
+                    result_value = mgr.measure_voltage(ch, logger=hw_logger) if is_volt else mgr.measure_current(ch, logger=hw_logger)
                     success = result_value >= 0
                 elif any(x in device for x in ["afe", "main", "hv_source", "hv source", "control power", "控制板"]):
                     if "2#" in device: dev = mgr.afe_pwr_2
@@ -855,7 +832,7 @@ class ChannelWorker(QObject):
         else:
             if bool(sub_step.params.get("drop_on_fail", False)) and self.engine:
                 reason = sub_step.params.get("name") or sub_step.params.get("action") or sub_step.type.value
-                self.engine.fail_channel_test(self.channel_id, f"???????????: {reason}")
+                self.engine.fail_channel_test(self.channel_id, f"子工步失败剔除: {reason}")
                 return
             if sub_step.fail_strategy == SubStepFailStrategy.RETRY_3 and self._retry_count < 3:
                 self._retry_count += 1

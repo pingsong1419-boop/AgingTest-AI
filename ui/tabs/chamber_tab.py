@@ -7,7 +7,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                 QPushButton, QGroupBox, QLineEdit, QScrollArea, 
                                 QFrame, QMessageBox, QGridLayout, QTableWidget, 
                                 QTableWidgetItem, QHeaderView, QComboBox, QProgressBar, 
-                                QDoubleSpinBox, QCheckBox, QAbstractItemView, QSlider)
+                                QDoubleSpinBox, QCheckBox, QAbstractItemView, QSlider,
+                                QSizePolicy, QAbstractScrollArea)
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QColor, QFont
 
@@ -195,10 +196,14 @@ class ChamberTab(QWidget):
         ly_step.addWidget(lbl_s_title)
         
         self.lbl_active_step = QLabel("当前阶段: 未启动老化测试工步")
+        self.lbl_active_step.setMinimumWidth(0)
+        self.lbl_active_step.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.lbl_active_step.setStyleSheet("color: #00E5FF; font-size: 11px; font-weight: bold; border: none;")
         ly_step.addWidget(self.lbl_active_step)
         
         self.lbl_step_time = QLabel("工步耗时: -- / -- 分钟")
+        self.lbl_step_time.setMinimumWidth(0)
+        self.lbl_step_time.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.lbl_step_time.setStyleSheet("color: #CCCCCC; font-size: 11px; border: none;")
         ly_step.addWidget(self.lbl_step_time)
         
@@ -284,6 +289,11 @@ class ChamberTab(QWidget):
         # 工步配置表格
         self.table_steps = QTableWidget(0, 7)
         self.table_steps.setHorizontalHeaderLabels(["工步序号", "老化测试工步", "目标温度 (℃)", "设定测试时间", "测试终止条件", "运行时间(m)", "执行状态"])
+        self.table_steps.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
+        self.table_steps.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.table_steps.setMinimumWidth(0)
+        self.table_steps.setWordWrap(False)
+        self.table_steps.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_steps.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_steps.setColumnWidth(0, 75)   # 工步序号
         self.table_steps.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch) # 老化测试工步（自适应）
@@ -340,7 +350,8 @@ class ChamberTab(QWidget):
         
         # 新增：方案总运行时间显示 (增加最小宽度预留1000+分钟的显示空间)
         self.lbl_total_time = QLabel("方案运行总时间: 0.00 分钟")
-        self.lbl_total_time.setMinimumWidth(180)
+        self.lbl_total_time.setMinimumWidth(160)
+        self.lbl_total_time.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.lbl_total_time.setStyleSheet("color: #00E5FF; font-weight: bold; margin-left: 10px;")
         progress_total_layout.addWidget(self.lbl_total_time)
         
@@ -852,6 +863,7 @@ class ChamberTab(QWidget):
         self.table_steps.blockSignals(True)
         self.table_steps.setRowCount(len(self.steps_data))
         for row, step in enumerate(self.steps_data):
+            is_active_row = self.sequence_running and row == self.active_step_idx
             # 序号
             item_seq = QTableWidgetItem(f"{row + 1}")
             item_seq.setTextAlignment(Qt.AlignCenter)
@@ -867,7 +879,7 @@ class ChamberTab(QWidget):
             
             # 测试时间/倒计时
             test_val = step.get('hours', 0.0)
-            if step["status"] == "运行中...":
+            if is_active_row:
                 if test_val > 0:
                     rem = max(0, test_val - self.step_elapsed_sec)
                     total_m = int(rem)
@@ -888,7 +900,7 @@ class ChamberTab(QWidget):
             item_status.setTextAlignment(Qt.AlignCenter)
             item_status.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             
-            if step["status"] == "运行中...":
+            if is_active_row:
                 item_status.setForeground(QColor("#39FF14"))
                 item_status.setFont(QFont("Consolas", 9, QFont.Bold))
             elif step["status"] == "已完成":
@@ -1091,6 +1103,8 @@ class ChamberTab(QWidget):
         """启动老化测试工步自动运行引擎"""
         import datetime
         print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Chamber] 请求“启动老化测试工步”")
+        top_window = self.window()
+        was_maximized = bool(top_window and top_window.isMaximized())
 
         self._is_bypass_chamber = False
         if not self.steps_data:
@@ -1169,6 +1183,8 @@ class ChamberTab(QWidget):
         self.btn_add.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(False)
         self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        if was_maximized:
+            QTimer.singleShot(0, top_window.showMaximized)
 
         # 激活第一步的温度下发 (由上面的逻辑替代)
         # self.apply_step_temperatures(0)
@@ -1581,7 +1597,7 @@ class ChamberTab(QWidget):
                 self.steps_data[self.active_step_idx]["hours"] = 0.0
                 
             elif step_name == "老化完成取料":
-                logger.info("[老化引擎] 进入 '老化完成取料'，关闭已连接电源、高压源、模拟电池及老化板继电器")
+                logger.info("[老化引擎] 进入 '老化完成取料'，关闭已连接高压源、DUT电源及老化板继电器；电池模拟器与AFE供电电源输出控制已屏蔽")
                 
                 def _finish_task():
                     mgr = getattr(self, "mgr", None)
@@ -1602,19 +1618,10 @@ class ChamberTab(QWidget):
 
                     safe_output_off("高压源", getattr(mgr, "hv_source", None))
 
-                    try:
-                        connected_sims = [sim for sim in getattr(mgr, "simulators", []) if getattr(sim, "is_connected", False)]
-                        if connected_sims:
-                            mgr.broadcast_output(False)
-                        else:
-                            logger.info("[老化引擎] 电池模拟器未连接，跳过广播关闭。")
-                    except Exception as e:
-                        logger.warning(f"[老化引擎] 电池模拟器广播关闭失败，已跳过：{e}")
+                    logger.info("[老化引擎] 电池模拟器输出关闭已按要求屏蔽，取料工步不调用模拟电池 1/2。")
 
                     safe_output_off("DUT供电电源", getattr(mgr, "dut_power", None))
-                    safe_output_off("1# AFE供电电源", getattr(mgr, "afe_power_1", None))
-                    safe_output_off("2# AFE供电电源", getattr(mgr, "afe_pwr_2", None))
-                    safe_output_off("3# AFE供电电源", getattr(mgr, "afe_pwr_3", None))
+                    logger.info("[老化引擎] AFE供电电源输出关闭已按要求屏蔽，取料工步不调用 1#/2#/3# AFE。")
 
                     for cid, board in getattr(mgr, "boards", {}).items():
                         relays = getattr(board, "relays", None)
@@ -1852,7 +1859,7 @@ class ChamberTab(QWidget):
 
         # 终止条件判断逻辑
         if end_cond == "测试结束终止":
-            time_met = True
+            time_met = self.step_elapsed_sec >= test_hours if test_hours > 0 else True
             
             test_met = True
             if has_selected_channels:
@@ -1862,6 +1869,12 @@ class ChamberTab(QWidget):
                 step_completed = True
                 completion_reason = "时间已达标且通道测试全部完成"
                 logger.info(f"[老化引擎] 同时满足设定时间达标与勾选通道测试全部结束条件，自动结束工步 '{step_name}'。")
+            elif time_met and not test_met:
+                self.steps_data[self.active_step_idx]["status"] = "等待测试完成"
+                self.refresh_steps_table()
+            elif test_met and not time_met:
+                self.steps_data[self.active_step_idx]["status"] = "等待倒计时"
+                self.refresh_steps_table()
         elif end_cond == "到达目标温度终止":
             if getattr(self, "_is_bypass_chamber", False):
                 step_completed = True

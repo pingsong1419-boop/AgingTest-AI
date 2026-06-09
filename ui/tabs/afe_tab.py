@@ -134,6 +134,15 @@ class AFEPowerTab(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.start_reading)
         self.timer.setInterval(1000)
+        QTimer.singleShot(0, self._sync_connection_state)
+
+    def _sync_connection_state(self):
+        if self.mgr and getattr(self.mgr.afe_power_1, "is_connected", False):
+            self.btn_connect.setText("已连接")
+            self.btn_connect.setStyleSheet("background-color: #28A745;")
+            self.btn_connect.setEnabled(False)
+            self.btn_disconnect.setEnabled(True)
+            self.timer.start()
 
     def connect_afe(self):
         if not self.mgr: return
@@ -157,6 +166,9 @@ class AFEPowerTab(QWidget):
             self.btn_connect.setText("连接失败")
             self.btn_connect.setStyleSheet("background-color: #C82333;")
             self.btn_connect.setEnabled(True)
+            err = getattr(self.mgr.afe_power_1, "last_error", "")
+            if err:
+                self._notify_status(f"AFE电源连接失败: {err}")
 
     def disconnect_afe(self):
         if self.mgr:

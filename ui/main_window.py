@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QTabWidget, QStatusBar, QHBoxLayout, QPushButton
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QLabel, QTabWidget, QStatusBar, QHBoxLayout, QPushButton, QSizePolicy
 from PySide6.QtCore import Qt
 
 from ui.tabs.overview_tab import OverviewTab
@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
             self.setWindowIcon(QIcon(icon_path))
             
         self.resize(1280, 800)
+        self.setMinimumSize(1024, 700)
         
         # 初始化核心业务引擎
         from core.engine import TestEngine
@@ -68,6 +69,7 @@ class MainWindow(QMainWindow):
 
     def _init_ui(self):
         central_widget = QWidget()
+        central_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
@@ -78,6 +80,7 @@ class MainWindow(QMainWindow):
 
         # 核心导航 Tab
         self.tabs = QTabWidget()
+        self.tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         # 1. 多通道监控页
         self.tab_overview = OverviewTab(self.engine, self.db_manager)

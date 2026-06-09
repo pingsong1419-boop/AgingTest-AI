@@ -1,4 +1,4 @@
-from .lingtu_66100 import Lingtu66100
+from .ngi_83624 import NGI83624
 from .ngi_n3618 import NGIN3618
 from .afe_power_ru36 import AFEPowerRU36
 from .mainboard_power_ru60 import MainboardPowerRU60
@@ -43,16 +43,13 @@ class DeviceManager:
 
         # 1. 模拟电池
         sim1_ip = cfg.get("sim1_ip", "192.168.1.210")
-        sim1_port = int(cfg.get("sim1_port", 5025))
+        sim1_port = int(cfg.get("sim1_port", 7000))
         sim2_ip = cfg.get("sim2_ip", "192.168.1.211")
-        sim2_port = int(cfg.get("sim2_port", 5025))
-        sim3_ip = cfg.get("sim3_ip", "192.168.1.212")
-        sim3_port = int(cfg.get("sim3_port", 5025))
+        sim2_port = int(cfg.get("sim2_port", 7000))
         
         self.simulators = [
-            Lingtu66100(sim1_ip, sim1_port, max_channels=18),
-            Lingtu66100(sim2_ip, sim2_port, max_channels=18),
-            Lingtu66100(sim3_ip, sim3_port, max_channels=18)
+            NGI83624(sim1_ip, sim1_port, max_channels=24),
+            NGI83624(sim2_ip, sim2_port, max_channels=24)
         ]
         # BUG-11修复: 删除后台线程connect，避免与init_all_devices的串行connect产生竞态
 
@@ -116,8 +113,8 @@ class DeviceManager:
         """
         根据全局通道号 (1-48) 自动路由到具体的物理设备和物理通道
         """
-        unit_index = (global_ch - 1) // 18
-        local_ch = (global_ch - 1) % 18 + 1
+        unit_index = (global_ch - 1) // 24
+        local_ch = (global_ch - 1) % 24 + 1
         
         if unit_index < len(self.simulators):
             return self.simulators[unit_index], local_ch
@@ -154,7 +151,7 @@ class DeviceManager:
         return -1.0
 
     def broadcast_voltage(self, voltage: float, logger=None) -> bool:
-        """全系统广播设置电压：对所有模拟器的 1-18 通道执行设置"""
+        """全系统广播设置电压：对所有模拟器的 1-24 通道执行设置"""
         if logger: logger(f"[*] 全系统同步设置电压: {voltage}V")
         success = True
         for i, sim in enumerate(self.simulators):
@@ -163,7 +160,7 @@ class DeviceManager:
         return success
 
     def broadcast_current(self, current: float, logger=None) -> bool:
-        """全系统广播设置电流：对所有模拟器的 1-18 通道执行设置"""
+        """全系统广播设置电流：对所有模拟器的 1-24 通道执行设置"""
         if logger: logger(f"[*] 全系统同步设置电流限制: {current}A")
         success = True
         for i, sim in enumerate(self.simulators):
@@ -206,36 +203,11 @@ class DeviceManager:
             self.chamber.connect()
             if logger: logger(f"[*] 高低温老化箱 状态: {'已联机' if self.chamber.is_connected else '离线'}")
         
-        # 2. 电源类设备初始化
-        if self.hv_source: 
-            self.hv_source.connect()
-            if logger: logger(f"[*] NGI 高压源 状态: {'已联机' if self.hv_source.is_connected else '离线'}")
-        if self.afe_power_1: 
-            self.afe_power_1.connect()
-            if logger: logger(f"[*] 1# AFE 供电电源 状态: {'已联机' if self.afe_power_1.is_connected else '离线'}")
-        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: 
-            self.afe_pwr_2.connect()
-            if logger: logger(f"[*] 2# AFE 供电电源 状态: {'已联机' if self.afe_pwr_2.is_connected else '离线'}")
-        if self.afe_pwr_3: 
-            self.afe_pwr_3.connect()
-            if logger: logger(f"[*] 3# AFE 供电电源 状态: {'已联机' if self.afe_pwr_3.is_connected else '离线'}")
-        
-        if self.dut_power: 
-            self.dut_power.connect()
-            if logger: logger(f"[*] DUT 供电主电源 状态: {'已联机' if self.dut_power.is_connected else '离线'}")
-            
+        # --- 提前：控制板主电源联机与分级上电逻辑 ---
         if self.ctrl_board_power: 
             self.ctrl_board_power.connect()
             if logger: logger(f"[*] 控制板主电源 状态: {'已联机' if self.ctrl_board_power.is_connected else '离线'}")
-        
-        # 3. 电池模拟器初始化
-        sim_conn_count = 0
-        for sim in self.simulators:
-            if sim.connect():
-                sim_conn_count += 1
-        if logger: logger(f"[*] 电池模拟器 状态: {sim_conn_count} / {len(self.simulators)} 已联机")
             
-        # 4. [关键] 功能板上电与 Easy320 分级上电逻辑
         power_ok = False
         if self.ctrl_board_power and self.ctrl_board_power.is_connected:
             if logger: logger("[*] 正在初始化控制板供电电源: 设定 24.0V / 40.0A ...")
@@ -268,10 +240,40 @@ class DeviceManager:
                     time.sleep(0.5) 
                 else:
                     if logger: logger(f"[!] 警告: PLC 继电器 {i+1} 写入失败")
-            if logger: logger("[*] 分级上电指令发送完毕。")
+            if logger: logger("[*] 分级上电指令发送完毕，等待 2 秒以确保所有控制板网络模块启动就绪...")
+            import time
+            time.sleep(2.0)
         elif not power_ok:
             if logger: logger("[!] 由于控制板供电电源异常，已跳过 PLC 继电器分级上电流程。")
+        # ----------------------------------------------
+
+        # 2. 电源类设备初始化
+        if self.hv_source: 
+            self.hv_source.connect()
+            if logger: logger(f"[*] NGI 高压源 状态: {'已联机' if self.hv_source.is_connected else '离线'}")
+        if self.afe_power_1: 
+            self.afe_power_1.connect()
+            if logger: logger(f"[*] 1# AFE 供电电源 状态: {'已联机' if self.afe_power_1.is_connected else '离线'}")
+        if hasattr(self, 'afe_pwr_2') and self.afe_pwr_2: 
+            self.afe_pwr_2.connect()
+            if logger: logger(f"[*] 2# AFE 供电电源 状态: {'已联机' if self.afe_pwr_2.is_connected else '离线'}")
+        if self.afe_pwr_3: 
+            self.afe_pwr_3.connect()
+            if logger: logger(f"[*] 3# AFE 供电电源 状态: {'已联机' if self.afe_pwr_3.is_connected else '离线'}")
         
+        if self.dut_power: 
+            self.dut_power.connect()
+            if logger: logger(f"[*] DUT 供电主电源 状态: {'已联机' if self.dut_power.is_connected else '离线'}")
+            
+
+        # 3. NGI 83624A 电池模拟器初始化
+        sim_conn_count = 0
+        for sim in self.simulators:
+            if sim.connect():
+                sim_conn_count += 1
+        if logger: logger(f"[*] NGI 83624A 电池模拟器 状态: {sim_conn_count} / {len(self.simulators)} 已联机")
+            
+
         # 5. [关键] 逻辑自检：并行扫描 48 路老化板在线状态
         if logger: logger("[*] 开始并行扫描 48 路老化板在线状态 (TCP 握手)...")
         from concurrent.futures import ThreadPoolExecutor
@@ -279,11 +281,15 @@ class DeviceManager:
         online_count = 0
         def check_board(b_tuple):
             idx, board = b_tuple
-            if board.connect():
-                return (idx, True, getattr(board, "ip", "Unknown IP"))
+            import time
+            for attempt in range(4):  # 首次连接 + 最多 3 次重连
+                if board.connect():
+                    return (idx, True, getattr(board, "ip", "Unknown IP"))
+                if attempt < 3:
+                    time.sleep(3.0)
             return (idx, False, getattr(board, "ip", "Unknown IP"))
 
-        with ThreadPoolExecutor(max_workers=20) as executor:
+        with ThreadPoolExecutor(max_workers=16) as executor:
             results = list(executor.map(check_board, self.boards.items()))
             online_count = sum(1 for _, ok, _ in results if ok)
             offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]
@@ -309,8 +315,15 @@ class DeviceManager:
                 "color": "#28A745" if is_conn else "#DC3545"
             })
 
+        total_boards = len(self.boards) or 48
         connected_boards = sum(1 for b in self.boards.values() if b.is_connected)
-        add_status("老化控制板 (分布式)", None, f"已联机: {connected_boards} / 48")
+        boards_ok = connected_boards == total_boards
+        status_list.append({
+            "name": "老化控制板 (分布式)",
+            "info": f"已联机: {connected_boards} / {total_boards}",
+            "status": "已联机" if boards_ok else "离线",
+            "color": "#28A745" if boards_ok else "#DC3545",
+        })
         
         if self.hv_source: add_status("NGI 高压源", self.hv_source)
         if self.afe_power_1: add_status("1# AFE 供电电源", self.afe_power_1)
@@ -322,8 +335,14 @@ class DeviceManager:
         if self.easy320: add_status("Easy320 继电器", self.easy320)
         if self.chamber: add_status("高低温老化箱", self.chamber)
         
-        for i, sim in enumerate(self.simulators):
-            add_status(f"{i+1}# 电池模拟器 (18CH)", sim)
+        sim_total = len(self.simulators)
+        sim_connected = sum(1 for sim in self.simulators if getattr(sim, "is_connected", False))
+        status_list.append({
+            "name": "NGI 83624A 电池模拟器",
+            "info": f"已联机 {sim_connected} / {sim_total}",
+            "status": "已联机" if sim_total > 0 and sim_connected == sim_total else "离线",
+            "color": "#28A745" if sim_total > 0 and sim_connected == sim_total else "#DC3545",
+        })
             
         return status_list
 
