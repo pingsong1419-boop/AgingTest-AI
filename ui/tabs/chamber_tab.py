@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                 QFrame, QMessageBox, QGridLayout, QTableWidget, 
                                 QTableWidgetItem, QHeaderView, QComboBox, QProgressBar, 
                                 QDoubleSpinBox, QCheckBox, QAbstractItemView, QSlider,
-                                QSizePolicy, QAbstractScrollArea)
+                                QSizePolicy, QAbstractScrollArea, QDialog,
+                                QDialogButtonBox, QProgressDialog, QApplication)
 from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QColor, QFont
 
@@ -30,6 +31,9 @@ class ChamberTab(QWidget):
         self.sequence_running = False
         self.pre_step_device_backups = []
         self.last_pre_step_device_backup = None
+        self._last_safe_power_down_ok = False
+        self._last_safe_power_down_context = ""
+        self._last_safe_power_down_ts = 0.0
 
         self._init_ui()
         
@@ -69,6 +73,248 @@ class ChamberTab(QWidget):
 
     def _is_hold_delay_step(self, step_name: str) -> bool:
         return self._normalize_step_name(step_name) == "保温延时等待"
+
+    def _default_power_sequence_config(self, mode="load"):
+        return {
+            "mode": mode,
+            "strict_verify_output": True,
+            "on_error_stop_sequence": True,
+            "delay_after_afe_on_sec": 5,
+            "delay_after_battery_off_sec": 10,
+            "battery_channel_scope": "all",
+            "afe_devices": [
+                {"name": "1# AFE供电电源", "key": "afe_power_1", "enabled": True, "voltage": 40.0, "current": 36.0, "output": True},
+                {"name": "2# AFE供电电源", "key": "afe_pwr_2", "enabled": True, "voltage": 40.0, "current": 12.0, "output": True},
+                {"name": "3# AFE供电电源", "key": "afe_pwr_3", "enabled": True, "voltage": 40.0, "current": 12.0, "output": True},
+            ],
+            "battery_simulators": [
+                {"name": "1# 模拟电池", "index": 0, "enabled": True, "voltage": 2.5, "current": 1.0, "range": "HIGH", "output": True},
+                {"name": "2# 模拟电池", "index": 1, "enabled": True, "voltage": 2.5, "current": 1.0, "range": "HIGH", "output": True},
+            ],
+        }
+
+    def _validate_bms_load_power_config(self, afe_widgets, bat_widgets):
+        errors = []
+        enabled_battery_voltages = [
+            float(sp_v.value())
+            for _item, chk, sp_v, _sp_i, _combo_range in bat_widgets
+            if chk.isChecked()
+        ]
+        if len(enabled_battery_voltages) < 2:
+            errors.append("BMS带载工作必须启用 2 台模拟电池。")
+        if enabled_battery_voltages:
+            ref_voltage = enabled_battery_voltages[0]
+            for idx, voltage in enumerate(enabled_battery_voltages, start=1):
+                if abs(voltage - ref_voltage) > 0.001:
+                    errors.append(f"模拟电池{idx} 电压 {voltage:.4f}V 与模拟电池1 电压 {ref_voltage:.4f}V 不一致。")
+            expected_afe_voltage = ref_voltage * 16.0
+        else:
+            expected_afe_voltage = 0.0
+
+        enabled_afe_count = 0
+        for idx, (_item, chk, sp_v, sp_i) in enumerate(afe_widgets, start=1):
+            if not chk.isChecked():
+                continue
+            enabled_afe_count += 1
+            afe_voltage = float(sp_v.value())
+            afe_current = float(sp_i.value())
+            max_current = 36.0 if idx == 1 else 12.0
+            if afe_voltage > 100.0:
+                errors.append(f"{idx}# AFE电源电压 {afe_voltage:.3f}V 超过最大输出 100V。")
+            if abs(afe_voltage - expected_afe_voltage) > 1.0:
+                errors.append(
+                    f"{idx}# AFE电源电压 {afe_voltage:.3f}V 不可信："
+                    f"应等于模拟电池电压 {ref_voltage:.4f}V × 16 = {expected_afe_voltage:.3f}V，允许范围 ±1V。"
+                )
+            if afe_current > max_current:
+                errors.append(f"{idx}# AFE电源电流 {afe_current:.3f}A 超过最大输出 {max_current:.0f}A。")
+
+        if enabled_afe_count < 3:
+            errors.append("BMS带载工作必须启用 3 台 AFE供电电源。")
+        return errors
+
+    def _safe_delay_after_afe_on_sec(self, config):
+        return max(5.0, float(config.get("delay_after_afe_on_sec", 5)))
+
+    def _safe_delay_after_battery_off_sec(self, config):
+        return max(10.0, float(config.get("delay_after_battery_off_sec", 10)))
+
+    def _ensure_power_sequence_config(self, step, mode=None):
+        config = step.get("power_sequence_config")
+        if not isinstance(config, dict):
+            config = self._default_power_sequence_config(mode or "load")
+        else:
+            default = self._default_power_sequence_config(config.get("mode", mode or "load"))
+            default.update(config)
+            for key in ("afe_devices", "battery_simulators"):
+                merged = []
+                existing = {item.get("key", item.get("index")): item for item in config.get(key, []) if isinstance(item, dict)}
+                for item in default[key]:
+                    ident = item.get("key", item.get("index"))
+                    new_item = item.copy()
+                    new_item.update(existing.get(ident, {}))
+                    merged.append(new_item)
+                default[key] = merged
+            config = default
+        if mode:
+            config["mode"] = mode
+        step["power_sequence_config"] = config
+        return config
+
+    def show_power_sequence_config_dialog(self, row, mode="load"):
+        if not (0 <= row < len(self.steps_data)):
+            return
+
+        step = self.steps_data[row]
+        config = self._ensure_power_sequence_config(step, mode)
+        is_finish_mode = mode == "finish"
+        dialog = QDialog(self)
+        dialog.setWindowTitle("老化完成取料安全下电设置" if is_finish_mode else "BMS带载电源安全时序参数")
+        layout = QVBoxLayout(dialog)
+
+        delay_row = QHBoxLayout()
+        sp_afe_delay = None
+        if not is_finish_mode:
+            delay_row.addWidget(QLabel("AFE开启后等待(s):"))
+            sp_afe_delay = QDoubleSpinBox()
+            sp_afe_delay.setRange(5, 60)
+            sp_afe_delay.setDecimals(1)
+            sp_afe_delay.setValue(self._safe_delay_after_afe_on_sec(config))
+            delay_row.addWidget(sp_afe_delay)
+        delay_row.addWidget(QLabel("模拟电池关闭后等待(s):"))
+        sp_bat_delay = QDoubleSpinBox()
+        sp_bat_delay.setRange(10, 60)
+        sp_bat_delay.setDecimals(1)
+        sp_bat_delay.setValue(self._safe_delay_after_battery_off_sec(config))
+        delay_row.addWidget(sp_bat_delay)
+        layout.addLayout(delay_row)
+
+        scope_row = QHBoxLayout()
+        chk_strict = QCheckBox("严格回读确认输出状态")
+        chk_strict.setChecked(True)
+        chk_strict.setEnabled(False)
+        scope_row.addWidget(chk_strict)
+        scope_row.addWidget(QLabel("模拟电池通道范围:"))
+        combo_scope = QComboBox()
+        combo_scope.addItems(["all", "selected"])
+        combo_scope.setCurrentText(config.get("battery_channel_scope", "all"))
+        scope_row.addWidget(combo_scope)
+        layout.addLayout(scope_row)
+
+        afe_widgets = []
+        bat_widgets = []
+        if not is_finish_mode:
+            afe_group = QGroupBox("AFE供电电源参数")
+            afe_grid = QGridLayout(afe_group)
+            afe_grid.addWidget(QLabel("参与"), 0, 0)
+            afe_grid.addWidget(QLabel("设备"), 0, 1)
+            afe_grid.addWidget(QLabel("电压(V)"), 0, 2)
+            afe_grid.addWidget(QLabel("电流(A)"), 0, 3)
+            for i, item in enumerate(config.get("afe_devices", []), start=1):
+                chk = QCheckBox()
+                chk.setChecked(bool(item.get("enabled", True)))
+                sp_v = QDoubleSpinBox()
+                sp_v.setRange(0, 120)
+                sp_v.setDecimals(3)
+                sp_v.setValue(float(item.get("voltage", 40.0)))
+                sp_i = QDoubleSpinBox()
+                sp_i.setRange(0, 36 if i == 1 else 12)
+                sp_i.setDecimals(3)
+                sp_i.setValue(float(item.get("current", 36.0 if i == 1 else 12.0)))
+                afe_grid.addWidget(chk, i, 0)
+                afe_grid.addWidget(QLabel(item.get("name", f"{i}# AFE供电电源")), i, 1)
+                afe_grid.addWidget(sp_v, i, 2)
+                afe_grid.addWidget(sp_i, i, 3)
+                afe_widgets.append((item, chk, sp_v, sp_i))
+            layout.addWidget(afe_group)
+
+            bat_group = QGroupBox("模拟电池参数")
+            bat_grid = QGridLayout(bat_group)
+            bat_grid.addWidget(QLabel("参与"), 0, 0)
+            bat_grid.addWidget(QLabel("设备"), 0, 1)
+            bat_grid.addWidget(QLabel("电压(V)"), 0, 2)
+            bat_grid.addWidget(QLabel("电流(A)"), 0, 3)
+            bat_grid.addWidget(QLabel("量程"), 0, 4)
+            for i, item in enumerate(config.get("battery_simulators", []), start=1):
+                chk = QCheckBox()
+                chk.setChecked(bool(item.get("enabled", True)))
+                sp_v = QDoubleSpinBox()
+                sp_v.setRange(0, 10)
+                sp_v.setDecimals(4)
+                sp_v.setValue(float(item.get("voltage", 2.5)))
+                sp_i = QDoubleSpinBox()
+                sp_i.setRange(0, 20)
+                sp_i.setDecimals(4)
+                sp_i.setValue(float(item.get("current", 1.0)))
+                combo_range = QComboBox()
+                combo_range.addItems(["HIGH", "LOW", "AUTO"])
+                combo_range.setCurrentText(str(item.get("range", "HIGH")).upper())
+                bat_grid.addWidget(chk, i, 0)
+                bat_grid.addWidget(QLabel(item.get("name", f"{i}# 模拟电池")), i, 1)
+                bat_grid.addWidget(sp_v, i, 2)
+                bat_grid.addWidget(sp_i, i, 3)
+                bat_grid.addWidget(combo_range, i, 4)
+                bat_widgets.append((item, chk, sp_v, sp_i, combo_range))
+            layout.addWidget(bat_group)
+
+        def _accept_power_config():
+            if not is_finish_mode:
+                safety_errors = self._validate_bms_load_power_config(afe_widgets, bat_widgets)
+                if safety_errors:
+                    QMessageBox.critical(
+                        dialog,
+                        "BMS带载参数安全审查失败",
+                        "\n".join(safety_errors)
+                    )
+                    return
+            dialog.accept()
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(_accept_power_config)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        config["mode"] = mode
+        config["strict_verify_output"] = True
+        if sp_afe_delay is not None:
+            config["delay_after_afe_on_sec"] = float(sp_afe_delay.value())
+        config["delay_after_battery_off_sec"] = float(sp_bat_delay.value())
+        config["battery_channel_scope"] = combo_scope.currentText()
+        for item, chk, sp_v, sp_i in afe_widgets:
+            item["enabled"] = chk.isChecked()
+            item["voltage"] = float(sp_v.value())
+            item["current"] = float(sp_i.value())
+            item["output"] = True
+        for item, chk, sp_v, sp_i, combo_range in bat_widgets:
+            item["enabled"] = chk.isChecked()
+            item["voltage"] = float(sp_v.value())
+            item["current"] = float(sp_i.value())
+            item["range"] = combo_range.currentText()
+            item["output"] = True
+        step["power_sequence_config"] = config
+
+    def maybe_show_power_sequence_config_dialog(self, row, step_name):
+        if getattr(self, "_showing_power_sequence_config_dialog", False):
+            return
+        if self.sequence_running or getattr(self, "_suppress_power_sequence_config_dialog", False):
+            return
+        now = time.time()
+        last_key, last_ts = getattr(self, "_last_power_config_dialog_key", (None, 0))
+        key = (row, step_name)
+        if key == last_key and now - last_ts < 1.0:
+            return
+        self._last_power_config_dialog_key = (key, now)
+        self._showing_power_sequence_config_dialog = True
+        try:
+            if step_name == "BMS带载工作":
+                self.show_power_sequence_config_dialog(row, mode="load")
+            elif step_name == "老化完成取料":
+                self.show_power_sequence_config_dialog(row, mode="finish")
+        finally:
+            self._showing_power_sequence_config_dialog = False
 
     def _init_ui(self):
         main_layout = QVBoxLayout(self)
@@ -338,6 +584,7 @@ class ChamberTab(QWidget):
         self.table_steps.setColumnWidth(6, 120)   # 执行状态
         self.table_steps.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table_steps.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.table_steps.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         self.table_steps.setStyleSheet("""
             QTableWidget {
                 background-color: #131326;
@@ -565,6 +812,9 @@ class ChamberTab(QWidget):
 
     def _update_buttons_state(self):
         """如果引擎中有通道正在测试，则禁用启动老化工步等按钮"""
+        if self.sequence_running:
+            return
+
         is_testing = False
         overview = self.get_overview_tab()
         if overview and overview.engine and len(overview.engine.workers) > 0:
@@ -585,6 +835,35 @@ class ChamberTab(QWidget):
         else:
             self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px;")
             self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+
+    def _set_step_editing_locked(self, locked: bool):
+        """运行过程中老化工步只允许查看，禁止改配方内容。"""
+        self.table_steps.setEditTriggers(QAbstractItemView.NoEditTriggers if locked else (QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed))
+        for btn_name in ("btn_load_p", "btn_save_p", "btn_save_as_p", "btn_del_p", "btn_add", "btn_del", "btn_up", "btn_down"):
+            btn = getattr(self, btn_name, None)
+            if btn:
+                btn.setEnabled(not locked)
+        if hasattr(self, "combo_presets"):
+            self.combo_presets.setEnabled(not locked)
+
+    def _is_temperature_transition_step(self, step_name: str) -> bool:
+        return step_name in ["升温至目标温度", "降温至目标温度", "运行至室温工步"]
+
+    def _effective_chamber_target_temp(self, set_temp: float) -> float:
+        """老化箱实际下发/判定温度：正温+1℃，负温-1℃。"""
+        set_temp = float(set_temp)
+        return set_temp + 1.0 if set_temp >= 0 else set_temp - 1.0
+
+    def _restore_step_editing_controls(self):
+        self._set_step_editing_locked(False)
+        self.btn_load_p.setStyleSheet("background-color: #007BFF; color: white;")
+        self.btn_save_p.setStyleSheet("background-color: #28A745; color: white;")
+        self.btn_save_as_p.setStyleSheet("background-color: #17A2B8; color: white;")
+        self.btn_del_p.setStyleSheet("background-color: #DC3545; color: white;")
+        self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_up.setStyleSheet("background-color: #17A2B8; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_down.setStyleSheet("background-color: #17A2B8; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
 
     def get_overview_tab(self):
         parent = self.parent()
@@ -731,7 +1010,8 @@ class ChamberTab(QWidget):
             self.load_preset_profile(preset_name)
 
     def load_preset_profile(self, profile_name):
-        self.stop_aging_sequence()
+        if self.sequence_running:
+            self.stop_aging_sequence()
         self.steps_data.clear()
         
         if self.db_manager and hasattr(self.db_manager, "load_chamber_preset_json"):
@@ -744,6 +1024,7 @@ class ChamberTab(QWidget):
                         "temp": s.get("temp", 25.0),
                         "hours": s.get("hours", 1.0),
                         "end_cond": "到达目标时间终止" if self._is_hold_delay_step(step_name) else s.get("end_cond", "到达目标时间终止"),
+                        "power_sequence_config": s.get("power_sequence_config"),
                         "status": "等待中"
                     })
                 self.refresh_steps_table()
@@ -823,6 +1104,9 @@ class ChamberTab(QWidget):
 
     def _sync_table_to_data(self):
         """将表格中可能正在编辑的数据同步回 steps_data 内存中"""
+        if self.sequence_running:
+            return
+
         # 强制结束当前可能处于输入状态的单元格编辑并保存数据（解决直接点击启动按钮时编辑尚未提交的问题）
         self.table_steps.setCurrentCell(-1, -1)
         
@@ -862,6 +1146,9 @@ class ChamberTab(QWidget):
             except:
                 pass
     def on_cell_changed(self, row, col):
+        if self.sequence_running:
+            return
+
         if col not in (2, 3):
             return
         if row >= len(self.steps_data):
@@ -980,6 +1267,7 @@ class ChamberTab(QWidget):
                 step_options.append(step["name"])
             combo.addItems(step_options)
             combo.setCurrentText(step["name"])
+            combo.setEnabled(not self.sequence_running)
             combo.setStyleSheet("background-color: #1A1A2E; color: white; border: 1px solid #3E3E5C;")
             # 绑定下拉框数据到 underlying step list
             def _update_name(text, r=row):
@@ -993,6 +1281,8 @@ class ChamberTab(QWidget):
                     self.steps_data[r]["end_cond"] = "测试结束终止"
                 elif text in ["老化完成取料", "BMS带载工作", "高温老化", "温巡老化"]:
                     self.steps_data[r]["end_cond"] = "默认"
+
+                self.maybe_show_power_sequence_config_dialog(r, text)
 
                 if self._is_hold_delay_step(text) or text in ["启动多通道测试", "BMS带载工作", "老化完成取料", "高温老化", "温巡老化"]:
                     item_t = self.table_steps.item(r, 2)
@@ -1012,6 +1302,7 @@ class ChamberTab(QWidget):
                 from PySide6.QtCore import QTimer
                 QTimer.singleShot(0, self.refresh_steps_table)
             combo.currentTextChanged.connect(_update_name)
+            combo.activated.connect(lambda _idx, r=row, c=combo: self.maybe_show_power_sequence_config_dialog(r, c.currentText()))
             self.table_steps.setCellWidget(row, 1, combo)
             
             # 根据工步名称自动固定/锁定终止条件
@@ -1048,6 +1339,7 @@ class ChamberTab(QWidget):
             self.table_steps.setItem(row, 3, item_hours)
             self.table_steps.setItem(row, 6, item_status)
         self.table_steps.blockSignals(False)
+        self.table_steps.setEditTriggers(QAbstractItemView.NoEditTriggers if self.sequence_running else (QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed))
 
     def add_blank_step(self):
         if self.sequence_running:
@@ -1173,7 +1465,11 @@ class ChamberTab(QWidget):
             return
 
         # 启动前必须先同步表格，否则刚编辑的工步类型/目标温度会被刷新覆盖。
-        self._sync_table_to_data()
+        self._suppress_power_sequence_config_dialog = True
+        try:
+            self._sync_table_to_data()
+        finally:
+            self._suppress_power_sequence_config_dialog = False
 
         requires_multi_channel = any(
             step.get("name", "") == "启动多通道测试"
@@ -1221,6 +1517,8 @@ class ChamberTab(QWidget):
         self.step_elapsed_sec = 0.0
         self.sequence_running = True
         self._bms_load_follow_batch = False
+        self._timeout_returning_to_room = False
+        self._timeout_return_reason = ""
         
         # 将所有工步设为等待，并把第1步设为运行中
         for i, step in enumerate(self.steps_data):
@@ -1246,6 +1544,9 @@ class ChamberTab(QWidget):
         self.btn_add.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(False)
         self.btn_del.setStyleSheet("background-color: #555555; color: #888888; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_up.setEnabled(False)
+        self.btn_down.setEnabled(False)
+        self._set_step_editing_locked(True)
         if was_maximized:
             QTimer.singleShot(0, top_window.showMaximized)
 
@@ -1322,6 +1623,13 @@ class ChamberTab(QWidget):
         import datetime
         print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Chamber] 收到“停止工步测试”指令")
 
+        self._safe_power_down_sim_afe(
+            self._get_shutdown_power_config(),
+            show_errors=True,
+            context="停止测试工步安全下电"
+        )
+        self._safe_power_down_aux_sources("停止测试工步辅助电源关闭")
+
         if self.active_step_idx != -1 and self.active_step_idx < len(self.steps_data):
             self.steps_data[self.active_step_idx]["elapsed_mins"] = self.step_elapsed_sec
 
@@ -1372,6 +1680,7 @@ class ChamberTab(QWidget):
         self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(True)
         self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self._restore_step_editing_controls()
         
         self._is_bypass_chamber = False
         
@@ -1379,6 +1688,14 @@ class ChamberTab(QWidget):
         self.lbl_step_time.setText("工步耗时: --:-- / --:--")
         self.pbar_step.setValue(0)
         self.pbar_total.setValue(0)
+
+    def force_safe_power_down_from_main_stop(self):
+        """主界面强制停止按钮调用的电源兜底下电。"""
+        return self._safe_power_down_sim_afe(
+            self._get_shutdown_power_config(),
+            show_errors=True,
+            context="主界面强制停止安全下电"
+        )
 
     def apply_step_temperatures(self, idx):
         """当工步发生转换，自动根据该工步的温度，写入 PLC 设定值"""
@@ -1389,6 +1706,7 @@ class ChamberTab(QWidget):
         step = self.steps_data[idx]
         step_name = step.get("name", "")
         target_temp = step["temp"]
+        send_temp = self._effective_chamber_target_temp(target_temp)
         
         if self._is_hold_delay_step(step_name) or step_name in ["启动多通道测试", "BMS带载工作", "老化完成取料", "高温老化", "温巡老化"]:
             # 这三个辅助工步以及提示工步不需要目标温度和启动老化箱
@@ -1399,13 +1717,14 @@ class ChamberTab(QWidget):
         # 写入 PLC 寄存器
         mode_ok = self.write_plc_bit("V699.0", mode_heat, sync=False)
         if mode_heat:
-            target_ok = self.chamber.write_real("VD800", target_temp) # 制热
+            target_ok = self.chamber.write_real("VD800", send_temp) # 制热
         else:
-            target_ok = self.apply_cooling_target(target_temp) # 制冷：VD750
+            target_ok = self.apply_cooling_target(send_temp) # 制冷：VD750
             
         # 联动自动模式 V699.2 为 ON，让 PLC 根据我们写的目标值自己恒温
         auto_ok = self.write_plc_bit("V699.2", True, sync=False)
         self.sync_plc_data()
+        logger.info(f"[老化引擎] 工步 '{step_name}' 设定温度 {target_temp:.1f}℃，实际下发 {send_temp:.1f}℃。")
         if not (mode_ok and target_ok and auto_ok):
             self.lbl_status.setText("PLC 状态: 温度目标写入失败")
             self.lbl_status.setStyleSheet("color: #DC3545; font-weight: bold;")
@@ -1418,6 +1737,8 @@ class ChamberTab(QWidget):
         self.sync_plc_data()
         
         # 2. 如果工步测试引擎在运行，驱动工步计时
+        if getattr(self, "_power_sequence_busy", False):
+            return
         if self.sequence_running and self.active_step_idx != -1:
             self.drive_aging_sequence_step()
 
@@ -1555,14 +1876,13 @@ class ChamberTab(QWidget):
 
     def apply_bms_load_for_channels(self, cids):
         target_cids = sorted({int(cid) for cid in (cids or [])})
-        if not target_cids:
-            return
 
         def _bms_task():
             try:
                 if getattr(self, "mgr", None) and getattr(self.mgr, "dut_power", None):
                     dut_power = self.mgr.dut_power
                     if getattr(dut_power, "is_connected", False):
+                        logger.info("[老化引擎] BMS带载工作：正在开启 DUT 被测物供电电源输出。")
                         dut_power.set_voltage(12.0)
                         dut_power.set_current(200.0)
                         dut_power.output_control(True)
@@ -1570,6 +1890,9 @@ class ChamberTab(QWidget):
                         logger.info("[老化引擎] DUT供电电源未连接，跳过带载供电设置。")
 
                 if getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
+                    if not target_cids:
+                        logger.info("[老化引擎] 当前无活动批次通道，BMS带载继电器动作延后到批次启动前执行。")
+                        return
                     logger.info(f"[老化引擎] BMS带载继电器动作通道: {target_cids}")
                     for cid in target_cids:
                         board = self.mgr.boards.get(cid)
@@ -1670,6 +1993,395 @@ class ChamberTab(QWidget):
             f"{step_name}, 通道={selected_cids or '未选择'}"
         )
 
+    def _power_logger(self, msg):
+        logger.info(f"[老化电源时序] {msg}")
+
+    def _show_power_progress(self, title, text):
+        dialog = getattr(self, "_power_progress_dialog", None)
+        if dialog is None:
+            dialog = QProgressDialog("", None, 0, 0, self)
+            dialog.setWindowModality(Qt.NonModal)
+            dialog.setCancelButton(None)
+            dialog.setMinimumDuration(0)
+            dialog.setRange(0, 0)
+            dialog.setAutoClose(False)
+            dialog.setAutoReset(False)
+            self._power_progress_dialog = dialog
+        dialog.setWindowTitle(title)
+        dialog.setLabelText(text)
+        self._power_sequence_busy = True
+        dialog.show()
+        QApplication.processEvents()
+
+    def _update_power_progress(self, text):
+        dialog = getattr(self, "_power_progress_dialog", None)
+        if dialog:
+            dialog.setLabelText(text)
+            QApplication.processEvents()
+        self._power_logger(text)
+
+    def _close_power_progress(self):
+        dialog = getattr(self, "_power_progress_dialog", None)
+        if dialog:
+            dialog.close()
+            QApplication.processEvents()
+        self._power_sequence_busy = False
+
+    def _power_sleep(self, seconds, message=None):
+        end_time = time.time() + max(0.0, float(seconds or 0))
+        while time.time() < end_time:
+            remain = max(0.0, end_time - time.time())
+            if message:
+                self._update_power_progress(f"{message}，剩余 {remain:.1f}s")
+            time.sleep(min(0.2, remain))
+            QApplication.processEvents()
+
+    def _verify_output_state(self, label, device, expected, errors):
+        if not hasattr(device, "read_output_state"):
+            errors.append(f"{label} 缺少输出状态回读接口")
+            return False
+        last_state = None
+        for attempt in range(2):
+            self._power_sleep(0.5, f"{label} 等待输出状态稳定，准备第 {attempt + 1}/2 次回读")
+            self._update_power_progress(f"{label} 第 {attempt + 1}/2 次回读输出状态")
+            state = device.read_output_state(logger=self._power_logger)
+            last_state = state
+            if state is not None and bool(state) == bool(expected):
+                self._update_power_progress(f"{label} 输出状态确认 {'开启' if expected else '关闭'}")
+                return True
+            self._power_logger(
+                f"{label} 第 {attempt + 1}/2 次输出状态回读未达预期，"
+                f"期望 {'开启' if expected else '关闭'}，实际 {self._format_output_state_for_log(state)}"
+            )
+        if last_state is None:
+            errors.append(f"{label} 输出状态回读失败")
+        else:
+            errors.append(f"{label} 输出回读为 {'开启' if last_state else '关闭'}，期望 {'开启' if expected else '关闭'}")
+        return False
+
+    def _format_output_state_for_log(self, state):
+        if state is None:
+            return "无效"
+        return "开启" if state else "关闭"
+
+    def _should_verify_power_output(self, config):
+        return True
+
+    def _verify_sim_output_state(self, label, sim, channel, expected, errors):
+        if not hasattr(sim, "read_output_state"):
+            errors.append(f"{label} 缺少输出状态回读接口")
+            return False
+        last_state = None
+        for attempt in range(2):
+            self._power_sleep(0.5, f"{label} 等待输出状态稳定，准备第 {attempt + 1}/2 次回读")
+            self._update_power_progress(f"{label} 第 {attempt + 1}/2 次回读输出状态")
+            state = sim.read_output_state(channel, logger=self._power_logger)
+            last_state = state
+            if state is not None and bool(state) == bool(expected):
+                self._update_power_progress(f"{label} 输出状态确认 {'开启' if expected else '关闭'}")
+                return True
+            self._power_logger(
+                f"{label} 第 {attempt + 1}/2 次输出状态回读未达预期，"
+                f"期望 {'开启' if expected else '关闭'}，实际 {self._format_output_state_for_log(state)}"
+            )
+        if last_state is None:
+            errors.append(f"{label} 输出状态回读失败")
+        else:
+            errors.append(f"{label} 输出回读为 {'开启' if last_state else '关闭'}，期望 {'开启' if expected else '关闭'}")
+        return False
+
+    def _get_battery_channels_for_config(self, sim_index, sim, config):
+        if config.get("battery_channel_scope", "all") == "selected":
+            selected = self._get_selected_channel_ids_for_backup()
+            unit_start = sim_index * 24 + 1
+            unit_end = unit_start + getattr(sim, "max_channels", 24) - 1
+            locals_ = [cid - unit_start + 1 for cid in selected if unit_start <= cid <= unit_end]
+            return locals_ or [0]
+        return [0]
+
+    def _shutdown_afe_devices(self, config, only_items=None, errors=None):
+        mgr = getattr(self, "mgr", None)
+        errors = errors if errors is not None else []
+        targets = only_items if only_items is not None else list(config.get("afe_devices", []))
+        for item in targets:
+            label = item.get("name", item.get("key", "AFE供电电源"))
+            self._update_power_progress(f"正在关闭 {label}")
+            dev = getattr(mgr, item.get("key", ""), None) if mgr else None
+            if not dev:
+                errors.append(f"{label} 未配置")
+                continue
+            if not getattr(dev, "is_connected", False):
+                errors.append(f"{label} 未连接")
+                continue
+            try:
+                if not dev.output_control(False, logger=self._power_logger):
+                    errors.append(f"{label} 输出关闭命令失败")
+                    continue
+                if self._should_verify_power_output(config):
+                    self._verify_output_state(label, dev, False, errors)
+            except Exception as e:
+                errors.append(f"{label} 输出关闭异常: {e}")
+        return errors
+
+    def _shutdown_battery_simulators(self, config, only_items=None, errors=None):
+        mgr = getattr(self, "mgr", None)
+        errors = errors if errors is not None else []
+        simulators = list(getattr(mgr, "simulators", []) or []) if mgr else []
+        targets = only_items if only_items is not None else list(config.get("battery_simulators", []))
+        shutdown_targets = []
+        for item in targets:
+            label = item.get("name", "模拟电池")
+            idx = int(item.get("index", 0))
+            if idx >= len(simulators):
+                errors.append(f"{label} 未配置")
+                continue
+            sim = simulators[idx]
+            if not getattr(sim, "is_connected", False):
+                errors.append(f"{label} 未连接")
+                continue
+            for ch in self._get_battery_channels_for_config(idx, sim, config):
+                ch_label = label if ch == 0 else f"{label} CH{ch}"
+                shutdown_targets.append((ch_label, sim, ch))
+
+        controlled_targets = []
+        if shutdown_targets:
+            self._update_power_progress("正在同时关闭 2 台模拟电池输出")
+        for ch_label, sim, ch in shutdown_targets:
+            try:
+                if not sim.output_control(ch, False, logger=self._power_logger):
+                    errors.append(f"{ch_label} 输出关闭命令失败")
+                    continue
+                controlled_targets.append((ch_label, sim, ch))
+            except Exception as e:
+                errors.append(f"{ch_label} 输出关闭异常: {e}")
+
+        if self._should_verify_power_output(config):
+            for ch_label, sim, ch in controlled_targets:
+                try:
+                    self._verify_sim_output_state(ch_label, sim, ch, False, errors)
+                except Exception as e:
+                    errors.append(f"{ch_label} 输出关闭回读异常: {e}")
+        return errors
+
+    def _safe_power_down_sim_afe(self, config=None, show_errors=True, context="安全下电"):
+        default_config = self._default_power_sequence_config("finish")
+        if isinstance(config, dict):
+            merged_config = default_config.copy()
+            merged_config.update(config)
+            for key in ("afe_devices", "battery_simulators"):
+                existing = {item.get("key", item.get("index")): item for item in config.get(key, []) if isinstance(item, dict)}
+                merged_items = []
+                for item in default_config[key]:
+                    ident = item.get("key", item.get("index"))
+                    merged_item = item.copy()
+                    merged_item.update(existing.get(ident, {}))
+                    merged_items.append(merged_item)
+                merged_config[key] = merged_items
+            config = merged_config
+        else:
+            config = default_config
+        config["strict_verify_output"] = True
+        self._show_power_progress(context, f"{context}: 准备执行安全下电")
+        errors = []
+        self._update_power_progress(f"{context}: 开始先关闭模拟电池")
+        self._shutdown_battery_simulators(config, errors=errors)
+        battery_errors = list(errors)
+        if battery_errors:
+            self._close_power_progress()
+            if show_errors:
+                QMessageBox.critical(
+                    self,
+                    f"{context}异常",
+                    "模拟电池输出关闭未确认，已禁止继续关闭 AFE供电电源：\n" + "\n".join(battery_errors)
+                )
+            return False, errors
+        delay = self._safe_delay_after_battery_off_sec(config)
+        if delay > 0:
+            self._power_sleep(delay, f"{context}: 模拟电池关闭完成，等待后再关闭 AFE供电电源")
+        self._update_power_progress(f"{context}: 开始关闭 AFE供电电源")
+        self._shutdown_afe_devices(config, errors=errors)
+        self._close_power_progress()
+        if errors and show_errors:
+            QMessageBox.critical(self, f"{context}异常", "\n".join(errors))
+        success = not errors
+        if success:
+            self._last_safe_power_down_ok = True
+            self._last_safe_power_down_context = context
+            self._last_safe_power_down_ts = time.time()
+        return success, errors
+
+    def _safe_power_down_aux_sources(self, context="异常停机辅助电源关闭"):
+        """老化箱停机收尾时关闭 DUT 供电电源和高压源输出。"""
+        mgr = getattr(self, "mgr", None)
+        errors = []
+
+        def safe_output_off(label, device):
+            if not device:
+                logger.info(f"[老化引擎] {context}: {label} 未配置，跳过关闭。")
+                return
+            if not getattr(device, "is_connected", False):
+                logger.info(f"[老化引擎] {context}: {label} 未连接，跳过关闭。")
+                return
+            try:
+                ok = device.output_control(False)
+                if ok is False:
+                    errors.append(f"{label} 输出关闭命令失败")
+                else:
+                    logger.info(f"[老化引擎] {context}: {label} 输出已关闭。")
+            except Exception as e:
+                errors.append(f"{label} 输出关闭异常: {e}")
+
+        safe_output_off("DUT供电电源", getattr(mgr, "dut_power", None) if mgr else None)
+        safe_output_off("高压源", getattr(mgr, "hv_source", None) if mgr else None)
+
+        if errors:
+            logger.warning(f"[老化引擎] {context}: " + "；".join(errors))
+        return not errors, errors
+
+    def _get_shutdown_power_config(self):
+        if self.active_step_idx != -1 and 0 <= self.active_step_idx < len(self.steps_data):
+            cfg = self.steps_data[self.active_step_idx].get("power_sequence_config")
+            if isinstance(cfg, dict):
+                return cfg
+        for step in self.steps_data:
+            if step.get("name") == "老化完成取料" and isinstance(step.get("power_sequence_config"), dict):
+                return step["power_sequence_config"]
+        for step in self.steps_data:
+            if step.get("name") == "BMS带载工作" and isinstance(step.get("power_sequence_config"), dict):
+                return step["power_sequence_config"]
+        return self._default_power_sequence_config("finish")
+
+    def _abort_aging_for_power_error(self, title, errors):
+        message = "\n".join(errors) if isinstance(errors, list) else str(errors)
+        logger.error(f"[老化电源时序] {title}: {message}")
+        QMessageBox.critical(self, title, message)
+        if self.active_step_idx != -1 and self.active_step_idx < len(self.steps_data):
+            self.steps_data[self.active_step_idx]["elapsed_mins"] = self.step_elapsed_sec
+            self.steps_data[self.active_step_idx]["status"] = "电源时序异常"
+        self.sequence_running = False
+        self.active_step_idx = -1
+        self.step_elapsed_sec = 0.0
+        self._timeout_returning_to_room = False
+        self._timeout_return_reason = ""
+        self._safe_power_down_aux_sources("电源时序异常辅助电源关闭")
+        self.refresh_steps_table()
+        self.btn_run_seq.setEnabled(True)
+        self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_bypass_run.setEnabled(True)
+        self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_load_p.setEnabled(True)
+        self.btn_save_p.setEnabled(True)
+        self.btn_save_as_p.setEnabled(True)
+        self.btn_del_p.setEnabled(True)
+        self.combo_presets.setEnabled(True)
+        self.btn_add.setEnabled(True)
+        self.btn_del.setEnabled(True)
+        self._restore_step_editing_controls()
+
+    def execute_bms_load_power_sequence(self, step):
+        config = self._ensure_power_sequence_config(step, mode="load")
+        mgr = getattr(self, "mgr", None)
+        errors = []
+        opened_afe = []
+        opened_sims = []
+        self._show_power_progress("BMS带载工作电源安全时序", "准备开启 3 台 AFE供电电源")
+
+        afe_items = [item for item in config.get("afe_devices", []) if item.get("enabled", True)]
+        battery_items = [item for item in config.get("battery_simulators", []) if item.get("enabled", True)]
+        if len(afe_items) < 3:
+            self._abort_aging_for_power_error("AFE电源控制异常", ["BMS带载工作必须启用 3 台 AFE供电电源"])
+            return False
+        if len(battery_items) < 2:
+            self._abort_aging_for_power_error("模拟电池控制异常", ["BMS带载工作必须启用 2 台模拟电池"])
+            return False
+
+        for item in afe_items:
+            label = item.get("name", item.get("key", "AFE供电电源"))
+            self._update_power_progress(f"正在设置并开启 {label}")
+            dev = getattr(mgr, item.get("key", ""), None) if mgr else None
+            if not dev:
+                errors.append(f"{label} 未配置")
+                break
+            if not getattr(dev, "is_connected", False):
+                errors.append(f"{label} 未连接")
+                break
+            if not dev.set_voltage(float(item.get("voltage", 40.0)), logger=self._power_logger):
+                errors.append(f"{label} 电压设置失败")
+                break
+            if not dev.set_current(float(item.get("current", 36.0)), logger=self._power_logger):
+                errors.append(f"{label} 电流设置失败")
+                break
+            if not dev.output_control(True, logger=self._power_logger):
+                errors.append(f"{label} 输出开启命令失败")
+                break
+            opened_afe.append(item)
+            if self._should_verify_power_output(config) and not self._verify_output_state(label, dev, True, errors):
+                break
+
+        if errors:
+            rollback_errors = []
+            self._update_power_progress("AFE供电电源异常，正在关闭已开启的 AFE供电电源")
+            self._shutdown_afe_devices(config, only_items=opened_afe, errors=rollback_errors)
+            self._close_power_progress()
+            self._abort_aging_for_power_error("AFE电源控制异常", errors + rollback_errors)
+            return False
+
+        delay = self._safe_delay_after_afe_on_sec(config)
+        if delay > 0:
+            self._power_sleep(delay, "AFE全部输出确认成功，等待后开启模拟电池")
+
+        simulators = list(getattr(mgr, "simulators", []) or []) if mgr else []
+        for item in battery_items:
+            label = item.get("name", "模拟电池")
+            self._update_power_progress(f"正在设置并开启 {label}")
+            idx = int(item.get("index", 0))
+            if idx >= len(simulators):
+                errors.append(f"{label} 未配置")
+                break
+            sim = simulators[idx]
+            if not getattr(sim, "is_connected", False):
+                errors.append(f"{label} 未连接")
+                break
+            opened_sims.append(item)
+            for ch in self._get_battery_channels_for_config(idx, sim, config):
+                ch_label = label if ch == 0 else f"{label} CH{ch}"
+                if not sim.set_voltage(ch, float(item.get("voltage", 3.3)), logger=self._power_logger):
+                    errors.append(f"{ch_label} 电压设置失败")
+                    break
+                if not sim.set_current_limit(ch, float(item.get("current", 1.0)), logger=self._power_logger):
+                    errors.append(f"{ch_label} 电流设置失败")
+                    break
+                if hasattr(sim, "set_range") and not sim.set_range(ch, item.get("range", "HIGH"), logger=self._power_logger):
+                    errors.append(f"{ch_label} 量程设置失败")
+                    break
+                if not sim.output_control(ch, True, logger=self._power_logger):
+                    errors.append(f"{ch_label} 输出开启命令失败")
+                    break
+                if self._should_verify_power_output(config) and not self._verify_sim_output_state(ch_label, sim, ch, True, errors):
+                    break
+            if errors:
+                break
+
+        if errors:
+            rollback_errors = []
+            self._update_power_progress("模拟电池异常，正在关闭已开启的模拟电池")
+            self._shutdown_battery_simulators(config, only_items=opened_sims, errors=rollback_errors)
+            if rollback_errors:
+                rollback_errors.append("模拟电池输出关闭未确认，已禁止继续关闭 AFE供电电源")
+            else:
+                delay = self._safe_delay_after_battery_off_sec(config)
+                if delay > 0:
+                    self._power_sleep(delay, "模拟电池关闭完成，等待后关闭 AFE供电电源")
+                self._update_power_progress("正在关闭已开启的 AFE供电电源")
+                self._shutdown_afe_devices(config, only_items=opened_afe, errors=rollback_errors)
+            self._close_power_progress()
+            self._abort_aging_for_power_error("模拟电池控制异常", errors + rollback_errors)
+            return False
+
+        self._update_power_progress("BMS带载工作电源安全时序完成")
+        self._close_power_progress()
+        return True
+
     def drive_aging_sequence_step(self):
         """老化测试工步计时执行逻辑机 (定时驱动器)"""
         # 如果已被挂起，直接停止倒计时和流转
@@ -1698,16 +2410,18 @@ class ChamberTab(QWidget):
                 self.write_plc_bit("V0.6", True, sync=False)
                 
                 # 再切换制冷制热模式和设定温度
-                mode_heat = self.should_heat_step(step_name, step["temp"])
+                set_temp = step["temp"]
+                send_temp = self._effective_chamber_target_temp(set_temp)
+                mode_heat = self.should_heat_step(step_name, set_temp)
                 self.write_plc_bit("V699.0", mode_heat, sync=False)
                 if mode_heat:
-                    self.chamber.write_real("VD800", step["temp"])
+                    self.chamber.write_real("VD800", send_temp)
                 else:
-                    self.apply_cooling_target(step["temp"])
+                    self.apply_cooling_target(send_temp)
                 self.write_plc_bit("V699.2", True, sync=False)
                 
                 self.sync_plc_data()
-                logger.info(f"[老化引擎] 进入工步 '{step_name}'，系统已停止，已设定模式与温度，等待 60 秒保护期。")
+                logger.info(f"[老化引擎] 进入工步 '{step_name}'，系统已停止，设定温度 {set_temp:.1f}℃，实际下发 {send_temp:.1f}℃，等待 60 秒保护期。")
                 
             else:
                 self._compressor_waiting = False
@@ -1728,16 +2442,15 @@ class ChamberTab(QWidget):
 
             elif step_name == "BMS带载工作":
                 logger.info("[老化引擎] 进入 'BMS带载工作'，后续按多通道批次配置主机电源与老化板继电器")
+                if not self.execute_bms_load_power_sequence(step):
+                    return
                 self._bms_load_follow_batch = True
                 overview_tab = self.get_overview_tab()
                 active_cids = []
                 if overview_tab and hasattr(overview_tab, "get_batch_completion_state"):
                     batch_state = overview_tab.get_batch_completion_state()
                     active_cids = sorted(batch_state.get("active_cids", set()))
-                if active_cids:
-                    self.apply_bms_load_for_channels(active_cids)
-                else:
-                    logger.info("[老化引擎] 尚无活动批次，BMS带载将在每批16个通道启动前执行。")
+                self.apply_bms_load_for_channels(active_cids)
                             
                 # 倒计时停止，执行状态变更
                 step["hours"] = 0.0
@@ -1745,6 +2458,17 @@ class ChamberTab(QWidget):
                 
             elif step_name == "老化完成取料":
                 logger.info("[老化引擎] 进入 '老化完成取料'，关闭已连接高压源、DUT电源及老化板继电器；电池模拟器与AFE供电电源输出控制已屏蔽")
+                safe_down_ok, safe_down_errors = self._safe_power_down_sim_afe(
+                    self._ensure_power_sequence_config(step, mode="finish"),
+                    show_errors=False,
+                    context="老化完成取料安全下电"
+                )
+                if not safe_down_ok:
+                    self._abort_aging_for_power_error(
+                        "老化完成取料安全下电异常",
+                        safe_down_errors or ["安全下电失败"]
+                    )
+                    return
                 
                 def _finish_task():
                     mgr = getattr(self, "mgr", None)
@@ -1813,8 +2537,9 @@ class ChamberTab(QWidget):
         if getattr(self, "_is_recovering_temp", False):
             current_temp = self.chamber.data_store.get("VD720", 25.0) if getattr(self, "chamber", None) else 25.0
             target_temp = step.get("temp", 25.0)
-            if abs(current_temp - target_temp) <= 2.0:
-                logger.info(f"[老化引擎] 断点追温达标 (当前 {current_temp:.1f}℃ -> 目标 {target_temp:.1f}℃)，正式恢复倒计时与多通道测试。")
+            send_temp = self._effective_chamber_target_temp(target_temp)
+            if abs(current_temp - send_temp) <= 0.5:
+                logger.info(f"[老化引擎] 断点追温达标 (当前 {current_temp:.1f}℃ -> 设定 {target_temp:.1f}℃ / 发送 {send_temp:.1f}℃)，正式恢复倒计时与多通道测试。")
                 self._is_recovering_temp = False
                 self.steps_data[self.active_step_idx]["status"] = "运行中..."
                 self.refresh_steps_table()
@@ -1826,7 +2551,7 @@ class ChamberTab(QWidget):
                         for worker in overview_tab.engine.workers.values():
                             worker.is_suspended = False
             else:
-                self.lbl_active_step.setText(f"当前阶段: 断点追温保护中 (当前 {current_temp:.1f}℃ -> 目标 {target_temp:.1f}℃)")
+                self.lbl_active_step.setText(f"当前阶段: 断点追温保护中 (当前 {current_temp:.1f}℃ -> 发送目标 {send_temp:.1f}℃)")
                 # 将追温状态写入表格中
                 self.steps_data[self.active_step_idx]["status"] = f"追温中({current_temp:.1f}℃)"
                 self.refresh_steps_table()
@@ -1842,20 +2567,22 @@ class ChamberTab(QWidget):
                         break
                 
                 mode_heat = self.should_heat_step(step_name, setting_temp)
+                send_temp = self._effective_chamber_target_temp(setting_temp)
                 self.chamber.write_bit("V699.0", mode_heat)
                 if mode_heat:
-                    self.chamber.write_real("VD800", setting_temp)
+                    self.chamber.write_real("VD800", send_temp)
                 else:
-                    self.apply_cooling_target(setting_temp)
+                    self.apply_cooling_target(send_temp)
                 self.chamber.write_bit("V699.2", True)
             else:
                 if step_name not in ["运行至室温工步", "升温至目标温度", "降温至目标温度"] and not self._is_hold_delay_step(step_name):
                     mode_heat = self.should_heat_step(step_name, step["temp"])
+                    send_temp = self._effective_chamber_target_temp(step["temp"])
                     self.chamber.write_bit("V699.0", mode_heat)
                     if mode_heat:
-                        self.chamber.write_real("VD800", step["temp"])
+                        self.chamber.write_real("VD800", send_temp)
                     else:
-                        self.apply_cooling_target(step["temp"])
+                        self.apply_cooling_target(send_temp)
                     self.chamber.write_bit("V699.2", True)
 
         test_hours = step.get("hours", 0.0)
@@ -2029,6 +2756,7 @@ class ChamberTab(QWidget):
             else:
                 current_temp = self.chamber.data_store.get("VD720", 25.0) if self.chamber else 25.0
                 target_temp = step["temp"]
+                send_temp = self._effective_chamber_target_temp(target_temp)
                 
                 is_heating_transition = False
                 is_cooling_transition = False
@@ -2042,17 +2770,25 @@ class ChamberTab(QWidget):
                     else:
                         is_cooling_transition = True
                 
-                if is_heating_transition and current_temp >= target_temp:
+                if is_heating_transition and abs(current_temp - send_temp) <= 0.5:
                     step_completed = True
                     completion_reason = "温度达标"
-                    logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达升温目标 {target_temp:.1f} °C，自动切换工步")
-                elif is_cooling_transition and current_temp <= target_temp:
+                    logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达升温发送目标 {send_temp:.1f} °C (设定 {target_temp:.1f} °C)，自动切换工步")
+                elif is_cooling_transition and abs(current_temp - send_temp) <= 0.5:
                     step_completed = True
                     completion_reason = "温度达标"
-                    logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达降温目标 {target_temp:.1f} °C，自动切换工步")
+                    logger.info(f"[老化引擎] 当前温度 {current_temp:.1f} °C 已达降温发送目标 {send_temp:.1f} °C (设定 {target_temp:.1f} °C)，自动切换工步")
+
+                if step_completed and getattr(self, "_timeout_returning_to_room", False):
+                    self._finish_timeout_return_to_room_temp()
+                    return
                 
                 if not step_completed and test_hours > 0 and self.step_elapsed_sec >= test_hours:
-                    self._handle_timeout_ng(step_name, test_hours, f"实际箱温未达设定温度 ({target_temp:.1f} ℃)，已超时")
+                    reason = f"实际箱温未达发送目标温度 ({send_temp:.1f} ℃，设定 {target_temp:.1f} ℃，允许±0.5℃)，已超时"
+                    if self._is_temperature_transition_step(step_name):
+                        self._start_timeout_return_to_room_temp(step_name, reason)
+                    else:
+                        self._handle_timeout_ng(step_name, test_hours, reason)
                     return
         else: # "到达目标时间终止" 或 "默认"
             if test_hours > 0:
@@ -2065,6 +2801,7 @@ class ChamberTab(QWidget):
 
 
         if step_completed:
+            completed_step_name = step.get("name", "")
             status_text = "已完成"
             self.steps_data[self.active_step_idx]["status"] = status_text
             self.steps_data[self.active_step_idx]["elapsed_mins"] = self.step_elapsed_sec
@@ -2080,6 +2817,19 @@ class ChamberTab(QWidget):
                 self.speak_text(f"老化测试切换到第 {self.active_step_idx + 1} 步")
             else:
                 # 所有工步全部执行完成
+                just_finished_power_down = (
+                    completed_step_name == "老化完成取料"
+                    and getattr(self, "_last_safe_power_down_ok", False)
+                    and time.time() - getattr(self, "_last_safe_power_down_ts", 0.0) < 30.0
+                )
+                if not just_finished_power_down:
+                    self._safe_power_down_sim_afe(
+                        self._get_shutdown_power_config(),
+                        show_errors=True,
+                        context="预设方案完成安全下电"
+                    )
+                else:
+                    logger.info("[老化引擎] 老化完成取料已完成安全下电，方案完成分支跳过重复安全下电。")
                 self.sequence_running = False
                 self.active_step_idx = -1
                 self.write_plc_bit("V0.5", False) # 停止系统
@@ -2093,6 +2843,8 @@ class ChamberTab(QWidget):
                 
                 self.btn_run_seq.setEnabled(True)
                 self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; border-radius: 4px;")
+                self.btn_bypass_run.setEnabled(True)
+                self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
                 
                 # 恢复预设区功能
                 self.btn_load_p.setEnabled(True)
@@ -2110,6 +2862,7 @@ class ChamberTab(QWidget):
                 self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
                 self.btn_del.setEnabled(True)
                 self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+                self._restore_step_editing_controls()
                 
                 self.lbl_active_step.setText("当前阶段: 老化测试全部完成！")
                 self.lbl_step_time.setText("工步耗时: 全部结束")
@@ -2119,6 +2872,96 @@ class ChamberTab(QWidget):
                 self.speak_text("恭喜，高低温老化测试工步全部执行完毕")
                 QMessageBox.information(self, "测试结束", "高低温老化箱测试工步已全部成功执行完毕！")
 
+    def _start_timeout_return_to_room_temp(self, step_name, reason):
+        logger.warning(f"[老化引擎] 工步 {step_name} 设定时间已完成但温度不达标，开始回室温 30℃ 保护流程：{reason}")
+
+        if self.active_step_idx == -1 or self.active_step_idx >= len(self.steps_data):
+            self._handle_timeout_ng(step_name, 0, reason)
+            return
+
+        current_temp = self.chamber.data_store.get("VD720", 25.0) if getattr(self, "chamber", None) else 25.0
+        return_step_name = "升温至目标温度" if current_temp < 30.0 else "降温至目标温度"
+
+        self._timeout_returning_to_room = True
+        self._timeout_return_reason = reason
+        self._timeout_original_step_name = step_name
+        self._timeout_original_elapsed = self.step_elapsed_sec
+        self._current_step_init_idx = -1
+        self.step_elapsed_sec = 0.0
+
+        step = self.steps_data[self.active_step_idx]
+        step["name"] = return_step_name
+        step["temp"] = 30.0
+        step["hours"] = 0.0
+        step["end_cond"] = "到达目标温度终止"
+        step["status"] = "回室温中(30℃)"
+
+        for idx in range(self.active_step_idx + 1, len(self.steps_data)):
+            self.steps_data[idx]["status"] = "待停止"
+
+        self.write_plc_bit("V0.5", False, sync=False)
+        self.write_plc_bit("V0.6", True, sync=False)
+        self.sync_plc_data()
+        self.lbl_active_step.setText("当前阶段: 设定时间已完成，温度不达标，回室温 30℃ 保护中")
+        self.lbl_step_time.setText("工步耗时: 停机保护 60s 后启动回室温")
+        self.refresh_steps_table()
+
+    def _finish_timeout_return_to_room_temp(self):
+        reason = getattr(self, "_timeout_return_reason", "设定时间已完成，温度不达标")
+        original_step_name = getattr(self, "_timeout_original_step_name", "升降温工步")
+        original_elapsed = getattr(self, "_timeout_original_elapsed", self.step_elapsed_sec)
+
+        self._safe_power_down_sim_afe(
+            self._get_shutdown_power_config(),
+            show_errors=True,
+            context="温度不达标回室温完成安全下电"
+        )
+        self._safe_power_down_aux_sources("温度不达标回室温完成辅助电源关闭")
+
+        if self.active_step_idx != -1 and self.active_step_idx < len(self.steps_data):
+            self.steps_data[self.active_step_idx]["name"] = original_step_name
+            self.steps_data[self.active_step_idx]["elapsed_mins"] = original_elapsed
+            self.steps_data[self.active_step_idx]["status"] = "异常未达标"
+            for idx in range(self.active_step_idx + 1, len(self.steps_data)):
+                self.steps_data[idx]["status"] = "已停止"
+
+        self.sequence_running = False
+        self.active_step_idx = -1
+        self.step_elapsed_sec = 0.0
+        self._timeout_returning_to_room = False
+        self._timeout_return_reason = ""
+
+        self.write_plc_bit("V0.5", False, sync=False)
+        self.write_plc_bit("V0.6", True, sync=False)
+        self.sync_plc_data()
+
+        overview_tab = self.get_overview_tab()
+        if overview_tab and overview_tab.engine:
+            with overview_tab.engine._lock:
+                for worker in overview_tab.engine.workers.values():
+                    worker.is_suspended = False
+            if getattr(self, "chk_linkage", None) and self.chk_linkage.isChecked():
+                for cid in list(overview_tab.engine.workers.keys()):
+                    overview_tab.engine.stop_channel_test(cid)
+                    idx = cid - 1
+                    if 0 <= idx < len(overview_tab.channel_widgets):
+                        overview_tab.channel_widgets[idx].set_status("已停止", "#DC3545")
+
+        self.btn_run_seq.setEnabled(True)
+        self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_bypass_run.setEnabled(True)
+        self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self._restore_step_editing_controls()
+        self._is_bypass_chamber = False
+
+        self.lbl_active_step.setText("当前阶段: 设定时间已完成，温度不达标")
+        self.lbl_step_time.setText("工步耗时: 异常未达标")
+        self.pbar_step.setValue(100)
+        self.refresh_steps_table()
+
+        self.speak_text("警告：设定时间已完成，温度不达标")
+        QMessageBox.critical(self, "温度不达标", f"设定时间已完成，温度不达标。\n原因：{reason}\n老化箱已回到室温 30℃ 并停止所有工步。")
+
     def _handle_timeout_ng(self, step_name, timeout_hours, reason):
         logger.warning(f"[老化引擎] 工步 {step_name} 超时/异常终止：{reason}")
         
@@ -2126,6 +2969,7 @@ class ChamberTab(QWidget):
             self.steps_data[self.active_step_idx]["elapsed_mins"] = self.step_elapsed_sec
             
         self.sequence_running = False
+        self._safe_power_down_aux_sources("老化测试异常终止辅助电源关闭")
         self.write_plc_bit("V0.5", False, sync=False)
         self.write_plc_bit("V0.6", True, sync=False)
         self.sync_plc_data()
@@ -2160,6 +3004,7 @@ class ChamberTab(QWidget):
         self.btn_add.setStyleSheet("background-color: #007BFF; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
         self.btn_del.setEnabled(True)
         self.btn_del.setStyleSheet("background-color: #DC3545; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self._restore_step_editing_controls()
         
         self._is_bypass_chamber = False
         self.lbl_active_step.setText("当前阶段: 老化测试异常终止")
