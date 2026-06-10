@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                QSpinBox, QStackedWidget, QWidget, QFormLayout, QFrame, 
                                QCheckBox, QScrollArea, QGridLayout)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIntValidator
 
 class StepDialog(QDialog):
     def __init__(self, parent=None, step_data=None, parent_exec_mode="并行执行"):
@@ -511,7 +512,14 @@ class StepDialog(QDialog):
             self.on_eol_op_changed()
 
     def _combo_value(self, combo):
-        return combo.currentData() if combo.currentData() is not None else combo.currentText()
+        if combo.isEditable():
+            text = combo.currentText().strip()
+            index = combo.currentIndex()
+            if index >= 0 and text == combo.itemText(index).strip() and combo.currentData() is not None:
+                return str(combo.currentData()).strip()
+            return text
+        value = combo.currentData() if combo.currentData() is not None else combo.currentText()
+        return str(value).strip()
 
     def _set_combo_by_value(self, combo, value):
         text = str(value)
@@ -520,11 +528,16 @@ class StepDialog(QDialog):
             index = combo.findText(text)
         if index >= 0:
             combo.setCurrentIndex(index)
+        elif combo.isEditable():
+            combo.setEditText(text)
 
-    def _set_param_combo(self, combo, label, title, items):
+    def _set_param_combo(self, combo, label, title, items, editable=False, validator=None):
         label.setText(title)
         label.setVisible(bool(items))
         combo.clear()
+        combo.setEditable(editable)
+        if combo.lineEdit():
+            combo.lineEdit().setValidator(validator)
         combo.setVisible(bool(items))
         for text, value in items:
             combo.addItem(text, value)
@@ -659,7 +672,14 @@ class StepDialog(QDialog):
                 self.eol_param4_label.setVisible(True)
                 self.eol_param4.setVisible(True)
         elif "0x10" in op:
-            self._set_param_combo(self.eol_param1, self.eol_param1_label, "NTC索引:", self._index_items(64, "NTC "))
+            self._set_param_combo(
+                self.eol_param1,
+                self.eol_param1_label,
+                "NTC索引(0-255):",
+                self._index_items(256, "NTC "),
+                editable=True,
+                validator=QIntValidator(0, 255, self)
+            )
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "温感类型:", [
                 ("1 CELL_NTC", "CELL_NTC"),
                 ("2 PCB_NTC", "PCB_NTC"),

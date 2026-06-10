@@ -838,6 +838,8 @@ class EOLProtocol:
                     
                     # 2. 提取温感索引并打包至 payload 的第二个字节 (CAN 帧的第 6 字节)
                     ntc_index = self._int_arg(kwargs, "NTC", "INDEX", "PARAM1")
+                    if not 0 <= ntc_index <= 255:
+                        raise ValueError(f"NTC index out of range: {ntc_index} (expected 0-255)")
                     payload = bytes([0x00, ntc_index])
                 except Exception as ex:
                     # 异常降级
