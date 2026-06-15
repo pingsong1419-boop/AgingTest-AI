@@ -79,7 +79,8 @@ class ChamberTab(QWidget):
             "mode": mode,
             "strict_verify_output": True,
             "on_error_stop_sequence": True,
-            "delay_after_afe_on_sec": 5,
+            "delay_after_afe_on_sec": 10,
+            "delay_after_battery_on_sec": 5,
             "delay_after_battery_off_sec": 10,
             "battery_channel_scope": "all",
             "afe_devices": [
@@ -134,7 +135,10 @@ class ChamberTab(QWidget):
         return errors
 
     def _safe_delay_after_afe_on_sec(self, config):
-        return max(5.0, float(config.get("delay_after_afe_on_sec", 5)))
+        return max(10.0, float(config.get("delay_after_afe_on_sec", 10)))
+
+    def _safe_delay_after_battery_on_sec(self, config):
+        return max(5.0, float(config.get("delay_after_battery_on_sec", 5)))
 
     def _safe_delay_after_battery_off_sec(self, config):
         return max(10.0, float(config.get("delay_after_battery_off_sec", 10)))
@@ -174,13 +178,20 @@ class ChamberTab(QWidget):
 
         delay_row = QHBoxLayout()
         sp_afe_delay = None
+        sp_bat_on_delay = None
         if not is_finish_mode:
             delay_row.addWidget(QLabel("AFE开启后等待(s):"))
             sp_afe_delay = QDoubleSpinBox()
-            sp_afe_delay.setRange(5, 60)
+            sp_afe_delay.setRange(10, 60)
             sp_afe_delay.setDecimals(1)
             sp_afe_delay.setValue(self._safe_delay_after_afe_on_sec(config))
             delay_row.addWidget(sp_afe_delay)
+            delay_row.addWidget(QLabel("模拟电池开启后等待(s):"))
+            sp_bat_on_delay = QDoubleSpinBox()
+            sp_bat_on_delay.setRange(5, 60)
+            sp_bat_on_delay.setDecimals(1)
+            sp_bat_on_delay.setValue(self._safe_delay_after_battery_on_sec(config))
+            delay_row.addWidget(sp_bat_on_delay)
         delay_row.addWidget(QLabel("模拟电池关闭后等待(s):"))
         sp_bat_delay = QDoubleSpinBox()
         sp_bat_delay.setRange(10, 60)
@@ -281,6 +292,8 @@ class ChamberTab(QWidget):
         config["strict_verify_output"] = True
         if sp_afe_delay is not None:
             config["delay_after_afe_on_sec"] = float(sp_afe_delay.value())
+        if sp_bat_on_delay is not None:
+            config["delay_after_battery_on_sec"] = float(sp_bat_on_delay.value())
         config["delay_after_battery_off_sec"] = float(sp_bat_delay.value())
         config["battery_channel_scope"] = combo_scope.currentText()
         for item, chk, sp_v, sp_i in afe_widgets:
@@ -847,12 +860,11 @@ class ChamberTab(QWidget):
             self.combo_presets.setEnabled(not locked)
 
     def _is_temperature_transition_step(self, step_name: str) -> bool:
-        return step_name in ["升温至目标温度", "降温至目标温度", "运行至室温工步"]
+        return step_name in ["升温至目标温度", "降温至目标温度"]
 
     def _effective_chamber_target_temp(self, set_temp: float) -> float:
-        """老化箱实际下发/判定温度：正温+1℃，负温-1℃。"""
-        set_temp = float(set_temp)
-        return set_temp + 1.0 if set_temp >= 0 else set_temp - 1.0
+        """老化箱实际下发/判定温度：直接使用用户设定值。"""
+        return float(set_temp)
 
     def _restore_step_editing_controls(self):
         self._set_step_editing_locked(False)
@@ -939,10 +951,6 @@ class ChamberTab(QWidget):
         if mode == "heat":
             return True
             
-        if step_name == "运行至室温工步":
-            current_temp = self.chamber.data_store.get("VD720", 25.0) if getattr(self, "chamber", None) else 25.0
-            return target_temp > current_temp
-            
         return target_temp >= 25.0
 
     def temperature_step_mode(self, step_name: str):
@@ -959,6 +967,101 @@ class ChamberTab(QWidget):
             return False
 
         return self.chamber.write_real("VD750", target_temp)
+
+    def _write_chamber_temperature_target(self, target_temp: float, mode_heat: bool, sync: bool = False) -> bool:
+        """按冷热模式直接写入目标温度，不执行停机保护时序。"""
+        if not self.chamber:
+            return False
+        ok = self.write_plc_bit("V699.0", mode_heat, sync=False)
+        if mode_heat:
+            ok = self.chamber.write_real("VD800", float(target_temp)) and ok
+        else:
+            ok = self.apply_cooling_target(float(target_temp)) and ok
+        if sync:
+            self.sync_plc_data()
+        return ok
+
+    def _get_previous_temperature_target(self):
+        """返回最近一次升温/降温至目标温度工步的设定温度。"""
+        start_idx = min(self.active_step_idx - 1, len(self.steps_data) - 1)
+        for prev_idx in range(start_idx, -1, -1):
+            prev_step = self.steps_data[prev_idx]
+            if self._normalize_step_name(prev_step.get("name", "")) in ["升温至目标温度", "降温至目标温度"]:
+                try:
+                    return float(prev_step.get("temp", 25.0))
+                except (TypeError, ValueError):
+                    return 25.0
+        return None
+
+    def _abort_aging_for_temperature_alarm(self, title: str, message: str):
+        """温度越界或保护失败时停机、停止流程并报警。"""
+        logger.error(f"[老化温度保护] {title}: {message}")
+        self.sequence_running = False
+        self._compressor_waiting = False
+        self._temperature_startup_phase = None
+        self._timeout_returning_to_room = False
+        self.write_plc_bit("V0.5", False, sync=False)
+        self.write_plc_bit("V0.6", True, sync=False)
+        self.write_plc_bit("V699.2", False, sync=False)
+        self.sync_plc_data()
+
+        if self.active_step_idx != -1 and self.active_step_idx < len(self.steps_data):
+            self.steps_data[self.active_step_idx]["status"] = "温度保护停机"
+            for idx in range(self.active_step_idx + 1, len(self.steps_data)):
+                self.steps_data[idx]["status"] = "已停止"
+        self.active_step_idx = -1
+        self.step_elapsed_sec = 0.0
+        self.refresh_steps_table()
+        self.btn_run_seq.setEnabled(True)
+        self.btn_run_seq.setStyleSheet("background-color: #28A745; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self.btn_bypass_run.setEnabled(True)
+        self.btn_bypass_run.setStyleSheet("background-color: #6F42C1; color: white; font-weight: bold; font-size: 13px; padding: 6px 12px; border-radius: 4px;")
+        self._restore_step_editing_controls()
+        self.lbl_active_step.setText("当前阶段: 温度保护停机")
+        self.lbl_step_time.setText("工步耗时: 已停止")
+        QMessageBox.critical(self, title, message)
+
+    def _monitor_hold_or_test_temperature(self, step) -> bool:
+        """保温/多通道测试阶段实时温度保护与快速纠偏；返回 True 表示流程已被中止。"""
+        if getattr(self, "_is_bypass_chamber", False) or not self.chamber:
+            return False
+
+        current_temp = float(self.chamber.data_store.get("VD720", 25.0))
+        if current_temp > 90.0:
+            self._abort_aging_for_temperature_alarm(
+                "高温超限",
+                f"当前老化箱温度 {current_temp:.1f}℃ 已超过 90℃，系统已停机并停止老化流程。"
+            )
+            return True
+        if current_temp < -45.0:
+            self._abort_aging_for_temperature_alarm(
+                "低温超限",
+                f"当前老化箱温度 {current_temp:.1f}℃ 已低于 -45℃，系统已停机并停止老化流程。"
+            )
+            return True
+
+        target_temp = self._get_previous_temperature_target()
+        if target_temp is None:
+            try:
+                target_temp = float(step.get("temp", 25.0))
+            except (TypeError, ValueError):
+                target_temp = 25.0
+
+        if current_temp > target_temp + 3.0:
+            self._write_chamber_temperature_target(target_temp, mode_heat=False, sync=False)
+            self.write_plc_bit("V0.5", True, sync=False)
+            self.write_plc_bit("V0.6", False, sync=False)
+            self.write_plc_bit("V699.2", True, sync=False)
+            self.sync_plc_data()
+            logger.warning(f"[老化温度纠偏] 当前 {current_temp:.1f}℃ 高于目标 {target_temp:.1f}℃ +3℃，直接切制冷并写入目标。")
+        elif current_temp < target_temp - 3.0:
+            self._write_chamber_temperature_target(target_temp, mode_heat=True, sync=False)
+            self.write_plc_bit("V0.5", True, sync=False)
+            self.write_plc_bit("V0.6", False, sync=False)
+            self.write_plc_bit("V699.2", True, sync=False)
+            self.sync_plc_data()
+            logger.warning(f"[老化温度纠偏] 当前 {current_temp:.1f}℃ 低于目标 {target_temp:.1f}℃ -3℃，直接切制热并写入目标。")
+        return False
 
     def apply_manual_targets(self):
         """手动设置 VD 设定温度并下发"""
@@ -1019,6 +1122,8 @@ class ChamberTab(QWidget):
             if data and "steps" in data:
                 for s in data["steps"]:
                     step_name = self._normalize_step_name(s.get("name", "自定义工步"))
+                    if step_name == "运行至室温工步":
+                        continue
                     self.steps_data.append({
                         "name": step_name,
                         "temp": s.get("temp", 25.0),
@@ -1262,7 +1367,9 @@ class ChamberTab(QWidget):
             combo = QComboBox()
             combo.wheelEvent = lambda event: event.ignore()
             step["name"] = self._normalize_step_name(step.get("name", ""))
-            step_options = ["升温至目标温度", "降温至目标温度", "运行至室温工步", "保温延时等待", "启动多通道测试", "BMS带载工作", "老化完成取料", "高温老化", "温巡老化"]
+            if step["name"] == "运行至室温工步":
+                step["name"] = "保温延时等待"
+            step_options = ["升温至目标温度", "降温至目标温度", "保温延时等待", "启动多通道测试", "BMS带载工作", "老化完成取料", "高温老化", "温巡老化"]
             if step["name"] not in step_options:
                 step_options.append(step["name"])
             combo.addItems(step_options)
@@ -1273,7 +1380,7 @@ class ChamberTab(QWidget):
             def _update_name(text, r=row):
                 self.steps_data[r]["name"] = self._normalize_step_name(text)
                 # 自动分配固定终止条件
-                if text in ["升温至目标温度", "降温至目标温度", "运行至室温工步"]:
+                if text in ["升温至目标温度", "降温至目标温度"]:
                     self.steps_data[r]["end_cond"] = "到达目标温度终止"
                 elif self._is_hold_delay_step(text):
                     self.steps_data[r]["end_cond"] = "到达目标时间终止"
@@ -1308,7 +1415,7 @@ class ChamberTab(QWidget):
             # 根据工步名称自动固定/锁定终止条件
             step_name = step.get("name", "")
             fixed_cond = "默认"
-            if step_name in ["升温至目标温度", "降温至目标温度", "运行至室温工步"]:
+            if step_name in ["升温至目标温度", "降温至目标温度"]:
                 fixed_cond = "到达目标温度终止"
             elif self._is_hold_delay_step(step_name):
                 fixed_cond = "到达目标时间终止"
@@ -1504,7 +1611,7 @@ class ChamberTab(QWidget):
             
         # 真正开启 PLC 系统启动指令（如果是升降温，暂不启动，交由 tick 中的压缩机保护处理）
         first_step_name = self.steps_data[0].get("name", "") if self.steps_data else ""
-        if first_step_name not in ["升温至目标温度", "降温至目标温度", "运行至室温工步"]:
+        if first_step_name not in ["升温至目标温度", "降温至目标温度"]:
             # 其它不带压的工步（如维持温度、老化测试等），不再强制启动系统，仅下发必要温度即可
             self.apply_step_temperatures(0)
             logger.info(f"[老化引擎] 首个工步为 '{first_step_name}'，不下发系统启动指令，仅下发温度配置。")
@@ -1715,17 +1822,12 @@ class ChamberTab(QWidget):
         mode_heat = self.should_heat_step(step_name, target_temp)
         
         # 写入 PLC 寄存器
-        mode_ok = self.write_plc_bit("V699.0", mode_heat, sync=False)
-        if mode_heat:
-            target_ok = self.chamber.write_real("VD800", send_temp) # 制热
-        else:
-            target_ok = self.apply_cooling_target(send_temp) # 制冷：VD750
-            
+        target_ok = self._write_chamber_temperature_target(send_temp, mode_heat, sync=False)
         # 联动自动模式 V699.2 为 ON，让 PLC 根据我们写的目标值自己恒温
         auto_ok = self.write_plc_bit("V699.2", True, sync=False)
         self.sync_plc_data()
         logger.info(f"[老化引擎] 工步 '{step_name}' 设定温度 {target_temp:.1f}℃，实际下发 {send_temp:.1f}℃。")
-        if not (mode_ok and target_ok and auto_ok):
+        if not (target_ok and auto_ok):
             self.lbl_status.setText("PLC 状态: 温度目标写入失败")
             self.lbl_status.setStyleSheet("color: #DC3545; font-weight: bold;")
 
@@ -1876,6 +1978,8 @@ class ChamberTab(QWidget):
 
     def apply_bms_load_for_channels(self, cids):
         target_cids = sorted({int(cid) for cid in (cids or [])})
+        if not target_cids:
+            target_cids = self._get_selected_channel_ids_for_backup()
 
         def _bms_task():
             try:
@@ -1891,7 +1995,7 @@ class ChamberTab(QWidget):
 
                 if getattr(self, "mgr", None) and hasattr(self.mgr, "boards"):
                     if not target_cids:
-                        logger.info("[老化引擎] 当前无活动批次通道，BMS带载继电器动作延后到批次启动前执行。")
+                        logger.info("[老化引擎] 当前无活动批次通道且未勾选通道，跳过 BMS带载继电器动作。")
                         return
                     logger.info(f"[老化引擎] BMS带载继电器动作通道: {target_cids}")
                     for cid in target_cids:
@@ -1902,8 +2006,10 @@ class ChamberTab(QWidget):
                             if not board.relays.is_connected:
                                 board.relays.connect()
                             if board.relays.is_connected:
-                                board.relays.write_relay(0, True)
-                                board.relays.write_relay(10, True)
+                                kl15_ok = board.relays.set_relay_by_name("KL15", True)
+                                can1_ok = board.relays.set_relay_by_name("CAN1", True)
+                                if not (kl15_ok and can1_ok):
+                                    logger.warning(f"[老化引擎] CH-{cid} KL15/CAN1 继电器动作未全部成功: KL15={kl15_ok}, CAN1={can1_ok}")
                         except Exception as e:
                             logger.warning(f"[老化引擎] CH-{cid} BMS带载继电器动作失败，已跳过：{e}")
             except Exception as e:
@@ -2378,6 +2484,10 @@ class ChamberTab(QWidget):
             self._abort_aging_for_power_error("模拟电池控制异常", errors + rollback_errors)
             return False
 
+        delay = self._safe_delay_after_battery_on_sec(config)
+        if delay > 0:
+            self._power_sleep(delay, "模拟电池全部输出确认成功，等待后继续执行后续操作")
+
         self._update_power_progress("BMS带载工作电源安全时序完成")
         self._close_power_progress()
         return True
@@ -2401,30 +2511,21 @@ class ChamberTab(QWidget):
             
             # 压缩机保护逻辑：进入升降温工步时，强制停机等待
             self._compressor_wait_sec = 0.0
-            if step_name in ["运行至室温工步", "升温至目标温度", "降温至目标温度"] and not getattr(self, "_is_bypass_chamber", False):
+            if step_name in ["升温至目标温度", "降温至目标温度"] and not getattr(self, "_is_bypass_chamber", False):
                 self._compressor_waiting = True
-                self._wait_target_sec = 60.0
+                self._temperature_startup_phase = "before_target"
+                self._wait_target_sec = 20.0
                 
-                # 先系统停止
+                # 先系统停止并关闭自动恒温，等待 20s 后再写目标温度和冷热模式。
                 self.write_plc_bit("V0.5", False, sync=False)
                 self.write_plc_bit("V0.6", True, sync=False)
-                
-                # 再切换制冷制热模式和设定温度
-                set_temp = step["temp"]
-                send_temp = self._effective_chamber_target_temp(set_temp)
-                mode_heat = self.should_heat_step(step_name, set_temp)
-                self.write_plc_bit("V699.0", mode_heat, sync=False)
-                if mode_heat:
-                    self.chamber.write_real("VD800", send_temp)
-                else:
-                    self.apply_cooling_target(send_temp)
-                self.write_plc_bit("V699.2", True, sync=False)
-                
+                self.write_plc_bit("V699.2", False, sync=False)
                 self.sync_plc_data()
-                logger.info(f"[老化引擎] 进入工步 '{step_name}'，系统已停止，设定温度 {set_temp:.1f}℃，实际下发 {send_temp:.1f}℃，等待 60 秒保护期。")
+                logger.info(f"[老化引擎] 进入工步 '{step_name}'，系统已停止，自动恒温已关闭，等待 20 秒后写目标。")
                 
             else:
                 self._compressor_waiting = False
+                self._temperature_startup_phase = None
             
             if step_name == "启动多通道测试":
                 logger.info("[老化引擎] 进入 '启动多通道测试'，触发主界面的多通道测试")
@@ -2450,6 +2551,8 @@ class ChamberTab(QWidget):
                 if overview_tab and hasattr(overview_tab, "get_batch_completion_state"):
                     batch_state = overview_tab.get_batch_completion_state()
                     active_cids = sorted(batch_state.get("active_cids", set()))
+                if not active_cids:
+                    active_cids = self._get_selected_channel_ids_for_backup()
                 self.apply_bms_load_for_channels(active_cids)
                             
                 # 倒计时停止，执行状态变更
@@ -2458,6 +2561,9 @@ class ChamberTab(QWidget):
                 
             elif step_name == "老化完成取料":
                 logger.info("[老化引擎] 进入 '老化完成取料'，关闭已连接高压源、DUT电源及老化板继电器；电池模拟器与AFE供电电源输出控制已屏蔽")
+                self.write_plc_bit("V0.5", False, sync=False)
+                self.write_plc_bit("V0.6", True, sync=False)
+                self.sync_plc_data()
                 safe_down_ok, safe_down_errors = self._safe_power_down_sim_afe(
                     self._ensure_power_sequence_config(step, mode="finish"),
                     show_errors=False,
@@ -2519,19 +2625,39 @@ class ChamberTab(QWidget):
             wait_target = getattr(self, "_wait_target_sec", 60.0)
             if self._compressor_wait_sec < wait_target:
                 remain_sec = int(wait_target - self._compressor_wait_sec)
-                self.lbl_active_step.setText(f"当前阶段: {step_name} (停机保护等待: {remain_sec}s)")
-                self.lbl_step_time.setText("系统已停止，等待保护期结束...")
+                phase = getattr(self, "_temperature_startup_phase", "before_target")
+                phase_text = "停机关闭恒温" if phase == "before_target" else "目标写入后等待"
+                self.lbl_active_step.setText(f"当前阶段: {step_name} ({phase_text}: {remain_sec}s)")
+                self.lbl_step_time.setText("系统已停止，等待温控启动时序完成...")
                 # 将倒计时状态写入表格中
-                self.steps_data[self.active_step_idx]["status"] = f"停机等待({remain_sec}s)"
+                self.steps_data[self.active_step_idx]["status"] = f"{phase_text}({remain_sec}s)"
                 self.refresh_steps_table()
                 return # 拦截，直接跳过下方所有的：温度下发、终止判定以及工步时间的扣除
+
+            if getattr(self, "_temperature_startup_phase", None) == "before_target":
+                set_temp = step["temp"]
+                send_temp = self._effective_chamber_target_temp(set_temp)
+                mode_heat = self.should_heat_step(step_name, set_temp)
+                self._write_chamber_temperature_target(send_temp, mode_heat, sync=True)
+                self._temperature_startup_phase = "after_target"
+                self._compressor_wait_sec = 0.0
+                self._wait_target_sec = 40.0
+                self.steps_data[self.active_step_idx]["status"] = "目标写入后等待(40s)"
+                self.lbl_active_step.setText(f"当前阶段: {step_name} (目标写入后等待: 40s)")
+                self.lbl_step_time.setText("目标温度和冷热模式已写入，等待 40s 后启动系统...")
+                self.refresh_steps_table()
+                logger.info(f"[老化引擎] 工步 '{step_name}' 已写入目标 {send_temp:.1f}℃ 和 {'制热' if mode_heat else '制冷'}模式，继续等待 40 秒。")
+                return
+
             else:
                 self._compressor_waiting = False
+                self._temperature_startup_phase = None
                 self.steps_data[self.active_step_idx]["status"] = "运行中..."
                 self.write_plc_bit("V0.5", True, sync=False)
                 self.write_plc_bit("V0.6", False, sync=False)
+                self.write_plc_bit("V699.2", True, sync=False)
                 self.sync_plc_data()
-                logger.info(f"[老化引擎] 停机保护期 {wait_target} 秒结束，重新启动系统。")
+                logger.info("[老化引擎] 温控启动时序完成，系统已启动并开启自动恒温。")
 
         # --- 断点恢复追温拦截器 ---
         if getattr(self, "_is_recovering_temp", False):
@@ -2558,31 +2684,24 @@ class ChamberTab(QWidget):
                 return # 拦截，直接跳过下方的时间累加与终止判定
 
         if not getattr(self, "_is_bypass_chamber", False):
-            if step_name in ["启动多通道测试", "BMS带载工作", "老化完成取料", "高温老化", "温巡老化"]:
+            if self._is_hold_delay_step(step_name) or step_name == "启动多通道测试":
+                if self._monitor_hold_or_test_temperature(step):
+                    return
+            elif step_name in ["BMS带载工作", "老化完成取料", "高温老化", "温巡老化"]:
                 # 绝对继承：忽略底层残余寄存器，直接向上追溯最近一次明确配置的工步温度
-                setting_temp = 25.0
-                for prev_idx in range(self.active_step_idx - 1, -1, -1):
-                    if self._normalize_step_name(self.steps_data[prev_idx]["name"]) in ["升温至目标温度", "降温至目标温度"]:
-                        setting_temp = self.steps_data[prev_idx]["temp"]
-                        break
+                setting_temp = self._get_previous_temperature_target()
+                if setting_temp is None:
+                    setting_temp = 25.0
                 
                 mode_heat = self.should_heat_step(step_name, setting_temp)
                 send_temp = self._effective_chamber_target_temp(setting_temp)
-                self.chamber.write_bit("V699.0", mode_heat)
-                if mode_heat:
-                    self.chamber.write_real("VD800", send_temp)
-                else:
-                    self.apply_cooling_target(send_temp)
+                self._write_chamber_temperature_target(send_temp, mode_heat, sync=False)
                 self.chamber.write_bit("V699.2", True)
             else:
-                if step_name not in ["运行至室温工步", "升温至目标温度", "降温至目标温度"] and not self._is_hold_delay_step(step_name):
+                if step_name not in ["升温至目标温度", "降温至目标温度"] and not self._is_hold_delay_step(step_name):
                     mode_heat = self.should_heat_step(step_name, step["temp"])
                     send_temp = self._effective_chamber_target_temp(step["temp"])
-                    self.chamber.write_bit("V699.0", mode_heat)
-                    if mode_heat:
-                        self.chamber.write_real("VD800", send_temp)
-                    else:
-                        self.apply_cooling_target(send_temp)
+                    self._write_chamber_temperature_target(send_temp, mode_heat, sync=False)
                     self.chamber.write_bit("V699.2", True)
 
         test_hours = step.get("hours", 0.0)
@@ -2832,6 +2951,7 @@ class ChamberTab(QWidget):
                     logger.info("[老化引擎] 老化完成取料已完成安全下电，方案完成分支跳过重复安全下电。")
                 self.sequence_running = False
                 self.active_step_idx = -1
+                self._is_bypass_chamber = False
                 self.write_plc_bit("V0.5", False) # 停止系统
                 self.write_plc_bit("V0.6", True)
                 
