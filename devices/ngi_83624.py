@@ -153,6 +153,41 @@ class NGI83624:
                 if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
                 return False
 
+    def read_output_state(self, channel: int, logger=None):
+        with self._lock:
+            if not self._ensure_connected():
+                if logger: logger(f"[IP: {self.ip}] 错误: 模拟器未连接")
+                return None
+
+            def query_one(ch: int):
+                self._clear_buffer()
+                cmd = f"OUTP{ch}:ONOFF?\n"
+                if logger: logger(f"[IP: {self.ip}] [TX] {cmd.strip()}")
+                self.sock.send(cmd.encode())
+                data = self.sock.recv(1024).decode(errors="ignore").strip()
+                if logger: logger(f"[IP: {self.ip}] [RX] {data}")
+                text = data.upper()
+                if text in ("1", "ON", "TRUE"):
+                    return True
+                if text in ("0", "OFF", "FALSE"):
+                    return False
+                try:
+                    return bool(int(float(text.split(",")[0])))
+                except Exception:
+                    return None
+
+            try:
+                if channel == 0:
+                    states = [query_one(ch) for ch in range(1, self.max_channels + 1)]
+                    if any(state is None for state in states):
+                        return None
+                    return all(states)
+                return query_one(channel)
+            except Exception as e:
+                self.is_connected = False
+                if logger: logger(f"[IP: {self.ip}] [!] 读取输出状态异常: {e}")
+                return None
+
     def _clear_buffer(self):
         if not self.sock: return
         self.sock.setblocking(False)

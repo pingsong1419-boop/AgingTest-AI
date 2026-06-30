@@ -123,6 +123,26 @@ class AFEPowerRU36:
                 if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
                 return False
 
+    def read_output_state(self, logger=None):
+        """读取输出状态 (十进制线圈地址 133)"""
+        with self.lock:
+            if not self.is_connected:
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: AFE电源未连接且尝试重连失败")
+                    return None
+            try:
+                if logger: logger(f"[IP: {self.ip}] [TX] Read Coil 133")
+                result = self.client.read_coils(address=133, count=1, device_id=self.unit_id)
+                if not result or result.isError():
+                    if logger: logger(f"[IP: {self.ip}] [RX] Error")
+                    return None
+                state = bool(result.bits[0])
+                if logger: logger(f"[IP: {self.ip}] [RX] Output {'ON' if state else 'OFF'}")
+                return state
+            except Exception as e:
+                if logger: logger(f"[IP: {self.ip}] [!] 读取输出状态异常: {e}")
+                return None
+
     def measure_voltage(self, logger=None) -> float:
         """测量电压 (十进制输入寄存器地址 100, 倍率 10)"""
         with self.lock:
