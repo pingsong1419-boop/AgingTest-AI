@@ -3,6 +3,7 @@ from pymodbus.framer import FramerType
 from pymodbus.exceptions import ModbusException
 import logging
 import threading
+import time
 
 # 配置日志
 import logging
@@ -93,20 +94,36 @@ class MainboardPowerRU60:
 
     def output_control(self, state: bool, logger=None) -> bool:
         """输出控制 (十进制线圈地址 133)"""
-        with self.lock:
+        for attempt in range(2):
             if not self.is_connected:
                 if not self.connect():
-                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败")
-                    return False
-            try:
-                if logger: logger(f"[IP: {self.ip}] [TX] Write Coil 133: {state}")
-                result = self.client.write_coil(133, state, device_id=self.unit_id)
-                success = result is not None and not result.isError()
-                if logger: logger(f"[IP: {self.ip}] [RX] {'Success' if success else 'Error'}")
-                return success
-            except Exception as e:
-                if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
-                return False
+                    if logger: logger(f"[IP: {self.ip}] 错误: 主机电源未连接且重连失败 (Attempt {attempt+1})")
+                    if attempt == 1: return False
+                    time.sleep(0.5)
+                    continue
+            with self.lock:
+                try:
+                    if logger: logger(f"[IP: {self.ip}] [TX] Write Coil 133: {state}")
+                    result = self.client.write_coil(133, state, device_id=self.unit_id)
+                    if result is not None and not result.isError():
+                        time.sleep(0.05)
+                        check = self.client.read_coils(133, count=1, device_id=self.unit_id)
+                        if not check.isError() and check.bits[0] == state:
+                            if logger: logger(f"[IP: {self.ip}] [RX] Success (Verified)")
+                            return True
+                        else:
+                            if logger: logger(f"[IP: {self.ip}] [!] 输出控制回读校验失败，准备重连重试")
+                    else:
+                        if logger: logger(f"[IP: {self.ip}] [!] 输出控制写线圈失败，准备重连重试")
+                    
+                    self.client.close()
+                    self.is_connected = False
+                except Exception as e:
+                    if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
+                    self.client.close()
+                    self.is_connected = False
+            time.sleep(0.5)
+        return False
 
     def measure_voltage(self, logger=None) -> float:
         """测量电压 (十进制输入寄存器地址 100, 倍率 100)"""

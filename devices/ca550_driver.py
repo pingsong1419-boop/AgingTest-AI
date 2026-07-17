@@ -41,6 +41,11 @@ class CA550Controller:
             self._last_connect_attempt = time.time()
             
             try:
+                # 确保先关闭旧连接
+                if self.ser and self.ser.is_open:
+                    try: self.ser.close()
+                    except: pass
+                
                 # 物理层连接
                 self.ser = serial.Serial(
                     port=self.port,
@@ -90,13 +95,14 @@ class CA550Controller:
         """断开连接"""
         with self._lock:
             if self.ser and self.ser.is_open:
-                self.ser.close()
+                try: self.ser.close()
+                except: pass
             self.is_connected = False
             logger.info(f"已断开物理连接: {self.port}")
 
-    def _send_command(self, cmd: str) -> str:
+    def _send_command(self, cmd: str, skip_conn_check=False) -> str:
         with self._lock:
-            if not self.is_connected:
+            if not self.is_connected and not skip_conn_check:
                 return "ERROR: Not Connected"
             
             try:
@@ -160,8 +166,71 @@ class CA550Controller:
         return self._send_command("SD?")
     def set_source_func(self, func_code: int): return self._send_command(f"SF{func_code}")
     def set_source_range(self, range_code: int): return self._send_command(f"SR{range_code}")
-    def set_source_data(self, value: float): return self._send_command(f"SD{value:.4f}")
-    def set_source_output(self, state: int): return self._send_command(f"SO{state}")
+    def set_source_data(self, value: float) -> bool:
+        """
+        设置源输出数值 (例如电压/电流)
+        带有 2 次重试机制及物理状态回读校验 (SD?)
+        """
+        for attempt in range(2):
+            res = self._send_command(f"SD{value:.4f}")
+            if "ERROR" in res:
+                time.sleep(0.5)
+                continue
+            
+            time.sleep(0.3) # 增加延时等待硬件动作，避免读到旧状态
+            
+            check = self._send_command("SD?")
+            if "ERROR" in check or not check:
+                time.sleep(0.5)
+                continue
+                
+            try:
+                # 解析回读结果
+                val = float(check.strip())
+                # 放宽 CA550 设定值回读的容忍度，避免浮点精度引起偶发判定失败
+                if abs(val - value) <= 0.05:
+                    return True
+                else:
+                    logger.warning(f"CA550 输出数值校验失败: 设定 {value}, 回读 {val}，准备重试 (Attempt {attempt+1})")
+            except Exception as e:
+                logger.warning(f"CA550 输出数值解析异常: {e}, 返回内容: {check}")
+                
+            time.sleep(0.5)
+            
+        self.is_connected = False
+        return False
+    def set_source_output(self, state: int) -> bool:
+        """
+        设置输出状态 (0=关, 1=开)
+        带有 2 次重试机制及物理状态回读校验
+        """
+        for attempt in range(2):
+            res = self._send_command(f"SO{state}")
+            if "ERROR" in res:
+                time.sleep(0.5)
+                continue
+            
+            time.sleep(0.3) # 增加延时等待硬件继电器动作，避免读到旧状态
+            
+            check = self._send_command("SO?")
+            if "ERROR" in check or not check:
+                time.sleep(0.5)
+                continue
+                
+            try:
+                # 解析回读结果 (例如回读出 '1' 或 '0')
+                val = int(check.strip())
+                if val == state:
+                    return True
+                else:
+                    logger.warning(f"CA550 输出控制校验失败，准备重试 (Attempt {attempt+1})")
+            except Exception as e:
+                logger.warning(f"CA550 输出状态解析异常: {e}, 返回内容: {check}")
+                
+            time.sleep(0.5)
+            
+        self.is_connected = False
+        return False
     def set_source_0_percent(self, value: float): return self._send_command(f"SL{value:.4f}")
     def set_source_100_percent(self, value: float): return self._send_command(f"SH{value:.4f}")
 

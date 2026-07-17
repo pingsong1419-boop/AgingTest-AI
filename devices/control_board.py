@@ -24,7 +24,7 @@ class ControlBoard:
         """同时尝试连接继电器和 CAN"""
         r_ok = self.relays.connect()
         c_ok = self.can.connect()
-        self.is_connected = r_ok or c_ok
+        self.is_connected = r_ok and c_ok
         return self.is_connected
 
     def disconnect(self):

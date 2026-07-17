@@ -104,17 +104,42 @@ class ChannelWorker(QObject):
         self.step_measured_values = {}
         self.current_progress = 0.0
         self.step_start_times = {}
+        self._full_log_history = []
         def _on_log_msg(_, msg):
             self.log_history.append(msg)
             if len(self.log_history) > self.MAX_LOG_HISTORY:
                 del self.log_history[:len(self.log_history) - self.MAX_LOG_HISTORY]
+            
+            import datetime
+            ts = datetime.datetime.now().strftime("[%H:%M:%S.%f]")[:-4] + "]"
+            self._full_log_history.append(f"{ts} {msg}")
+
             if os.environ.get("AGING_DEBUG_CHANNEL_LOG") == "1":
-                import datetime
                 print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [CH-{self.channel_id:02d}] {msg}")
         self.log_message.connect(_on_log_msg)
         self.step_finished.connect(lambda _, name, is_pass, val: (self.step_statuses.__setitem__(name, is_pass), self.step_measured_values.__setitem__(name, val)))
         self.sub_step_finished.connect(lambda _, step_idx, sub_idx, status, result: self.sub_step_statuses.__setitem__((step_idx, sub_idx), (status, result)))
         self.progress_updated.connect(lambda _, prog, __: setattr(self, "current_progress", prog))
+
+    def _save_local_execution_log(self):
+        try:
+            if not getattr(self, "_full_log_history", None): return
+            import os
+            import datetime
+            log_dir = "test_logs"
+            os.makedirs(log_dir, exist_ok=True)
+            sn = getattr(self, "master_barcode", "").strip()
+            if not sn: sn = "UNKNOWN"
+            sn = "".join(c for c in sn if c.isalnum() or c in "_-")
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(log_dir, f"CH{self.channel_id}_{sn}_{ts}.log")
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write("\n".join(self._full_log_history))
+        except Exception as e:
+            print(f"Failed to save execution log for CH{self.channel_id}: {e}")
+        finally:
+            if hasattr(self, "_full_log_history"):
+                self._full_log_history.clear()
 
     def set_test_info(self, test_id: int):
         self.test_id = test_id
@@ -298,6 +323,12 @@ class ChannelWorker(QObject):
             self.on_step_complete()
             return
         sub_step = step.sub_steps[self.current_sub_step_index]
+        
+        # 防死锁保护：在执行同步屏障或释放顺序锁前，提前主动释放可能独占的共享仪器资源，防止因挂起等待导致仪器锁被永久霸占
+        if sub_step.type in (SubStepType.BARRIER, SubStepType.RELEASE_SEQ_LOCK) and self.engine:
+            self.engine.release_resource("ca550", self.channel_id)
+            self.engine.release_resource("hv_source", self.channel_id)
+            
         self.execute_sub_step(sub_step)
 
     def _parse_numeric(self, s: Any) -> float:
@@ -478,7 +509,7 @@ class ChannelWorker(QObject):
                     if ch_match: target_ch = int(ch_match.group(1))
 
                 if "simulator" in device or "电池模拟器" in device:
-                    if "快捷批量配置" in action:
+                    if "快捷批量配置" in action or ("设" in action and "CH:" in p_str):
                         volt = self._parse_numeric(p_str.split("V")[0])
                         curr_ma = float(re.search(r"([\d\.]+)mA", p_str).group(1)) if "mA" in p_str else 0.0
                         output_on = "ON" in p_str
@@ -515,37 +546,63 @@ class ChannelWorker(QObject):
                         if success:
                             sim, ch = mgr._get_sim_and_ch(ch_to_use)
                             success = verify_and_wait(sim, v_val, ch=ch, threshold=0.002)
-                    if "开启输出" in p_str:
+                    if "mA" in p_str:
+                        curr_ma = float(re.search(r"([\d\.]+)mA", p_str).group(1))
+                        success = success and mgr.set_current(ch_to_use, curr_ma/1000.0, logger=hw_logger)
+                    if "Range:" in p_str:
+                        range_str = "HIGH" if "Range:HIGH" in p_str.upper() else "LOW"
+                        sim, local_ch = mgr._get_sim_and_ch(ch_to_use)
+                        if sim and hasattr(sim, "set_range"):
+                            success = success and sim.set_range(local_ch, range_str, logger=hw_logger)
+                    if "开启输出" in p_str or "ON" in p_str.upper():
                         success = success and mgr.output_control(ch_to_use, True, logger=hw_logger)
-                    elif "关闭输出" in p_str:
+                    elif "关闭输出" in p_str or "OFF" in p_str.upper():
                         success = success and mgr.output_control(ch_to_use, False, logger=hw_logger)
 
-                elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "control power", "控制板"]):
-                    if "hv_source" in device or "hv source" in device:
+                elif any(x in device for x in ["afe", "main", "hv source", "hv_source", "ngi", "高压源", "control power", "控制板"]):
+                    if any(x in device for x in ["hv_source", "hv source", "ngi", "高压源"]):
                         act = params.get("action", "")
+                        dev_name = "高压源"
                         if "清除保护" in act:
                             if hasattr(mgr.hv_source, "clear_errors"):
                                 success = mgr.hv_source.clear_errors(logger=hw_logger)
                             else:
                                 success = True
+                            hw_logger(f"-> {dev_name} 动作: 发:清除保护 回:{'成功' if success else '异常'}")
                         else:
-                            if any(x in p_str.upper() for x in ["V", "ON", "OFF"]) or "开启" in p_str or "关闭" in p_str:
+                            if any(x in p_str.upper() for x in ["V", "A", "ON", "OFF"]) or "开启" in p_str or "关闭" in p_str:
                                 if "V" in p_str.upper():
-                                    v_val = self._parse_numeric(p_str.upper().split("V")[0])
+                                    v_val = self._parse_numeric(p_str.upper().split("V")[0].split("/")[-1].strip() if "/" in p_str.upper().split("V")[0] else p_str.upper().split("V")[0])
                                     success = mgr.hv_source.set_voltage(v_val, logger=hw_logger)
                                     if success: success = verify_and_wait(mgr.hv_source, v_val)
+                                    hw_logger(f"-> {dev_name} 设定电压: 发:{v_val}V 回:{'成功' if success else '异常'}")
+                                if "A" in p_str.upper():
+                                    # Extract the A value correctly, typically formatted as "120V / 1.0A / 开启"
+                                    try:
+                                        a_str = [part for part in p_str.upper().split("/") if "A" in part][0]
+                                        a_val = self._parse_numeric(a_str.split("A")[0])
+                                        success = success and mgr.hv_source.set_current(a_val, logger=hw_logger)
+                                        hw_logger(f"-> {dev_name} 设定电流: 发:{a_val}A 回:{'成功' if success else '异常'}")
+                                    except: pass
                                 if "开启" in p_str or "ON" in p_str.upper():
                                     success = success and mgr.hv_source.output_control(True, logger=hw_logger)
+                                    hw_logger(f"-> {dev_name} 输出控制: 发:开启 回:{'开启' if success else '异常'}")
                                 if "关闭" in p_str or "OFF" in p_str.upper():
                                     success = success and mgr.hv_source.output_control(False, logger=hw_logger)
+                                    hw_logger(f"-> {dev_name} 输出控制: 发:关闭 回:{'关闭' if success else '异常'}")
                             else:
                                 if "输出控制" in act:
-                                    success = mgr.hv_source.output_control("开启" in p_str or "ON" in p_str.upper(), logger=hw_logger)
+                                    state = "开启" in p_str or "ON" in p_str.upper()
+                                    success = mgr.hv_source.output_control(state, logger=hw_logger)
+                                    action_str = "开启" if state else "关闭"
+                                    hw_logger(f"-> {dev_name} 输出控制: 发:{action_str} 回:{action_str if success else '异常'}")
                                 else:
                                     v_val = self._parse_numeric(p_str)
                                     success = mgr.hv_source.set_voltage(v_val, logger=hw_logger)
                                     if success: success = verify_and_wait(mgr.hv_source, v_val)
+                                    hw_logger(f"-> {dev_name} 设定电压: 发:{v_val}V 回:{'成功' if success else '异常'}")
                     else:
+                        dev_name = "2#AFE电源" if "2#" in device else "3#AFE电源" if "3#" in device else "1#AFE电源" if "afe" in device else "主板电源" if "main" in device else "控制板电源"
                         target_dev = mgr.afe_pwr_2 if "2#" in device else mgr.afe_pwr_3 if "3#" in device else mgr.afe_power_1 if "afe" in device else mgr.dut_power if "main" in device else mgr.ctrl_board_power
                         if target_dev:
                             if any(x in p_str.upper() for x in ["V", "A", "ON", "OFF"]) or "开启" in p_str or "关闭" in p_str:
@@ -553,15 +610,25 @@ class ChannelWorker(QObject):
                                     v_val = self._parse_numeric(p_str.upper().split("V")[0])
                                     success = target_dev.set_voltage(v_val, logger=hw_logger)
                                     if success: success = verify_and_wait(target_dev, v_val)
-                                if "开启" in p_str or "ON" in p_str.upper(): target_dev.output_control(True, logger=hw_logger)
-                                if "关闭" in p_str or "OFF" in p_str.upper(): target_dev.output_control(False, logger=hw_logger)
+                                    hw_logger(f"-> {dev_name} 设定电压: 发:{v_val}V 回:{'成功' if success else '异常'}")
+                                if "开启" in p_str or "ON" in p_str.upper(): 
+                                    success = target_dev.output_control(True, logger=hw_logger)
+                                    hw_logger(f"-> {dev_name} 输出控制: 发:开启 回:{'开启' if success else '异常'}")
+                                if "关闭" in p_str or "OFF" in p_str.upper(): 
+                                    success = target_dev.output_control(False, logger=hw_logger)
+                                    hw_logger(f"-> {dev_name} 输出控制: 发:关闭 回:{'关闭' if success else '异常'}")
                             else:
                                 act = params.get("action", "")
-                                if "输出控制" in act: target_dev.output_control("开启" in p_str or "ON" in p_str.upper(), logger=hw_logger)
+                                if "输出控制" in act: 
+                                    state = "开启" in p_str or "ON" in p_str.upper()
+                                    success = target_dev.output_control(state, logger=hw_logger)
+                                    action_str = "开启" if state else "关闭"
+                                    hw_logger(f"-> {dev_name} 输出控制: 发:{action_str} 回:{action_str if success else '异常'}")
                                 else:
                                     v_val = self._parse_numeric(p_str)
                                     success = target_dev.set_voltage(v_val, logger=hw_logger)
                                     if success: success = verify_and_wait(target_dev, v_val)
+                                    hw_logger(f"-> {dev_name} 设定电压: 发:{v_val}V 回:{'成功' if success else '异常'}")
 
                 elif "aging_board" in device or "aging board" in device or "老化" in device:
                     board = mgr.boards.get(self.channel_id)
@@ -570,20 +637,39 @@ class ChannelWorker(QObject):
                             for act in p_str.split(","):
                                 if ":" in act:
                                     n, s = act.split(":")
-                                    board.relays.set_relay_by_name(n.strip(), "ON" in s.upper() or "开启" in s)
-                        elif "全部" in params.get("action", ""): board.relays.all_off()
+                                    state = "ON" in s.upper() or "开启" in s
+                                    success = board.relays.set_relay_by_name(n.strip(), state)
+                                    action_str = "闭合" if state else "断开"
+                                    hw_logger(f"-> 继电器动作 [{n.strip()}]: 发:{action_str} 回:{action_str if success else '异常'}")
+                        elif "全部" in params.get("action", ""): 
+                            success = board.relays.all_off()
+                            hw_logger(f"-> 继电器动作: 发:全部断开 回:{'全部断开' if success else '异常'}")
                         else:
                             state = "闭合" in params.get("action", "")
-                            for ch in p_str.split(","):
-                                if ch.strip(): board.relays.write_relay(int(self._parse_numeric(ch))-1, state)
+                            ch_list = [ch.strip() for ch in p_str.split(",") if ch.strip()]
+                            for ch in ch_list:
+                                success = board.relays.write_relay(int(self._parse_numeric(ch))-1, state)
+                                if not success: break
+                            action_str = "闭合" if state else "断开"
+                            ch_str = ",".join(ch_list)
+                            ch_info = f"CH({ch_str})" if ch_str else ""
+                            hw_logger(f"-> 继电器动作 {ch_info}: 发:{action_str} 回:{action_str if success else '异常'}")
                     else: success = False
 
                 elif "easy320" in device:
-                    if "全部" in params.get("action", ""): mgr.easy320.batch_control(False)
+                    if "全部" in params.get("action", ""): 
+                        success = mgr.easy320.batch_control(False)
+                        hw_logger(f"-> Easy320动作: 发:全部断开 回:{'全部断开' if success else '异常'}")
                     else:
                         state = "闭合" in params.get("action", "")
-                        for ch in p_str.split(","):
-                            if ch.strip(): mgr.easy320.write_relay(int(self._parse_numeric(ch))-1, state)
+                        ch_list = [ch.strip() for ch in p_str.split(",") if ch.strip()]
+                        for ch in ch_list:
+                            success = mgr.easy320.write_relay(int(self._parse_numeric(ch))-1, state)
+                            if not success: break
+                        action_str = "闭合" if state else "断开"
+                        ch_str = ",".join(ch_list)
+                        ch_info = f"CH({ch_str})" if ch_str else ""
+                        hw_logger(f"-> Easy320动作 {ch_info}: 发:{action_str} 回:{action_str if success else '异常'}")
 
                 elif "ca550" in device:
                     if not mgr.ca550.is_connected:
@@ -592,21 +678,38 @@ class ChannelWorker(QObject):
                         com_port = cfg.get("ca550_com", "COM42")
                         mgr.ca550.port = com_port
                         mgr.ca550.connect()
+                    
                     if "Type:" in p_str:
                         f_code = 1 if "MA" in p_str.upper() else 2 if "OHM" in p_str.upper() else 3 if "RTD" in p_str.upper() else 4 if "TC" in p_str.upper() else 0
                         mgr.ca550.set_source_func(f_code)
                         if "Range:" in p_str:
                             r_code = 1 if "1V" in p_str else 2 if ("5V" in p_str or "10V" in p_str) else 3 if "30V" in p_str else 0
                             mgr.ca550.set_source_range(r_code)
-                        if "Val:" in p_str: mgr.ca550.set_source_data(float(self._parse_numeric(p_str.split("Val:")[-1])))
-                        if "Output:开启" in p_str: mgr.ca550.set_source_output(1)
-                        elif "Output:关闭" in p_str: mgr.ca550.set_source_output(0)
+                        if "Val:" in p_str:
+                            v_val = float(self._parse_numeric(p_str.split("Val:")[-1]))
+                            success = mgr.ca550.set_source_data(v_val)
+                            hw_logger(f"-> CA550 设定数值: 发:{v_val} 回:{'成功' if success else '异常'}")
+                        if "Output:开启" in p_str: 
+                            success = mgr.ca550.set_source_output(1)
+                            hw_logger(f"-> CA550 输出控制: 发:开启 回:{'开启' if success else '异常'}")
+                        elif "Output:关闭" in p_str: 
+                            mgr.ca550.set_source_data(0.0)
+                            success = mgr.ca550.set_source_output(0)
+                            hw_logger(f"-> CA550 输出控制: 发:关闭(归零) 回:{'关闭' if success else '异常'}")
                     else:
-                        if "关闭" in p_str or "OFF" in p_str.upper(): mgr.ca550.set_source_output(0)
+                        if "关闭" in p_str or "OFF" in p_str.upper(): 
+                            mgr.ca550.set_source_data(0.0)
+                            success = mgr.ca550.set_source_output(0)
+                            hw_logger(f"-> CA550 输出控制: 发:关闭(归零) 回:{'关闭' if success else '异常'}")
                         else:
                             mgr.ca550.set_source_func(0 if "V" in p_str.upper() else 1)
-                            mgr.ca550.set_source_data(self._parse_numeric(p_str))
-                            mgr.ca550.set_source_output(1)
+                            v_val = self._parse_numeric(p_str)
+                            success1 = mgr.ca550.set_source_data(v_val)
+                            hw_logger(f"-> CA550 设定数值: 发:{v_val} 回:{'成功' if success1 else '异常'}")
+                            success2 = mgr.ca550.set_source_output(1)
+                            hw_logger(f"-> CA550 输出控制: 发:开启 回:{'开启' if success2 else '异常'}")
+                            success = success1 and success2
+
 
             elif sub_step.type == SubStepType.READ_INSTRUMENT:
                 device, p_str = params.get("device", "").lower(), str(params.get("params", ""))
@@ -643,12 +746,12 @@ class ChannelWorker(QObject):
                     ch = target_ch if target_ch is not None else self.channel_id
                     result_value = mgr.measure_voltage(ch, logger=hw_logger) if is_volt else mgr.measure_current(ch, logger=hw_logger)
                     success = result_value >= 0
-                elif any(x in device for x in ["afe", "main", "hv_source", "hv source", "control power", "控制板"]):
+                elif any(x in device for x in ["afe", "main", "hv_source", "hv source", "ngi", "高压源", "control power", "控制板"]):
                     if "2#" in device: dev = mgr.afe_pwr_2
                     elif "3#" in device: dev = mgr.afe_pwr_3
                     elif "afe" in device: dev = mgr.afe_power_1
                     elif "main" in device: dev = mgr.dut_power
-                    elif "hv_source" in device or "hv source" in device: dev = mgr.hv_source
+                    elif any(x in device for x in ["hv_source", "hv source", "ngi", "高压源"]): dev = mgr.hv_source
                     else: dev = mgr.ctrl_board_power
                     if dev:
                         result_value = dev.measure_voltage() if is_volt else dev.measure_current()
@@ -795,6 +898,11 @@ class ChannelWorker(QObject):
         params = sub_step.params
         is_sync = bool(params.get("sync_exec", False))
         is_seq = bool(params.get("seq_exec", False))
+        
+        # 防死锁保护：如果当前通道正在独占块锁运行，则自动关闭其同步等待属性，避免与块外挂起的通道互相等待造成死锁
+        if self.engine and self.engine.resource_locks.get("seq_block_lock") == self.channel_id:
+            is_sync = False
+            is_seq = False
         trace(
             "SUBSTEP_START",
             self.channel_id,
@@ -923,7 +1031,7 @@ class ChannelWorker(QObject):
             else:
                 # 数值范围判定
                 # 修复BUG：如果获取到的值是控制结论 "PASS" 或 "FAIL"，但测试项确实配置了上下限要求，应该判定为 NG，因为没有取到有效数值
-                has_limits = step.min_limit is not None or step.max_limit is not None
+                has_limits = (step.min_limit is not None and str(step.min_limit).strip() != "") or (step.max_limit is not None and str(step.max_limit).strip() != "")
                 # 若提取的是纯控制字，但在配方中却配了具体的物理上下限，则视为错误，强制NG
                 # 除非配方中明确填写的下限就是这个控制字（例如明确要等 OK）
                 if val_to_log in ("PASS", "FAIL", "OK") and has_limits:
@@ -1049,6 +1157,8 @@ class ChannelWorker(QObject):
 
     def _upload_final_data_and_reset(self, status: bool):
         """异步执行测试判定结果上传、通道测试数据完整上报、以及大屏通道重置流程，异常时不阻塞本地业务"""
+        self._save_local_execution_log()
+        
         if not (self.engine and self.engine.api_client):
             return
 

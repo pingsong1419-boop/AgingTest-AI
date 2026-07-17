@@ -2,6 +2,7 @@ from pymodbus.client import ModbusTcpClient
 from pymodbus.framer import FramerType
 import threading
 import logging
+import time
 
 # 配置日志
 logger = logging.getLogger("PowerBoardRU12")

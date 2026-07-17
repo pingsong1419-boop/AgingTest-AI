@@ -95,11 +95,13 @@ class NGI83624:
             if not self._ensure_connected():
                 return False
             try:
+                # NGI 83624 SCPI current limit setting expects mA, so convert A to mA
+                curr_ma = current * 1000.0
                 if channel == 0:
                     ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
-                    cmd = f"SOUR:OUTCURR {current}(@{ch_str})\n"
+                    cmd = f"SOUR:OUTCURR {curr_ma:.2f}(@{ch_str})\n"
                 else:
-                    cmd = f"SOUR{channel}:OUTCURR {current}\n"
+                    cmd = f"SOUR{channel}:OUTCURR {curr_ma:.2f}\n"
                 
                 self._safe_send(cmd.encode(), logger=logger)
                 time.sleep(0.02)
@@ -135,23 +137,46 @@ class NGI83624:
                 return False
 
     def output_control(self, channel: int, state: bool, logger=None) -> bool:
-        with self._lock:
-            try:
-                val = 1 if state else 0
-                if channel == 0:
-                    ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
-                    cmd = f"OUTP:ONOFF {val}(@{ch_str})\n"
-                else:
-                    cmd = f"OUTP{channel}:ONOFF {val}\n"
-                    
-                if not self._safe_send(cmd.encode(), logger=logger): return False
-                time.sleep(0.02) 
+        for attempt in range(2):
+            if not self._ensure_connected():
+                if attempt == 1: return False
+                time.sleep(0.5)
+                continue
                 
-                if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
-                return True
-            except Exception as e:
-                if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
-                return False
+            with self._lock:
+                try:
+                    val = 1 if state else 0
+                    if channel == 0:
+                        ch_str = ",".join(str(i) for i in range(1, self.max_channels + 1))
+                        cmd = f"OUTP:ONOFF {val}(@{ch_str})\n"
+                    else:
+                        cmd = f"OUTP{channel}:ONOFF {val}\n"
+                        
+                    if not self._safe_send(cmd.encode(), logger=logger):
+                        self.is_connected = False
+                    else:
+                        time.sleep(0.05)
+                        # 回读校验
+                        if channel != 0:
+                            self._clear_buffer()
+                            qcmd = f"OUTP{channel}:ONOFF?\n"
+                            self.sock.send(qcmd.encode())
+                            data = self.sock.recv(1024).decode(errors="ignore").strip().upper()
+                            is_on = data in ("1", "ON", "TRUE")
+                            if is_on == state:
+                                return True
+                            else:
+                                if logger: logger(f"[IP: {self.ip}] [!] 通道 {channel} 输出状态校验失败，准备重试")
+                                self.is_connected = False
+                        else:
+                            if logger: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
+                            return True
+                except Exception as e:
+                    if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
+                    self.is_connected = False
+                    
+            time.sleep(0.5)
+        return False
 
     def read_output_state(self, channel: int, logger=None):
         with self._lock:

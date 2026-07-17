@@ -78,6 +78,10 @@ class RNCANDriver:
                 # 等待接收线程启动并稳定
                 time.sleep(0.1)
                 
+                if not self.is_connected:
+                    print(f"[RNCAN] Connection closed immediately by {self.ip}")
+                    return False
+
                 print(f"[RNCAN] Connected to {self.ip}:{self.port}")
                 return True
             except Exception as e:

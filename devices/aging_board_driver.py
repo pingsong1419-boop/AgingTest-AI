@@ -117,9 +117,8 @@ class AgingBoardController:
                         return True
                 except Exception as e:
                     logger.warning(f"功能板 {self.ip} TCP 已连接，但 Modbus 握手失败: {e}")
-                    # 只要 TCP 通了，我们先认为是在线的，后续指令执行时会再次尝试
-                    self.is_connected = True
-                    return True
+                    self._mark_failure()
+                    return False
 
             return False
         except Exception as e:
@@ -154,8 +153,14 @@ class AgingBoardController:
 
                 result = self.client.write_coil(address=address, value=state, device_id=self.slave_id)
                 if result and not result.isError():
-                    self.relay_states[address] = state
-                    return True
+                    # 增加回读校验
+                    time.sleep(0.05)
+                    check = self.client.read_coils(address=address, count=1, device_id=self.slave_id)
+                    if not check.isError() and check.bits[0] == state:
+                        self.relay_states[address] = state
+                        return True
+                    else:
+                        logger.warning(f"写入线圈 {address} 成功但回读校验失败，正在重试...")
                 
                 # 如果是 Modbus 错误，尝试重置连接后在下一次循环中重试
                 logger.warning(f"写入线圈 {address} 失败 (Modbus Error), 正在尝试重连重试...")
@@ -181,20 +186,39 @@ class AgingBoardController:
             return []
 
     def write_all_off(self) -> bool:
-        """批量关闭本板卡所有 22 路继电器"""
-        if not self.is_connected:
+        """批量关闭本板卡所有 22 路继电器 (带自动重试)"""
+        if not self._can_retry_now():
             return False
-        try:
-            result = self.client.write_coils(address=0, values=[False] * 22, device_id=self.slave_id)
-            if not result.isError():
-                # 重置本地状态缓存
-                for addr in self.relay_states:
-                    self.relay_states[addr] = False
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"批量关闭失败: {e}")
-            return False
+            
+        for attempt in range(2):
+            try:
+                if not self.is_connected or not self.client.is_socket_open():
+                    if not self.connect():
+                        if attempt == 1: return False
+                        continue
+                        
+                result = self.client.write_coils(address=0, values=[False] * 22, device_id=self.slave_id)
+                if result and not result.isError():
+                    # 增加回读校验
+                    time.sleep(0.05)
+                    check = self.client.read_coils(address=0, count=22, device_id=self.slave_id)
+                    if not check.isError() and not any(check.bits[:22]):
+                        # 重置本地状态缓存
+                        for addr in self.relay_states:
+                            self.relay_states[addr] = False
+                        return True
+                    else:
+                        logger.warning(f"老化板 {self.ip} 批量关闭继电器下发成功，但回读校验失败，正在重试...")
+                else:
+                    logger.warning(f"老化板 {self.ip} 批量关闭下发失败 (Modbus Error), 正在尝试重连重试...")
+                
+                self.disconnect()
+            except Exception as e:
+                self._log_error_throttled(f"老化板 {self.ip} 批量关闭异常 (Attempt {attempt+1}): {e}")
+                self.disconnect()
+                time.sleep(0.1)
+                
+        return False
     
     # 兼容性别名
     def all_off(self):

@@ -124,20 +124,47 @@ class Lingtu66100:
 
     def output_control(self, channel: int, state: bool, logger=None) -> bool:
         """控制输出开关"""
-        with self._lock:
-            try:
-                val = 1 if state else 0
-                channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
-                for ch in channels:
-                    cmd = f"OUTP{ch}:STAT {val}\n"
-                    if not self._safe_send(cmd.encode(), logger=logger): return False
-                    time.sleep(0.02) 
+        for attempt in range(2):
+            if not self._ensure_connected():
+                if attempt == 1: return False
+                time.sleep(0.5)
+                continue
                 
-                if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
-                return True
-            except Exception as e:
-                if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
-                return False
+            with self._lock:
+                try:
+                    val = 1 if state else 0
+                    channels = range(1, self.max_channels + 1) if channel == 0 else [channel]
+                    all_success = True
+                    for ch in channels:
+                        cmd = f"OUTP{ch}:STAT {val}\n"
+                        if not self._safe_send(cmd.encode(), logger=logger):
+                            all_success = False
+                            break
+                        time.sleep(0.05)
+                        
+                        # 回读校验
+                        self._clear_buffer()
+                        qcmd = f"OUTP{ch}:STAT?\n"
+                        self.sock.send(qcmd.encode())
+                        data = self.sock.recv(1024).decode(errors="ignore").strip().upper()
+                        is_on = data in ("1", "ON", "TRUE")
+                        if is_on != state:
+                            if logger: logger(f"[IP: {self.ip}] [!] 通道 {ch} 输出状态校验失败，准备重试")
+                            all_success = False
+                            break
+                            
+                    if all_success:
+                        if logger and channel == 0: logger(f"[IP: {self.ip}] [广播] {'开启' if state else '关闭'}所有通道输出")
+                        return True
+                    else:
+                        self.is_connected = False
+                        
+                except Exception as e:
+                    if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
+                    self.is_connected = False
+                    
+            time.sleep(0.5)
+        return False
 
 
     def _clear_buffer(self):

@@ -28,6 +28,18 @@ def setup_crash_logging():
 
 def main():
     setup_crash_logging()
+    
+    # --- 开启终端通讯交互监控日志 ---
+    import logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
+        datefmt='%H:%M:%S',
+        stream=sys.stdout
+    )
+    # 对于过多杂乱的日志可以稍微过滤，但目前全开DEBUG以捕获PyModbus的TX/RX
+    logging.getLogger('pymodbus').setLevel(logging.DEBUG)
+
     app = QApplication(sys.argv)
     
     # 加载全局工业风深色样式

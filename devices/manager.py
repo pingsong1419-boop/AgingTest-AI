@@ -281,15 +281,14 @@ class DeviceManager:
         online_count = 0
         def check_board(b_tuple):
             idx, board = b_tuple
-            import time
-            for attempt in range(4):  # 首次连接 + 最多 3 次重连
-                if board.connect():
-                    return (idx, True, getattr(board, "ip", "Unknown IP"))
-                if attempt < 3:
-                    time.sleep(3.0)
+            # 初始化扫描只尝试一次，避免因设备离线导致超时重试长达几十秒卡死网络
+            if board.connect():
+                # 安全启动逻辑：初始化连接成功后，默认关闭老化控制板上所有的 22 路继电器
+                board.relays.write_all_off()
+                return (idx, True, getattr(board, "ip", "Unknown IP"))
             return (idx, False, getattr(board, "ip", "Unknown IP"))
 
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=32) as executor:
             results = list(executor.map(check_board, self.boards.items()))
             online_count = sum(1 for _, ok, _ in results if ok)
             offline_details = [f"CH{idx}({ip})" for idx, ok, ip in results if not ok]

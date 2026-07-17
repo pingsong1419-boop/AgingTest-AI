@@ -108,19 +108,43 @@ class NGIN3618:
                 return False
 
     def output_control(self, state: bool, logger=None) -> bool:
-        if not self.is_connected:
-            if not self.connect():
-                if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接")
-                return False
-        with self.lock:
-            try:
-                cmd = "OUTP ON" if state else "OUTP OFF"
-                self.send_cmd(cmd, logger)
-                return self.check_success(logger)
-            except Exception as e:
-                self.is_connected = False
-                if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
-                return False
+        for attempt in range(2):
+            if not self.is_connected:
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: HV电源未连接 (Attempt {attempt+1})")
+                    if attempt == 1: return False
+                    time.sleep(0.5)
+                    continue
+            with self.lock:
+                try:
+                    cmd = "OUTP ON" if state else "OUTP OFF"
+                    self.send_cmd(cmd, logger)
+                    if self.check_success(logger):
+                        # 增加延时等待硬件继电器响应
+                        time.sleep(0.5)
+                        # 物理状态回读
+                        self.send_cmd("OUTP?", logger)
+                        res = self.sock.recv(1024).decode().strip()
+                        if logger: logger(f"[IP: {self.ip}] [RX] {res}")
+                        
+                        is_on = "1" in res or "ON" in res.upper()
+                        if is_on == state:
+                            return True
+                        else:
+                            if logger: logger(f"[IP: {self.ip}] [!] 输出控制校验失败，准备重试")
+                    else:
+                        if logger: logger(f"[IP: {self.ip}] [!] 输出控制指令报错，准备重试")
+                    
+                    self.sock.close()
+                    self.sock = None
+                    self.is_connected = False
+                except Exception as e:
+                    self.sock.close() if self.sock else None
+                    self.sock = None
+                    self.is_connected = False
+                    if logger: logger(f"[IP: {self.ip}] [!] 输出控制异常: {e}")
+            time.sleep(0.5)
+        return False
 
     def measure_voltage(self, logger=None) -> float:
         if not self.is_connected:

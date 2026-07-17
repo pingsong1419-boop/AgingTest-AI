@@ -269,7 +269,7 @@
             "max": "--",
             "strategy": "NG继续",
             "standard_type": "字符串",
-            "retry_count": "不复测",
+            "retry_count": "复测1次",
             "unit": "NULL",
             "exec_mode": "并行执行",
             "is_block_start": false,
@@ -307,9 +307,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "等待 (Wait)-固定延时 (500ms)",
+                    "name": "等待 (Wait)-固定延时 (1000ms)",
                     "action": "固定延时",
-                    "params": "500ms",
+                    "params": "1000ms",
                     "device": "等待 (Wait)",
                     "type": "等待",
                     "is_judgment": false,
@@ -317,9 +317,9 @@
                     "fail_strategy": "失败停止"
                 },
                 {
-                    "name": "CAN 交互-接收指定帧ID (ID:0x502 / TYPE:0 / CH:0 / TIMEOUT:500)",
+                    "name": "CAN 交互-接收指定帧ID (ID:0x502 / TYPE:0 / CH:0 / TIMEOUT:1000)",
                     "action": "接收指定帧ID",
-                    "params": "ID:0x502 / TYPE:0 / CH:0 / TIMEOUT:500",
+                    "params": "ID:0x502 / TYPE:0 / CH:0 / TIMEOUT:1000",
                     "device": "CAN 交互",
                     "type": "CAN接收",
                     "is_judgment": true,
@@ -4054,7 +4054,7 @@
             "retry_count": "不复测",
             "unit": "V",
             "exec_mode": "并行执行",
-            "is_block_start": false,
+            "is_block_start": true,
             "is_block_end": false,
             "target_board": "主机",
             "sub_steps": [
@@ -4531,7 +4531,7 @@
             "unit": "V",
             "exec_mode": "并行执行",
             "is_block_start": false,
-            "is_block_end": false,
+            "is_block_end": true,
             "target_board": "主机",
             "sub_steps": [
                 {

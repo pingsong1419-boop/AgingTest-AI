@@ -1,0 +1,1511 @@
+<TestReport id='324'>
+  <BasicInfo>
+    <Channel>1</Channel>
+    <Recipe>CA550_Loop_Test_100x</Recipe>
+    <StartTime>2026-07-02 17:04:54</StartTime>
+    <EndTime>2026-07-02 17:10:59</EndTime>
+    <TotalResult>PASS</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='Cycle 1 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 1 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 1 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 2 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 2 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 2 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 3 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 3 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 3 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 4 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 4 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 4 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 5 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 5 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 5 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 6 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 6 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 6 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 7 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 7 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 7 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 8 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 8 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 8 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 9 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 9 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 9 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 10 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 10 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 10 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 11 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 11 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 11 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 12 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 12 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 12 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 13 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 13 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 13 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 14 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 14 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 14 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 15 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 15 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 15 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 16 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 16 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 16 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 17 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 17 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 17 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 18 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 18 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 18 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 19 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 19 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 19 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 20 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 20 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 20 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 21 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 21 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 21 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 22 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 22 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 22 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 23 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 23 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 23 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 24 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 24 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 24 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 25 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 25 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 25 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 26 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 26 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 26 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 27 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 27 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 27 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 28 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 28 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 28 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 29 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 29 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 29 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 30 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 30 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 30 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 31 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 31 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 31 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 32 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 32 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 32 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 33 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 33 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 33 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 34 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 34 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 34 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 35 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 35 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 35 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 36 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 36 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 36 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 37 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 37 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 37 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 38 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 38 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 38 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 39 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 39 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 39 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 40 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 40 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 40 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 41 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 41 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 41 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 42 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 42 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 42 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 43 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 43 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 43 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 44 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 44 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 44 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 45 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 45 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 45 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 46 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 46 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 46 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 47 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 47 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 47 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 48 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 48 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 48 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 49 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 49 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 49 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 50 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 50 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 50 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 51 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 51 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 51 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 52 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 52 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 52 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 53 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 53 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 53 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 54 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 54 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 54 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 55 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 55 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 55 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 56 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 56 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 56 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 57 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 57 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 57 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 58 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 58 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 58 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 59 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 59 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 59 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 60 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 60 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 60 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 61 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 61 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 61 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 62 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 62 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 62 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 63 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 63 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 63 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 64 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 64 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 64 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 65 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 65 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 65 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 66 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 66 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 66 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 67 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 67 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 67 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 68 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 68 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 68 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 69 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 69 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 69 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 70 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 70 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 70 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 71 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 71 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 71 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 72 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 72 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 72 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 73 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 73 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 73 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 74 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 74 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 74 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 75 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 75 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 75 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 76 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 76 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 76 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 77 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 77 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 77 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 78 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 78 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 78 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 79 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 79 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 79 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 80 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 80 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 80 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 81 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 81 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 81 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 82 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 82 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 82 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 83 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 83 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 83 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 84 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 84 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 84 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 85 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 85 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 85 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 86 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 86 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 86 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 87 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 87 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 87 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 88 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 88 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 88 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 89 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 89 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 89 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 90 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 90 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 90 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 91 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 91 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 91 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 92 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 92 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 92 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 93 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 93 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 93 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 94 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 94 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 94 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 95 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 95 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 95 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 96 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 96 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 96 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 97 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 97 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 97 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 98 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 98 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 98 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 99 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 99 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 99 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 100 - 输出 1.5V'>
+      <Limit>1.4 ~ 1.6</Limit>
+      <Measured>1.5</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 100 - 输出 3.3V'>
+      <Limit>3.2 ~ 3.4</Limit>
+      <Measured>3.3</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='Cycle 100 - 输出关闭'>
+      <Limit>-0.1 ~ 0.1</Limit>
+      <Measured>0.0</Measured>
+      <Result>PASS</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

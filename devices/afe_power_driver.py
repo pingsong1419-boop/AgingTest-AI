@@ -109,19 +109,41 @@ class AFEPowerController:
                 logger.error(f"电流设置异常: {e}")
                 return False
 
-    def output_control(self, state: bool) -> bool:
+    def output_control(self, state: bool, logger=None) -> bool:
         """
         输出开关控制 (线圈地址 133)
         :param state: True 开启, False 关闭
         """
-        with self.lock:
-            if not self.is_connected: return False
-            try:
-                result = self.client.write_coil(address=133, value=state, device_id=self.slave_id)
-                return result is not None and not result.isError()
-            except Exception as e:
-                logger.error(f"输出控制异常: {e}")
-                return False
+        for attempt in range(2):
+            if not self.is_connected:
+                if not self.connect():
+                    if logger: logger(f"[IP: {self.ip}] 错误: AFE电源未连接且重连失败 (Attempt {attempt+1})")
+                    if attempt == 1: return False
+                    time.sleep(0.5)
+                    continue
+            with self.lock:
+                try:
+                    if logger: logger(f"[IP: {self.ip}] [TX] Write Coil 133: {state}")
+                    result = self.client.write_coil(address=133, value=state, device_id=self.slave_id)
+                    if result is not None and not result.isError():
+                        time.sleep(0.05)
+                        check = self.client.read_coils(133, count=1, device_id=self.slave_id)
+                        if not check.isError() and check.bits[0] == state:
+                            if logger: logger(f"[IP: {self.ip}] [RX] Success (Verified)")
+                            return True
+                        else:
+                            if logger: logger(f"[IP: {self.ip}] [!] 输出控制回读校验失败，准备重连重试")
+                    else:
+                        if logger: logger(f"[IP: {self.ip}] [!] 输出控制写线圈失败，准备重连重试")
+                        
+                    self.client.close()
+                    self.is_connected = False
+                except Exception as e:
+                    if logger: logger(f"[IP: {self.ip}] 输出控制异常: {e}")
+                    self.client.close()
+                    self.is_connected = False
+            time.sleep(0.5)
+        return False
 
     def measure_voltage(self) -> float:
         """

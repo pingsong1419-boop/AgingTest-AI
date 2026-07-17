@@ -1,0 +1,240 @@
+{
+    "name": "CA550单机循环测试",
+    "topology": "1主0从",
+    "items": [
+        {
+            "name": "Cycle 1 - 输出 1.5V",
+            "mode": "范围判定",
+            "min": "1.4",
+            "max": "1.6",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "串行执行",
+            "is_block_start": false,
+            "is_block_end": false,
+            "drop_on_ng": false,
+            "target_board": "主机",
+            "sub_steps": [
+                {
+                    "name": "CA550-输出1.5V",
+                    "action": "数值设定",
+                    "params": "Type:V/Range:5V/Val:1.5/Output:开启",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                },
+                {
+                    "name": "CA550-回读校验",
+                    "action": "读取",
+                    "params": "source",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "读取仪表",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                }
+            ]
+        },
+        {
+            "name": "Cycle 1 - 输出 3.3V",
+            "mode": "范围判定",
+            "min": "3.2",
+            "max": "3.4",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "串行执行",
+            "is_block_start": false,
+            "is_block_end": false,
+            "drop_on_ng": false,
+            "target_board": "主机",
+            "sub_steps": [
+                {
+                    "name": "CA550-输出3.3V",
+                    "action": "数值设定",
+                    "params": "Type:V/Range:5V/Val:3.3/Output:开启",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                },
+                {
+                    "name": "CA550-回读校验",
+                    "action": "读取",
+                    "params": "source",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "读取仪表",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                }
+            ]
+        },
+        {
+            "name": "Cycle 1 - 输出关闭",
+            "mode": "范围判定",
+            "min": "-0.1",
+            "max": "0.1",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "串行执行",
+            "is_block_start": false,
+            "is_block_end": false,
+            "drop_on_ng": false,
+            "target_board": "主机",
+            "sub_steps": [
+                {
+                    "name": "CA550-输出关闭",
+                    "action": "数值设定",
+                    "params": "Output:关闭/Val:0.0",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                },
+                {
+                    "name": "CA550-回读校验",
+                    "action": "读取",
+                    "params": "source",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "读取仪表",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                }
+            ]
+        },
+        {
+            "name": "Cycle 2 - 输出 2.0V",
+            "mode": "范围判定",
+            "min": "1.9",
+            "max": "2.1",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "串行执行",
+            "is_block_start": false,
+            "is_block_end": false,
+            "drop_on_ng": false,
+            "target_board": "主机",
+            "sub_steps": [
+                {
+                    "name": "CA550-输出2.0V",
+                    "action": "数值设定",
+                    "params": "Type:V/Range:5V/Val:2.0/Output:开启",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                },
+                {
+                    "name": "CA550-回读校验",
+                    "action": "读取",
+                    "params": "source",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "读取仪表",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                }
+            ]
+        },
+        {
+            "name": "Cycle 2 - 输出 4.2V",
+            "mode": "范围判定",
+            "min": "4.1",
+            "max": "4.3",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "串行执行",
+            "is_block_start": false,
+            "is_block_end": false,
+            "drop_on_ng": false,
+            "target_board": "主机",
+            "sub_steps": [
+                {
+                    "name": "CA550-输出4.2V",
+                    "action": "数值设定",
+                    "params": "Type:V/Range:5V/Val:4.2/Output:开启",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                },
+                {
+                    "name": "CA550-回读校验",
+                    "action": "读取",
+                    "params": "source",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "读取仪表",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                }
+            ]
+        },
+        {
+            "name": "Cycle 2 - 输出关闭",
+            "mode": "范围判定",
+            "min": "-0.1",
+            "max": "0.1",
+            "strategy": "NG继续",
+            "standard_type": "数值",
+            "retry_count": "不复测",
+            "unit": "V",
+            "exec_mode": "串行执行",
+            "is_block_start": false,
+            "is_block_end": false,
+            "drop_on_ng": false,
+            "target_board": "主机",
+            "sub_steps": [
+                {
+                    "name": "CA550-输出关闭",
+                    "action": "数值设定",
+                    "params": "Output:关闭/Val:0.0",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "设置仪表",
+                    "is_judgment": false,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                },
+                {
+                    "name": "CA550-回读校验",
+                    "action": "读取",
+                    "params": "source",
+                    "device": "横河CA550校验仪 (ca550)",
+                    "type": "读取仪表",
+                    "is_judgment": true,
+                    "sync_exec": false,
+                    "drop_on_fail": false,
+                    "fail_strategy": "忽略继续"
+                }
+            ]
+        }
+    ]
+}

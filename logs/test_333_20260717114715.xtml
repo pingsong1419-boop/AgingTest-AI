@@ -1,0 +1,21 @@
+<TestReport id='333'>
+  <BasicInfo>
+    <Channel>1</Channel>
+    <Recipe>DJ2513_Aging</Recipe>
+    <StartTime>2026-07-17 11:47:01</StartTime>
+    <EndTime>2026-07-17 11:47:15</EndTime>
+    <TotalResult>NG</TotalResult>
+  </BasicInfo>
+  <ItemsResults>
+    <Item name='设备初始化'>
+      <Limit>None ~ None</Limit>
+      <Measured>FAIL</Measured>
+      <Result>PASS</Result>
+    </Item>
+    <Item name='BMS板工作唤醒'>
+      <Limit>None ~ None</Limit>
+      <Measured>FAIL</Measured>
+      <Result>NG</Result>
+    </Item>
+  </ItemsResults>
+</TestReport>

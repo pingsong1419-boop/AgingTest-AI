@@ -5,6 +5,9 @@ from PySide6.QtCore import Qt
 from ui.tabs.overview_tab import OverviewTab
 from ui.tabs.config_tab import ConfigTab
 from ui.tabs.hardware_tab import HardwareTab
+from ui.tabs.chamber_tab import ChamberTab
+from ui.tabs.api_tab import ApiTab
+
 from ui.tabs.debug_tab import DebugTab
 from ui.tabs.simulator_tab import SimulatorTab
 from ui.tabs.hv_tab import HVSourceTab
@@ -16,8 +19,6 @@ from ui.tabs.easy320_tab_standalone import Easy320StandaloneTab
 from ui.tabs.ca550_tab_standalone import CA550StandaloneTab
 from ui.tabs.rn_can_tab import RNCANTab
 from ui.tabs.power_board_tab import PowerBoardTab
-from ui.tabs.chamber_tab import ChamberTab
-from ui.tabs.api_tab import ApiTab
 
 
 

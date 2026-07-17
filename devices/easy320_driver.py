@@ -69,27 +69,49 @@ class Easy320Controller:
             self.is_connected = False
 
     def write_relay(self, index: int, state: bool) -> bool:
-        """控制单个继电器开关"""
-        if not self.is_connected:
-            if not self.connect(): return False
-        
+        """控制单个继电器开关 (带自动重试与物理回读)"""
         address = self.start_address + index
-        with self.lock:
-            try:
-                # 模拟调试 TAB 的操作原理：增加微小延时
-                time.sleep(0.05)
-                
-                # 优先尝试线圈写入 (FC05)
-                result = self.client.write_coil(address=address, value=state, device_id=self.slave_id)
-                if result and not result.isError():
-                    return True
-                
-                # 备选尝试寄存器写入 (FC06)
-                result = self.client.write_register(address=address, value=1 if state else 0, device_id=self.slave_id)
-                return result is not None and not result.isError()
-            except Exception as e:
-                logger.error(f"继电器控制异常: {e}")
-                return False
+        
+        for attempt in range(2):
+            if not self.is_connected:
+                if not self.connect():
+                    if attempt == 1: return False
+                    time.sleep(0.1)
+                    continue
+
+            with self.lock:
+                try:
+                    # 模拟调试 TAB 的操作原理：增加微小延时
+                    time.sleep(0.05)
+                    
+                    # 优先尝试线圈写入 (FC05)
+                    result = self.client.write_coil(address=address, value=state, device_id=self.slave_id)
+                    if not (result and not result.isError()):
+                        # 备选尝试寄存器写入 (FC06)
+                        result = self.client.write_register(address=address, value=1 if state else 0, device_id=self.slave_id)
+                        
+                    if result and not result.isError():
+                        # 增加物理回读校验
+                        time.sleep(0.05)
+                        check = self.client.read_coils(address=address, count=1, device_id=self.slave_id)
+                        if not check.isError() and check.bits[0] == state:
+                            return True
+                        else:
+                            logger.warning(f"Easy320 继电器 {index} 写入成功但回读校验失败，准备重试")
+                    else:
+                        logger.warning(f"Easy320 继电器 {index} 写入失败，准备重连重试")
+                        
+                    # 失败后主动断开触发重连
+                    self.client.close()
+                    self.is_connected = False
+                except Exception as e:
+                    logger.error(f"继电器控制异常: {e}")
+                    self.client.close()
+                    self.is_connected = False
+            
+            time.sleep(0.1)
+            
+        return False
 
     def read_relays(self, count: int = 32) -> list:
         """读取继电器当前状态"""
@@ -110,12 +132,30 @@ class Easy320Controller:
                 return []
 
     def batch_control(self, state: bool, delay: float = 0.05):
-        """批量控制所有继电器"""
-        success = True
-        for i in range(32):
-            success = success and self.write_relay(i, state)
-            time.sleep(delay)
-        return success
+        """批量控制所有继电器 (带回读确认)"""
+        for attempt in range(2):
+            success = True
+            for i in range(32):
+                if not self.write_relay(i, state):
+                    success = False
+                    break
+                time.sleep(delay)
+                
+            if success:
+                time.sleep(0.1)
+                states = self.read_relays()
+                if states and len(states) >= 32:
+                    if all(s == state for s in states[:32]):
+                        return True
+                    else:
+                        logger.warning(f"Easy320 批量控制完成，但回读校验有不一致通道 (尝试 {attempt+1})")
+                else:
+                    logger.warning(f"Easy320 批量控制回读失败 (尝试 {attempt+1})")
+            
+            if attempt == 0:
+                logger.warning("Easy320 批量控制准备进行第 2 次重试...")
+                time.sleep(0.5)
+        return False
 
 # --- 使用示例 ---
 if __name__ == "__main__":

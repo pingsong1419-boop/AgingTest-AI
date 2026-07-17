@@ -1,0 +1,3122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>BMS 测试报告 - 未知主机</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #1a1a2e;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 10px;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f3460;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecca3;
+            padding-left: 10px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-item {
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-right: 10px;
+        }
+        .result-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .result-pass { background-color: #d4edda; color: #155724; }
+        .result-ng { background-color: #f8d7da; color: #721c24; }
+        .result-running { background-color: #fff3cd; color: #856404; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 14px;
+        }
+        th {
+            background-color: #0f3460;
+            color: #fff;
+            font-weight: 600;
+        }
+        tr:hover { background-color: #f8f9fa; }
+        .text-center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BMS 老化测试详细判定报告</h1>
+        
+        <div class="section-title">基本信息</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">通道号:</span>CH-01</div>
+            <div class="info-item"><span class="info-label">货架号:</span></div>
+            <div class="info-item"><span class="info-label">主机条码:</span>未知主机</div>
+            <div class="info-item"><span class="info-label">测试配方:</span>CA550_Loop_Test_100x</div>
+            <div class="info-item"><span class="info-label">测试总判定:</span>
+                <span class="result-badge result-pass">PASS</span>
+            </div>
+            <div class="info-item"><span class="info-label">测试开始时间:</span>2026-07-02 17:29:54</div>
+            <div class="info-item"><span class="info-label">测试结束时间:</span>2026-07-02 17:36:34</div>
+        </div>
+        
+        <div class="section-title">详细判定数据</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>测试项名称</th>
+                    <th class="text-center">单位</th>
+                    <th class="text-center">下限</th>
+                    <th class="text-center">上限</th>
+                    <th class="text-center">测量值</th>
+                    <th class="text-center">判定结果</th>
+                    <th class="text-center">执行用时(秒)</th>
+                    <th>记录时间</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cycle 1 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.49</td>
+                    <td>2026-07-02 17:29:55</td>
+                </tr>
+                <tr>
+                    <td>Cycle 1 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:29:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 1 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:29:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 2 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.44</td>
+                    <td>2026-07-02 17:29:59</td>
+                </tr>
+                <tr>
+                    <td>Cycle 2 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:30:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 2 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 3 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:30:03</td>
+                </tr>
+                <tr>
+                    <td>Cycle 3 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:30:05</td>
+                </tr>
+                <tr>
+                    <td>Cycle 3 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 4 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.44</td>
+                    <td>2026-07-02 17:30:07</td>
+                </tr>
+                <tr>
+                    <td>Cycle 4 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:30:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 4 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 5 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:30:11</td>
+                </tr>
+                <tr>
+                    <td>Cycle 5 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:30:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 5 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.04</td>
+                    <td>2026-07-02 17:30:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 6 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.48</td>
+                    <td>2026-07-02 17:30:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 6 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:30:17</td>
+                </tr>
+                <tr>
+                    <td>Cycle 6 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 7 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:30:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 7 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:30:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 7 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 8 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:30:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 8 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:30:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 8 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:30:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 9 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:30:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 9 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:30:29</td>
+                </tr>
+                <tr>
+                    <td>Cycle 9 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:30:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 10 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:30:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 10 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:30:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 10 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:34</td>
+                </tr>
+                <tr>
+                    <td>Cycle 11 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:30:36</td>
+                </tr>
+                <tr>
+                    <td>Cycle 11 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:30:37</td>
+                </tr>
+                <tr>
+                    <td>Cycle 11 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:30:38</td>
+                </tr>
+                <tr>
+                    <td>Cycle 12 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:30:40</td>
+                </tr>
+                <tr>
+                    <td>Cycle 12 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:30:41</td>
+                </tr>
+                <tr>
+                    <td>Cycle 12 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:30:42</td>
+                </tr>
+                <tr>
+                    <td>Cycle 13 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:30:44</td>
+                </tr>
+                <tr>
+                    <td>Cycle 13 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:30:45</td>
+                </tr>
+                <tr>
+                    <td>Cycle 13 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:46</td>
+                </tr>
+                <tr>
+                    <td>Cycle 14 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:30:48</td>
+                </tr>
+                <tr>
+                    <td>Cycle 14 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.50</td>
+                    <td>2026-07-02 17:30:49</td>
+                </tr>
+                <tr>
+                    <td>Cycle 14 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.03</td>
+                    <td>2026-07-02 17:30:50</td>
+                </tr>
+                <tr>
+                    <td>Cycle 15 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.44</td>
+                    <td>2026-07-02 17:30:52</td>
+                </tr>
+                <tr>
+                    <td>Cycle 15 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:30:53</td>
+                </tr>
+                <tr>
+                    <td>Cycle 15 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:30:54</td>
+                </tr>
+                <tr>
+                    <td>Cycle 16 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:30:56</td>
+                </tr>
+                <tr>
+                    <td>Cycle 16 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:30:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 16 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:30:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 17 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:00</td>
+                </tr>
+                <tr>
+                    <td>Cycle 17 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 17 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 18 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:04</td>
+                </tr>
+                <tr>
+                    <td>Cycle 18 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:05</td>
+                </tr>
+                <tr>
+                    <td>Cycle 18 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 19 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:31:08</td>
+                </tr>
+                <tr>
+                    <td>Cycle 19 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:31:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 19 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:31:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 20 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:12</td>
+                </tr>
+                <tr>
+                    <td>Cycle 20 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 20 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 21 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 21 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:17</td>
+                </tr>
+                <tr>
+                    <td>Cycle 21 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 22 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:31:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 22 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:31:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 22 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:31:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 23 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 23 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 23 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 24 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 24 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:29</td>
+                </tr>
+                <tr>
+                    <td>Cycle 24 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 25 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:31:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 25 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:31:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 25 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:31:34</td>
+                </tr>
+                <tr>
+                    <td>Cycle 26 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:36</td>
+                </tr>
+                <tr>
+                    <td>Cycle 26 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:37</td>
+                </tr>
+                <tr>
+                    <td>Cycle 26 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:38</td>
+                </tr>
+                <tr>
+                    <td>Cycle 27 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:40</td>
+                </tr>
+                <tr>
+                    <td>Cycle 27 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:41</td>
+                </tr>
+                <tr>
+                    <td>Cycle 27 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:42</td>
+                </tr>
+                <tr>
+                    <td>Cycle 28 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:31:44</td>
+                </tr>
+                <tr>
+                    <td>Cycle 28 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:31:45</td>
+                </tr>
+                <tr>
+                    <td>Cycle 28 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:31:46</td>
+                </tr>
+                <tr>
+                    <td>Cycle 29 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:48</td>
+                </tr>
+                <tr>
+                    <td>Cycle 29 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:31:49</td>
+                </tr>
+                <tr>
+                    <td>Cycle 29 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:50</td>
+                </tr>
+                <tr>
+                    <td>Cycle 30 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:31:52</td>
+                </tr>
+                <tr>
+                    <td>Cycle 30 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:31:53</td>
+                </tr>
+                <tr>
+                    <td>Cycle 30 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:31:54</td>
+                </tr>
+                <tr>
+                    <td>Cycle 31 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:31:56</td>
+                </tr>
+                <tr>
+                    <td>Cycle 31 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:31:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 31 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:31:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 32 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:32:00</td>
+                </tr>
+                <tr>
+                    <td>Cycle 32 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:32:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 32 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:32:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 33 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:32:04</td>
+                </tr>
+                <tr>
+                    <td>Cycle 33 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:32:05</td>
+                </tr>
+                <tr>
+                    <td>Cycle 33 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:32:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 34 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:32:08</td>
+                </tr>
+                <tr>
+                    <td>Cycle 34 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:32:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 34 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 35 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:32:12</td>
+                </tr>
+                <tr>
+                    <td>Cycle 35 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:32:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 35 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.02</td>
+                    <td>2026-07-02 17:32:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 36 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:32:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 36 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.54</td>
+                    <td>2026-07-02 17:32:17</td>
+                </tr>
+                <tr>
+                    <td>Cycle 36 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 37 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:32:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 37 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:32:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 37 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 38 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:32:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 38 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:32:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 38 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 39 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:32:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 39 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:32:29</td>
+                </tr>
+                <tr>
+                    <td>Cycle 39 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 40 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:32:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 40 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:32:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 40 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:34</td>
+                </tr>
+                <tr>
+                    <td>Cycle 41 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:32:36</td>
+                </tr>
+                <tr>
+                    <td>Cycle 41 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:32:37</td>
+                </tr>
+                <tr>
+                    <td>Cycle 41 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:38</td>
+                </tr>
+                <tr>
+                    <td>Cycle 42 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:32:40</td>
+                </tr>
+                <tr>
+                    <td>Cycle 42 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:32:41</td>
+                </tr>
+                <tr>
+                    <td>Cycle 42 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:42</td>
+                </tr>
+                <tr>
+                    <td>Cycle 43 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:32:44</td>
+                </tr>
+                <tr>
+                    <td>Cycle 43 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:32:45</td>
+                </tr>
+                <tr>
+                    <td>Cycle 43 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:46</td>
+                </tr>
+                <tr>
+                    <td>Cycle 44 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:32:48</td>
+                </tr>
+                <tr>
+                    <td>Cycle 44 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:32:49</td>
+                </tr>
+                <tr>
+                    <td>Cycle 44 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:50</td>
+                </tr>
+                <tr>
+                    <td>Cycle 45 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:32:52</td>
+                </tr>
+                <tr>
+                    <td>Cycle 45 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:32:53</td>
+                </tr>
+                <tr>
+                    <td>Cycle 45 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:54</td>
+                </tr>
+                <tr>
+                    <td>Cycle 46 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:32:56</td>
+                </tr>
+                <tr>
+                    <td>Cycle 46 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:32:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 46 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:32:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 47 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:33:00</td>
+                </tr>
+                <tr>
+                    <td>Cycle 47 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:33:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 47 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 48 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:33:04</td>
+                </tr>
+                <tr>
+                    <td>Cycle 48 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:33:05</td>
+                </tr>
+                <tr>
+                    <td>Cycle 48 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 49 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:33:08</td>
+                </tr>
+                <tr>
+                    <td>Cycle 49 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:33:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 49 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 50 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:33:12</td>
+                </tr>
+                <tr>
+                    <td>Cycle 50 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:33:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 50 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 51 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:33:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 51 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:33:17</td>
+                </tr>
+                <tr>
+                    <td>Cycle 51 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 52 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:33:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 52 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:33:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 52 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 53 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:33:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 53 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.50</td>
+                    <td>2026-07-02 17:33:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 53 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 54 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:33:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 54 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.56</td>
+                    <td>2026-07-02 17:33:29</td>
+                </tr>
+                <tr>
+                    <td>Cycle 54 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 55 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:33:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 55 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:33:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 55 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:34</td>
+                </tr>
+                <tr>
+                    <td>Cycle 56 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:33:36</td>
+                </tr>
+                <tr>
+                    <td>Cycle 56 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:33:37</td>
+                </tr>
+                <tr>
+                    <td>Cycle 56 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:38</td>
+                </tr>
+                <tr>
+                    <td>Cycle 57 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:33:40</td>
+                </tr>
+                <tr>
+                    <td>Cycle 57 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:33:41</td>
+                </tr>
+                <tr>
+                    <td>Cycle 57 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:42</td>
+                </tr>
+                <tr>
+                    <td>Cycle 58 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:33:44</td>
+                </tr>
+                <tr>
+                    <td>Cycle 58 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:33:45</td>
+                </tr>
+                <tr>
+                    <td>Cycle 58 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:46</td>
+                </tr>
+                <tr>
+                    <td>Cycle 59 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:33:48</td>
+                </tr>
+                <tr>
+                    <td>Cycle 59 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:33:49</td>
+                </tr>
+                <tr>
+                    <td>Cycle 59 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:50</td>
+                </tr>
+                <tr>
+                    <td>Cycle 60 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:33:52</td>
+                </tr>
+                <tr>
+                    <td>Cycle 60 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.55</td>
+                    <td>2026-07-02 17:33:53</td>
+                </tr>
+                <tr>
+                    <td>Cycle 60 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:54</td>
+                </tr>
+                <tr>
+                    <td>Cycle 61 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:33:56</td>
+                </tr>
+                <tr>
+                    <td>Cycle 61 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.53</td>
+                    <td>2026-07-02 17:33:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 61 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:33:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 62 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:00</td>
+                </tr>
+                <tr>
+                    <td>Cycle 62 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:34:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 62 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 63 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.47</td>
+                    <td>2026-07-02 17:34:04</td>
+                </tr>
+                <tr>
+                    <td>Cycle 63 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.62</td>
+                    <td>2026-07-02 17:34:05</td>
+                </tr>
+                <tr>
+                    <td>Cycle 63 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 64 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.61</td>
+                    <td>2026-07-02 17:34:08</td>
+                </tr>
+                <tr>
+                    <td>Cycle 64 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:34:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 64 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.04</td>
+                    <td>2026-07-02 17:34:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 65 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:12</td>
+                </tr>
+                <tr>
+                    <td>Cycle 65 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:34:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 65 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 66 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.43</td>
+                    <td>2026-07-02 17:34:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 66 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.63</td>
+                    <td>2026-07-02 17:34:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 66 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:19</td>
+                </tr>
+                <tr>
+                    <td>Cycle 67 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 67 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:34:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 67 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 68 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 68 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:34:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 68 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 69 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:34:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 69 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.58</td>
+                    <td>2026-07-02 17:34:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 69 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:31</td>
+                </tr>
+                <tr>
+                    <td>Cycle 70 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 70 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:34:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 70 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:34</td>
+                </tr>
+                <tr>
+                    <td>Cycle 71 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:36</td>
+                </tr>
+                <tr>
+                    <td>Cycle 71 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:34:37</td>
+                </tr>
+                <tr>
+                    <td>Cycle 71 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:38</td>
+                </tr>
+                <tr>
+                    <td>Cycle 72 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:40</td>
+                </tr>
+                <tr>
+                    <td>Cycle 72 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.58</td>
+                    <td>2026-07-02 17:34:42</td>
+                </tr>
+                <tr>
+                    <td>Cycle 72 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:43</td>
+                </tr>
+                <tr>
+                    <td>Cycle 73 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:44</td>
+                </tr>
+                <tr>
+                    <td>Cycle 73 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.50</td>
+                    <td>2026-07-02 17:34:45</td>
+                </tr>
+                <tr>
+                    <td>Cycle 73 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:46</td>
+                </tr>
+                <tr>
+                    <td>Cycle 74 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:48</td>
+                </tr>
+                <tr>
+                    <td>Cycle 74 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:34:49</td>
+                </tr>
+                <tr>
+                    <td>Cycle 74 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:50</td>
+                </tr>
+                <tr>
+                    <td>Cycle 75 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:34:52</td>
+                </tr>
+                <tr>
+                    <td>Cycle 75 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.59</td>
+                    <td>2026-07-02 17:34:54</td>
+                </tr>
+                <tr>
+                    <td>Cycle 75 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:55</td>
+                </tr>
+                <tr>
+                    <td>Cycle 76 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:34:56</td>
+                </tr>
+                <tr>
+                    <td>Cycle 76 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:34:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 76 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:34:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 77 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:00</td>
+                </tr>
+                <tr>
+                    <td>Cycle 77 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:35:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 77 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 78 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:04</td>
+                </tr>
+                <tr>
+                    <td>Cycle 78 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.60</td>
+                    <td>2026-07-02 17:35:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 78 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:07</td>
+                </tr>
+                <tr>
+                    <td>Cycle 79 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:08</td>
+                </tr>
+                <tr>
+                    <td>Cycle 79 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.50</td>
+                    <td>2026-07-02 17:35:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 79 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 80 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:12</td>
+                </tr>
+                <tr>
+                    <td>Cycle 80 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:35:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 80 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 81 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:35:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 81 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.59</td>
+                    <td>2026-07-02 17:35:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 81 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:19</td>
+                </tr>
+                <tr>
+                    <td>Cycle 82 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 82 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.50</td>
+                    <td>2026-07-02 17:35:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 82 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 83 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 83 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:35:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 83 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 84 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 84 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.60</td>
+                    <td>2026-07-02 17:35:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 84 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:31</td>
+                </tr>
+                <tr>
+                    <td>Cycle 85 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 85 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:35:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 85 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:34</td>
+                </tr>
+                <tr>
+                    <td>Cycle 86 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:36</td>
+                </tr>
+                <tr>
+                    <td>Cycle 86 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:35:37</td>
+                </tr>
+                <tr>
+                    <td>Cycle 86 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:38</td>
+                </tr>
+                <tr>
+                    <td>Cycle 87 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:40</td>
+                </tr>
+                <tr>
+                    <td>Cycle 87 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.59</td>
+                    <td>2026-07-02 17:35:42</td>
+                </tr>
+                <tr>
+                    <td>Cycle 87 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:43</td>
+                </tr>
+                <tr>
+                    <td>Cycle 88 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:44</td>
+                </tr>
+                <tr>
+                    <td>Cycle 88 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:35:45</td>
+                </tr>
+                <tr>
+                    <td>Cycle 88 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:46</td>
+                </tr>
+                <tr>
+                    <td>Cycle 89 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:48</td>
+                </tr>
+                <tr>
+                    <td>Cycle 89 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:35:49</td>
+                </tr>
+                <tr>
+                    <td>Cycle 89 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:50</td>
+                </tr>
+                <tr>
+                    <td>Cycle 90 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:35:52</td>
+                </tr>
+                <tr>
+                    <td>Cycle 90 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.58</td>
+                    <td>2026-07-02 17:35:54</td>
+                </tr>
+                <tr>
+                    <td>Cycle 90 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:55</td>
+                </tr>
+                <tr>
+                    <td>Cycle 91 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:35:56</td>
+                </tr>
+                <tr>
+                    <td>Cycle 91 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:35:57</td>
+                </tr>
+                <tr>
+                    <td>Cycle 91 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:35:58</td>
+                </tr>
+                <tr>
+                    <td>Cycle 92 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:00</td>
+                </tr>
+                <tr>
+                    <td>Cycle 92 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:36:01</td>
+                </tr>
+                <tr>
+                    <td>Cycle 92 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:02</td>
+                </tr>
+                <tr>
+                    <td>Cycle 93 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:04</td>
+                </tr>
+                <tr>
+                    <td>Cycle 93 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.59</td>
+                    <td>2026-07-02 17:36:06</td>
+                </tr>
+                <tr>
+                    <td>Cycle 93 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:07</td>
+                </tr>
+                <tr>
+                    <td>Cycle 94 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:08</td>
+                </tr>
+                <tr>
+                    <td>Cycle 94 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:36:09</td>
+                </tr>
+                <tr>
+                    <td>Cycle 94 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:10</td>
+                </tr>
+                <tr>
+                    <td>Cycle 95 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:12</td>
+                </tr>
+                <tr>
+                    <td>Cycle 95 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:36:13</td>
+                </tr>
+                <tr>
+                    <td>Cycle 95 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:14</td>
+                </tr>
+                <tr>
+                    <td>Cycle 96 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:16</td>
+                </tr>
+                <tr>
+                    <td>Cycle 96 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.59</td>
+                    <td>2026-07-02 17:36:18</td>
+                </tr>
+                <tr>
+                    <td>Cycle 96 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:19</td>
+                </tr>
+                <tr>
+                    <td>Cycle 97 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:20</td>
+                </tr>
+                <tr>
+                    <td>Cycle 97 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:36:21</td>
+                </tr>
+                <tr>
+                    <td>Cycle 97 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:22</td>
+                </tr>
+                <tr>
+                    <td>Cycle 98 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:24</td>
+                </tr>
+                <tr>
+                    <td>Cycle 98 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.52</td>
+                    <td>2026-07-02 17:36:25</td>
+                </tr>
+                <tr>
+                    <td>Cycle 98 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:26</td>
+                </tr>
+                <tr>
+                    <td>Cycle 99 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.46</td>
+                    <td>2026-07-02 17:36:28</td>
+                </tr>
+                <tr>
+                    <td>Cycle 99 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.59</td>
+                    <td>2026-07-02 17:36:30</td>
+                </tr>
+                <tr>
+                    <td>Cycle 99 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:31</td>
+                </tr>
+                <tr>
+                    <td>Cycle 100 - 输出 1.5V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">1.4</td>
+                    <td class="text-center">1.6</td>
+                    <td class="text-center">1.5</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.45</td>
+                    <td>2026-07-02 17:36:32</td>
+                </tr>
+                <tr>
+                    <td>Cycle 100 - 输出 3.3V</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">3.2</td>
+                    <td class="text-center">3.4</td>
+                    <td class="text-center">3.3</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.51</td>
+                    <td>2026-07-02 17:36:33</td>
+                </tr>
+                <tr>
+                    <td>Cycle 100 - 输出关闭</td>
+                    <td class="text-center">V</td>
+                    <td class="text-center">-0.1</td>
+                    <td class="text-center">0.1</td>
+                    <td class="text-center">0.0</td>
+                    <td class="text-center"><span class="result-badge result-pass">PASS</span></td>
+                    <td class="text-center">1.01</td>
+                    <td>2026-07-02 17:36:34</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
