@@ -100,3 +100,12 @@
 
 - **修改内容**: 修改 [DJ2513_Aging.json](file:///c:/Users/95403/Desktop/AgingTest-AI/recipes/DJ2513_Aging.json) 配方中 `CAN4通讯测试` 工步的参数：将 `"retry_count"` 改为 `"复测1次"`，将 14 号继电器闭合后的等待延时由 `500ms` 延长至 `1000ms`，并将 CAN 接收指定帧的超时时间由 `500ms` 延长至 `1000ms`。
 - **修改原因**: 解决实际多通道高负荷测试时，偶发性由于物理继电器动作抖动、总线建连延迟或报文接收未及时到达导致 `CAN4通讯测试` 偶发超时 NG 的稳定性问题。
+
+- **修改内容**:
+  1. 修改 [chamber_tab.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/tabs/chamber_tab.py) 中的 `start_aging_bypass_chamber` 方法，在屏蔽老化箱启动前添加 `QMessageBox.question` 选择对话框。
+  2. 修改 [overview_tab.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/tabs/overview_tab.py) 中的 `_advance_batch_if_ready` 方法，在所有测试通道自然结束（`UI_BATCH_ALL_DONE`）后，如果是屏蔽温箱的单测试模式，自动触发电源安全下电。
+- **修改原因**: 满足用户在屏蔽老化箱运行（紫色按钮启动）时，也能够选择性地同步启动电池模拟器和 AFE 电源的安全开机时序；并且当测试运行全部结束或手动停止时，能够实现电源的安全断开下电闭环，保障设备运行安全。
+
+## 2026-07-25
+- **修改内容**: 新增文档 [analysis_results.md](file:///c:/Users/95403/Desktop/AgingTest-AI/doc/analysis_results.md)，并将外置 `E:\CH01` 目录下的 18 个测试记录文件导入到项目中的 [reports/DJ2513_Aging/](file:///c:/Users/95403/Desktop/AgingTest-AI/reports/DJ2513_Aging/) 目录下。
+- **修改原因**: 用户需要对 `E:\CH01` 目录下的测试记录进行排查，分析后确定了低温（-38℃）下 `HSD_OUTPUT3（LL）` 与 `单体电压读取_161` 失效，原因为高温骤降至低温过程中的冷凝水结冰漏电所致。将测试数据及报告整理归档并上传 Git 以便追溯。
