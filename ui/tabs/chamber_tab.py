@@ -1541,6 +1541,42 @@ class ChamberTab(QWidget):
         if not overview_tab:
             return
 
+        # 弹窗询问是否需要开启电池模拟器和 AFE 电源控制
+        reply = QMessageBox.question(
+            self, 
+            "确认电源控制", 
+            "是否同步执行 [BMS带载工作] 电源安全时序以开启电池模拟器与 AFE 电源输出？",
+            QMessageBox.Yes | QMessageBox.No, 
+            QMessageBox.Yes
+        )
+        
+        if reply == QMessageBox.Yes:
+            # 检索或生成默认带载工步参数
+            bms_step = None
+            for step in self.steps_data:
+                if step.get("name") == "BMS带载工作":
+                    bms_step = step
+                    break
+            if not bms_step:
+                bms_step = {
+                    "name": "BMS带载工作",
+                    "power_sequence_config": self._default_power_sequence_config("load")
+                }
+            
+            # 执行电源上电安全时序，发生故障时终止启动并自动下电
+            if not self.execute_bms_load_power_sequence(bms_step):
+                return
+                
+            # 执行通道动作和被测物供电
+            self._bms_load_follow_batch = True
+            active_cids = []
+            if overview_tab and hasattr(overview_tab, "get_batch_completion_state"):
+                batch_state = overview_tab.get_batch_completion_state()
+                active_cids = sorted(batch_state.get("active_cids", set()))
+            if not active_cids:
+                active_cids = self._get_selected_channel_ids_for_backup()
+            self.apply_bms_load_for_channels(active_cids)
+
         # 彻底屏蔽老化工步执行序列，仅保留标识
         self._is_bypass_chamber = True
         self.sequence_running = False

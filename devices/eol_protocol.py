@@ -1036,6 +1036,7 @@ class EOLProtocol:
             # --- 0x07 CSC ---
             "0x07 CSC控制读取": {"device_id": 0x07, "operation": 0x0E, "decoder": self._decode_csc},
             "0x07 CSC控制写入": {"device_id": 0x07, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "COUNT", "STATE", "TYPE")])},
+            "0x07 CSC批量读取": {"device_id": 0x07, "operation": 0x0E, "decoder": self._decode_csc},
             
             # --- 0x08 CRASH ---
             "0x08 CRASH读取": {"device_id": 0x08, "operation": 0x01, "payload": lambda kw: bytes([self._int_arg(kw, "PARAM2", "INDEX", "TYPE")]), "decoder": self._decode_data_u32},

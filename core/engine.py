@@ -409,6 +409,128 @@ class ChannelWorker(QObject):
         
         eol_cfg = self._parse_eol_params(params)
         if not eol_cfg: raise ValueError("EOL参数缺失")
+        
+        # 拦截 0x07 CSC批量读取
+        if eol_cfg["op_name"] == "0x07 CSC批量读取":
+            board = self._get_can_board(mgr)
+            from devices.eol_protocol import EOLProtocol
+            eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
+            
+            start_idx = self._parse_int(eol_cfg["kwargs"].get("PARAM1"), 0)
+            count = self._parse_int(eol_cfg["kwargs"].get("PARAM2"), 192)
+            retry_limit = self._parse_int(eol_cfg["kwargs"].get("PARAM3"), 3)
+            
+            step_delay = 30  # 默认电芯间延时 30ms，防止总线拥堵导致下位机故障降级返回 2.5V 假数据
+            min_v, max_v = None, None
+            args_str = eol_cfg["kwargs"].get("ARGS", "")
+            if args_str:
+                # 将英文逗号和分号临时转换为 / 供 _parse_key_values 正确切分
+                clean_args = str(args_str).replace(",", "/").replace(";", "/")
+                kv_args = self._parse_key_values(clean_args)
+                if "MIN_V" in kv_args:
+                    try: min_v = float(kv_args["MIN_V"])
+                    except: pass
+                if "MAX_V" in kv_args:
+                    try: max_v = float(kv_args["MAX_V"])
+                    except: pass
+                if "STEP_DELAY" in kv_args:
+                    try: step_delay = int(kv_args["STEP_DELAY"])
+                    except: pass
+            
+            hw_logger(f"[CSC批量读取] 开始批量读取单体电压. 范围: {start_idx} 到 {start_idx + count - 1}, 重试上限: {retry_limit}次, 电芯间延时: {step_delay}ms")
+            if min_v is not None or max_v is not None:
+                hw_logger(f"[CSC批量读取] 校验电压区间: {min_v if min_v else '-inf'}V ~ {max_v if max_v else 'inf'}V")
+                
+            success = False
+            result_dict = {}
+            import time
+            for attempt in range(retry_limit + 1):
+                attempt_ok = True
+                current_round_data = {}
+                hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试读取全部电芯...")
+                self.log_message.emit(self.channel_id, f"[*] 第 {attempt} 次尝试读取全部 192 个电芯...")
+                
+                # 每轮开始读取前清空一次接收缓冲区以防止历史残留干扰
+                board.can.clear_rx_history(0x7F8)
+                
+                for offset in range(count):
+                    cell_idx = start_idx + offset
+                    
+                    # 循环间隔延时保护，避免总线拥堵或下位机繁忙返回故障2.5V数据
+                    if offset > 0 and step_delay > 0:
+                        time.sleep(step_delay / 1000.0)
+                        
+                    cell_kwargs = eol_cfg["kwargs"].copy()
+                    cell_kwargs["PARAM1"] = "0x0E"
+                    cell_kwargs["PARAM4"] = str(cell_idx)
+                    cell_kwargs["OP"] = "0x0E"
+                    cell_kwargs["INDEX"] = str(cell_idx)
+                    cell_kwargs.pop("ARGS", None)
+                    
+                    try:
+                        # 拼接并向 UI 前台记录 TX 报文原始数据
+                        tx_id_str = cell_kwargs.get("TX_ID", "0x7F0")
+                        rx_id_str = cell_kwargs.get("RX_ID", "0x7F8")
+                        tx_val_bytes = cell_idx.to_bytes(2, "big")
+                        tx_data = bytes([0x10, 0x07, 0x0E, 0x00]) + tx_val_bytes + b"\x00\x00"
+                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] TX -> ID:{tx_id_str} DATA:{tx_data.hex(' ').upper()}")
+                        
+                        cell_res = eol.execute("0x07 CSC控制读取", timeout=eol_cfg["timeout"], logger=hw_logger, **cell_kwargs)
+                        if not cell_res.success or cell_res.value is None:
+                            err_msg = getattr(cell_res, 'error', '未知错误')
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {err_msg}")
+                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取失败: {err_msg}")
+                            attempt_ok = False
+                            break
+                        
+                        val = float(cell_res.value)
+                        
+                        # 记录 RX 报文原始数据与解码值
+                        rx_raw = getattr(cell_res, 'raw_data', b"")
+                        rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
+                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
+                        
+                        if min_v is not None and val < min_v:
+                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 电压 {val}V 低于下限 {min_v}V")
+                            attempt_ok = False
+                            break
+                        if max_v is not None and val > max_v:
+                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 电压 {val}V 高于上限 {max_v}V")
+                            attempt_ok = False
+                            break
+                            
+                        current_round_data[cell_idx] = val
+                    except Exception as e:
+                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
+                        hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")
+                        attempt_ok = False
+                        break
+                
+                if attempt_ok:
+                    success = True
+                    result_dict = current_round_data
+                    hw_logger(f"[CSC批量读取] 第 {attempt} 次读取成功，获取全部 {count} 个电芯电压！")
+                    break
+                else:
+                    if attempt < retry_limit:
+                        hw_logger(f"[CSC批量读取] 第 {attempt} 次读取不合格，1.0秒后开始重新整体读取...")
+                        time.sleep(1.0)
+                    else:
+                        hw_logger(f"[CSC批量读取] 已达到最大重试次数 {retry_limit}，批量读取宣告失败。")
+            
+            if success:
+                # 写入全局变量，供后续工步调用
+                self.variables["CSC_CELLS"] = result_dict
+                for cell_idx, val in result_dict.items():
+                    self.variables[f"CSC_CELL_{cell_idx}"] = val
+                
+                result_value = f"PASS:已读取{len(result_dict)}个"
+            else:
+                result_value = "FAIL:电芯批量读取不合格或超时"
+            
+            hw_logger(f"EOL 0x07 CSC批量读取 => {'PASS' if success else 'FAIL'} {result_value}")
+            return success, result_value
+
         board = self._get_can_board(mgr)
         from devices.eol_protocol import EOLProtocol
         eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
@@ -719,7 +841,12 @@ class ChannelWorker(QObject):
                     val = self.variables.get(var_name, None)
                     if val is not None:
                         if isinstance(val, (int, float)):
-                            result_value = f"{val:.1f}kΩ" if "绝缘" in var_name else f"{val:.2f}"
+                            if "绝缘" in var_name:
+                                result_value = f"{val:.1f}kΩ"
+                            elif "CSC_CELL" in var_name or "cell" in var_name.lower():
+                                result_value = f"{val:.3f}"
+                            else:
+                                result_value = f"{val:.2f}"
                         else:
                             result_value = str(val)
                         success = True
@@ -823,7 +950,12 @@ class ChannelWorker(QObject):
                     
                 if val is not None:
                     if isinstance(val, (int, float)):
-                        result_value = f"{val:.1f}kΩ" if "绝缘" in var_name else f"{val:.2f}"
+                        if "绝缘" in var_name:
+                            result_value = f"{val:.1f}kΩ"
+                        elif "CSC_CELL" in var_name or "cell" in var_name.lower():
+                            result_value = f"{val:.3f}"
+                        else:
+                            result_value = f"{val:.2f}"
                     else:
                         result_value = str(val)
                     success = True

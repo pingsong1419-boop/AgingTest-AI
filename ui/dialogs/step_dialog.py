@@ -50,7 +50,10 @@ class StepDialog(QDialog):
                 background-color: #4ECCA3;
                 border: 6px solid #1A1A2E; /* Create a dot effect */
             }
-            QComboBox::drop-down { border: none; }
+            QComboBox::drop-down {
+                border-left: 1px solid #0F3460;
+                width: 25px;
+            }
             QPushButton#btn_ok { 
                 background-color: #E94560; 
                 color: white; 
@@ -363,7 +366,7 @@ class StepDialog(QDialog):
             "0x03 绝缘控制读取", "0x03 绝缘控制写入",
             "0x04 GPIO控制读取", "0x04 GPIO控制写入",
             "0x05 PWM读取", "0x06 ADC读取",
-            "0x07 CSC控制读取", "0x07 CSC控制写入",
+            "0x07 CSC控制读取", "0x07 CSC控制写入", "0x07 CSC批量读取",
             "0x08 CRASH读取", "0x09 RTC控制读取", "0x09 RTC控制写入",
             "0x10 NTC读取", "0x0A EEPROM控制读取", "0x0A EEPROM控制写入",
             "0x0B 霍尔电流读取", "0xFF 扩展指令",
@@ -437,8 +440,15 @@ class StepDialog(QDialog):
         self.page_variable = QWidget()
         var_form = QFormLayout(self.page_variable)
         self.var_name = QComboBox()
-        self.var_name.setEditable(False)
-        self.var_name.addItems(["正极绝缘", "负极绝缘", "环境温度"])
+        self.var_name.setEditable(True)
+        self.var_name.lineEdit().setPlaceholderText("可手动输入或选择变量名，如 CSC_CELL_0")
+        
+        # 预设系统支持的所有共享变量（内置变量 + 192个CSC电芯变量）
+        preset_vars = ["正极绝缘", "负极绝缘", "环境温度"]
+        for i in range(192):
+            preset_vars.append(f"CSC_CELL_{i}")
+            
+        self.var_name.addItems(preset_vars)
         var_form.addRow("变量名称:", self.var_name)
         self.param_stack.addWidget(self.page_variable) # 9
 
@@ -591,12 +601,14 @@ class StepDialog(QDialog):
         self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
         self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
         
-        # 默认隐藏参数3和参数4及其他特殊选项
+        # 默认隐藏参数3和参数4及其他特殊选项，并重置标签名称
         if hasattr(self, "eol_param3"):
             self.eol_param3.setVisible(False)
+            self.eol_param3_label.setText("参数3:")
             self.eol_param3_label.setVisible(False)
         if hasattr(self, "eol_param4"):
             self.eol_param4.setVisible(False)
+            self.eol_param4_label.setText("参数4:")
             self.eol_param4_label.setVisible(False)
         if hasattr(self, "eol_diff_ambient"):
             self.eol_diff_ambient.setVisible(False)
@@ -649,6 +661,24 @@ class StepDialog(QDialog):
                 self.eol_r3_label.setVisible(True)
                 self.eol_r4.setVisible(True)
                 self.eol_r4_label.setVisible(True)
+        elif "0x07 CSC批量读取" in op:
+            self._set_param_combo(self.eol_param1, self.eol_param1_label, "起始索引:", [
+                (str(i), str(i)) for i in range(256)
+            ], editable=True, validator=QIntValidator(0, 255, self))
+            self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取个数:", [
+                (str(i), str(i)) for i in range(1, 257)
+            ], editable=True, validator=QIntValidator(1, 256, self))
+            if hasattr(self, "eol_param3"):
+                self.eol_param3_label.setText("重试次数:")
+                self.eol_param3_label.setVisible(True)
+                self.eol_param3.setRange(0, 100)
+                self.eol_param3.setValue(3)
+                self.eol_param3.setVisible(True)
+            if hasattr(self, "eol_param4"):
+                self.eol_param4_label.setVisible(False)
+                self.eol_param4.setVisible(False)
+            self.eol_args.setVisible(True)
+            self.eol_args.setPlaceholderText("可选校验，格式 MIN_V:2.5,MAX_V:4.5")
         elif "0x07" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [
                 ("设置节点数目", "0x01"),
@@ -1009,7 +1039,7 @@ class StepDialog(QDialog):
             else:
                 self.action_combo.addItems([
                     "0x03 绝缘控制读取", "0x04 GPIO控制读取", "0x05 PWM读取", "0x06 ADC读取",
-                    "0x07 CSC控制读取", "0x08 CRASH读取", "0x09 RTC控制读取", "0x10 NTC读取",
+                    "0x07 CSC控制读取", "0x07 CSC批量读取", "0x08 CRASH读取", "0x09 RTC控制读取", "0x10 NTC读取",
                     "0x0A EEPROM控制读取", "0x0B 霍尔电流读取", "0xFF 扩展指令"
                 ])
         elif "CAN" in device_text:

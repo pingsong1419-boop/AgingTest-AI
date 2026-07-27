@@ -1308,6 +1308,11 @@ class OverviewTab(QWidget):
             self._active_channel_batch = set()
             self._completed_channel_batch = set()
             self._batch_advancing = False
+            
+            # 如果是屏蔽箱启动模式运行完毕，联动进行安全下电与重置
+            chamber_tab = self.get_chamber_tab()
+            if chamber_tab and getattr(chamber_tab, "_is_bypass_chamber", False) and not getattr(chamber_tab, "sequence_running", False):
+                chamber_tab.stop_aging_sequence()
 
     def get_batch_completion_state(self):
         return {

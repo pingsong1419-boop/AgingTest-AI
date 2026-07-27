@@ -109,3 +109,40 @@
 ## 2026-07-25
 - **修改内容**: 新增文档 [analysis_results.md](file:///c:/Users/95403/Desktop/AgingTest-AI/doc/analysis_results.md)，并将外置 `E:\CH01` 目录下的 18 个测试记录文件导入到项目中的 [reports/DJ2513_Aging/](file:///c:/Users/95403/Desktop/AgingTest-AI/reports/DJ2513_Aging/) 目录下。
 - **修改原因**: 用户需要对 `E:\CH01` 目录下的测试记录进行排查，分析后确定了低温（-38℃）下 `HSD_OUTPUT3（LL）` 与 `单体电压读取_161` 失效，原因为高温骤降至低温过程中的冷凝水结冰漏电所致。将测试数据及报告整理归档并上传 Git 以便追溯。
+
+## 2026-07-27
+- **修改内容**: 开辟新分支 `从机测试` 并切换至该分支。
+- **修改原因**: 依据用户指令，为了针对“从机测试”相关功能开展开发或修改，特开辟独立的工作分支以隔离代码变更。
+
+- **修改内容**: 
+  1. 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：在 EOL 操作选择框中新增 `"0x07 CSC批量读取"`，并修改 `on_eol_op_changed`，为批量读取单独配置“起始索引”、“读取个数”、“重试次数”与“ARGS 校验输入框”的交互逻辑。
+  2. 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)：在内置操作字典中注册 `"0x07 CSC批量读取"` 选项。
+  3. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：在 `_execute_eol_protocol` 中拦截 `"0x07 CSC批量读取"` 动作，实现指定范围一键遍历、失败整体重试（支持 `MIN_V` 和 `MAX_V` 校验过滤）以及将成功采集的数据写入 `self.variables[f"CSC_CELL_{cell_idx}"]` 共享变量池。
+- **修改内容**: 修改配方文件 [DJ2513_1.json](file:///c:/Users/95403/Desktop/AgingTest-AI/recipes/DJ2513_1.json)，在单体电压读取前插入一个总的 `"单体电压批量读取"` 测试工步（动作设定为新开发的 `0x07 CSC批量读取`，配好 192 个电芯，以及上下限 `MIN_V:2.495,MAX_V:2.505`）；并把后面的 192 个 `单体电压读取_01` 至 `单体电压读取_192` 的物理 CAN 读取子工步批量替换为 `"读取变量"` 子工步（分别读取变量 `CSC_CELL_0` 至 `CSC_CELL_191`）。
+- **修改原因**: 配合底层的 CSC 批量读取与重试防抖机制，整体提升 192 个单体电芯读取的稳定性，同时保持原本测试界面的多工步绿灯/红灯状态显示与报表逻辑完全兼容。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py) 的 `on_device_changed` 方法，在 `self.action_combo` 中补充了 `"0x07 CSC批量读取"` 下拉列表项。
+- **修改原因**: 修复配方编辑器中，功能动作下拉选项中遗漏了 `"0x07 CSC批量读取"` 选项，导致从文件加载配置时发生界面联动匹配错乱的 BUG。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py) 中的变量名称下拉框 `self.var_name` 属性，将其由 `setEditable(False)` 重构为 `setEditable(True)`，并提供手动输入 Placeholder 提示语。
+- **修改原因**: 原本的下拉框只能选择固定的内置变量（如正/负极绝缘等），导致当读取非固定自定义变量时（如 `CSC_CELL_0` 等电芯电压变量），用户在界面端无法编辑或输入自定义名称，影响交互和功能使用。
+
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 中的 `_execute_eol_protocol`，将 `"0x07 CSC批量读取"` 读取失败后的重试等待间隔从 `0.5` 秒延长至 `1.0` 秒。
+- **修改原因**: 依据建议，在批量数据读取不合格或超时进行重新整组读取前，留出更长的延时（1秒），以确保物理继电器、总线以及老化控制板通信有更充分的恢复时间，提升物理测试良率。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py) 初始化 `self.var_name` 时，将系统预置变量 `["正极绝缘", "负极绝缘", "环境温度"]` 以及 192 个 CSC 批量读取变量（`CSC_CELL_0` 至 `CSC_CELL_191`）全部加入其 items 中展示。
+- **修改原因**: 提高软件可配置性与用户体验，避免应用配置人员因对变量名（如拼写或电芯编号）记忆不准输入错误，使其可以直接在下拉列表中方便地滚动查找和点选配置。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py) 样式表，将 `QComboBox::drop-down` 规则由 `border: none;` 修改为具有 `border-left: 1px solid #0F3460;` 和 `width: 25px;` 的可见布局.
+- **修改原因**: 修复原本的样式表完全隐去了可编辑状态下下拉框右侧的下拉箭头，导致应用配置人员无法看出它是一个下拉框、必须被迫全手动打字填写的交互体验缺陷。
+
+- **修改内容**:
+  1. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：在 `"0x07 CSC批量读取"` 拦截器中，对 `for` 循环中每个电芯的连续读取之间，加入了可配置间隔等待时延保护（支持 `STEP_DELAY` 参数，默认为 `30` 毫秒）。
+  2. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：在批量读取每个电芯的过程中，实时计算并生成其 TX 报文，同时解析 `EOLResult.raw_data` 中的 RX 原始回包，通过 `self.log_message.emit` 发送至前台界面执行日志中直观展示。
+- **修改原因**: 解决由于微秒级超高密度的连续 CAN 循环导致物理总线拥堵，使下位机网关触发故障保护返回 `2.5V` 假数据的问题；同时按要求输出通信报文日志，供现场直观分析 CAN 数据包交互。
+
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 中 `SubStepType.READ_INSTRUMENT` 和 `SubStepType.READ_VAR` 的变量读取格式化展示逻辑，增加了针对 `CSC_CELL`（包含 `cell`）变量名的子串匹配判断。若读取到该类型变量，保留 `3` 位小数精度（`f"{val:.3f}"`），其余非绝缘数值变量仍维持 `2` 位小数（`f"{val:.2f}"`）。
+- **修改原因**: 解决在界面端和日志中读取变量 `CSC_CELL_X` 时，原本默认四舍五入保留两位小数展示，致使本为三位精度的单体电压真实波动数值（如 `2.498V`、`2.499V`）被强制在界面四舍五入为 `2.50V` 从而导致误解与精度丢失的问题。
+
+- **修改内容**: 将 2026-07-27 开发的 0x07 CSC 批量读取及相关 UI 优化代码提交并上传至 Git 远程仓库。
+- **修改原因**: 功能开发及系统性优化完毕，正式在 master 分支归档备份并推送至远程。
