@@ -168,3 +168,34 @@
 
 - **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)，在底层的编辑子工步参数窗口中新增了一个 `"相邻电芯异常值修正 (0V/5V)"` 复选框（`self.eol_fix_adjacent`）。此控件在且仅在选中 `"0x07 CSC批量读取"` 时才显示。加载配方时自动解析 `ARGS` 属性是否包含 `FIX_ADJACENT` 进行状态呈现；保存配方时自动根据勾选状态从 `ARGS` 参数列表里添加或移除该标签。
 - **修改原因**: 消除后台协议参数隐式设定的不便，在前端可视化图形配置界面中直观展示修正开关，极大地简化了应用管理与配方定制流程。
+
+- **修改内容**: 
+  1. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：新增 `SubStepType.CALCULATE`（公式计算）类型。在 `_execute_sub_step_logic` 核心执行器中实现该子工步的执行算法。支持通过 `STEP1`, `STEP2`...`STEPN` 引用当前测试项之前已运行的任意子工步结果，同时支持读写全局共享变量池，内部通过数学安全沙箱环境利用 Python 进行表达式 `eval` 闭环计算并返回。在配方解析时增加对 `"FORMULA:"` 及 `"公式计算"` 的反向映射支持。
+  2. 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：在一级分类 `"通用交互"` 的设备下拉中新增 `"公式计算 (Calculate)"` 选项。在Stacked参数页中增加 `self.page_formula` 专属表单（Page Index 10），包含公式输入与写入变量名配置。在 `get_data` 和 `_load_data` 中加入特殊的公式提取与写入解析逻辑，避免由于公式内部 `/` 或 `,` 等分割符号导致参数解析混乱的 Bug。
+- **修改原因**: 满足用户在同一个测试项内执行复合关联逻辑计算的迫切需求。例如，在第 4 步完成电流/电压等物理测量后，在第 5 步利用公式完成特定的多态计算并作为整个步骤的判定测量值或归档值输出。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py) 中的 `_load_data` 方法，在通用交互类别（`category = "通用交互"`）的一级分类判定条件中，加入了对 `"公式计算"` 设备和 `"公式计算"` 步骤类型的识别逻辑。
+- **修改原因**: 修复原本在配方中再次双击打开已经配置好 `"公式计算"` 动作的子工步时，由于一级分类没有匹配成功导致分类退回默认值（“设备操作”-“AFE”）、无法正确呈现场景和已填公式内容的 UI 缺陷。
+
+- **修改内容**: 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)，在通用的 EOL 物理设备请求和交互方法（`execute`）中拦截常规单次读取逻辑。若从子工步参数或额外参数 `ARGS` 字段中解析出配置参数 `SAMPLES`（均值采样数，如 `SAMPLES:10`）且值大于 0，底层自动切换为高稳中位值均值采样模式。在配置的时间间隔（由 `INTERVAL` 选配指定，默认 50ms）内进行高频读取，最终剔除全部采集结果中的一个最高值和一个最低值，取剩余数据的均值作为最终物理结果。
+- **修改原因**: 满足用户在物理测试环境中，对于 ADC 电压等敏感参数容易受电磁白噪声、线束接触瞬间抖动与干扰导致数据跳变、读数不稳定的痛点需求。通过算法滤除噪点脉冲信号，极大提高了自动化读取的物理稳定性和良率。
+
+- **修改内容**: 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)，在 `execute` 通用读取逻辑中加入“最接近设定值滤波”拦截分支。如果参数或 `ARGS` 输入框中同时提取到 `SAMPLES`（采样数）与 `TARGET` / `TARGET_VAL`（目标参考值），系统在连续读取指定次数后，自动计算所有读取值与目标参考值的差值绝对值，并提取出差值最小、即最接近目标参考电压值的单个物理测量值返回。
+- **修改原因**: 满足用户需要从多次抖动的测量采集中，自动筛选定位到与最邻近参考阈值（例如 $2.5\text{V}$）最接近的值作为高精度测试返回结果的需求。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：在构造函数中定义 `self.eol_args_label`（附加参数标签），并用 `addRow` 优雅加入 `eol_form` 表单中代替原本的空白标签。在 `on_eol_op_changed` 中增加了默认重置隐藏逻辑，并针对 `0x06 ADC读取`、`0x07 CSC批量读取`、`0x09 RTC控制`、`0x0A EEPROM控制` 特殊动作添加了显式控制显示逻辑，同时优化了 `0x06` 下的采样滤波占位符文字提示。
+- **修改原因**: 修复因原本在除批量读取外的其他 EOL 动作下，`eol_args` 输入框被全局永久隐藏，导致用户无法在界面上直观地为 `0x06 ADC读取` 等动作配置采样数 `SAMPLES` 与目标电压值 `TARGET` 参数的界面功能性缺陷。
+
+- **修改内容**:
+  1. 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)：在 `0xFF` 协议的 `_decode_wakeup` 解码器中，将 `op_code == 0x0E`（读取压力传感器）的返回值从原本的 U32 原始整数值修改为 `U32 原始整型值 * 100`。
+  2. 修改主配方文件 [DJ2513_Aging33333333.json](file:///c:/Users/95403/Desktop/AgingTest-AI/recipes/DJ2513_Aging33333333.json)：在 `"测试完成"` 步骤之前插入一个新的测试工步，命名为 `"大气压测试"`。该工步配置为使用 `3.5HEOL协议` 设备的 `0xFF 扩展指令`（子指令为 `0x0E` 读取压力传感器），设定判定范围为 `90000` 至 `110000`，单位为 `Pa`。
+- **修改原因**: 满足用户对大气压测试项的物理量提取与范围自动化校验需求。由于压力传感器返回的字节 `00 00 03 F1` 组合整数值 `1009` 表示的是百帕（hPa）或需缩放的单位，乘以系数 100 之后可还原为标准物理单位帕斯卡（Pa），以匹配 `90000` 至 `110000` Pa 的常规大气压范围进行测试。
+
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)，在 `"0x07 CSC批量读取"` 拦截器分支中注入前置的继电器控制和节点配置下发时序（断开 KL15/CAN1 -> 延时 4 秒 -> 闭合 KL15/CAN1 -> 延时 1 秒稳定 -> 以 500ms 间隔循环发送 5 次设置节点数目 12 的配置报文 -> 全部下发后延时 4 秒 -> 批量电芯电压读取）。
+- **修改原因**: 满足用户在批量电芯电压测试前，对电芯网关断电复位、500ms 稳定步进下发节点配置并在下发后静置 4 秒以完全稳定通信通道的物理测试良率要求。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)，在 `on_eol_op_changed` 中增加了针对 `"0x08 CRASH读取"` 动作的判断，使其显示“附加参数”输入框。
+- **修改原因**: 满足用户在配置 0x08 CRASH读取 时，也能在界面端直观填入采样滤波参数 `SAMPLES` 以过滤硬件脉冲噪声的需求。
+
+- **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)，在 `on_eol_op_changed` 中增加了针对 `"0x07 CSC控制读取"`（单次操作）动作的判断，使其显示“附加参数”输入框。
+- **修改原因**: 满足用户在配置 0x07 CSC控制读取 时，也能在界面端直观填入采样滤波参数 `SAMPLES` 以便多次读取过滤总线噪声的需求。

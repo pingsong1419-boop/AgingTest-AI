@@ -374,7 +374,8 @@ class StepDialog(QDialog):
         ])
         self.eol_op.setVisible(False)
         self.eol_args = QLineEdit("")
-        self.eol_args.setVisible(False)
+        self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
+        self.eol_args_label = QLabel("附加参数:")
 
         # 添加到布局 (按用户指定顺序)
         eol_form.addRow("RNCAN通道:", self.eol_channel)
@@ -407,7 +408,7 @@ class StepDialog(QDialog):
         
         # 兼容旧代码的占位符
         eol_form.addRow("", self.eol_op) 
-        eol_form.addRow("", self.eol_args)
+        eol_form.addRow(self.eol_args_label, self.eol_args)
         
         self.param_stack.addWidget(self.page_eol) # 7
 
@@ -456,6 +457,20 @@ class StepDialog(QDialog):
         self.var_name.addItems(preset_vars)
         var_form.addRow("变量名称:", self.var_name)
         self.param_stack.addWidget(self.page_variable) # 9
+
+        # --- 页面 10: 公式计算 ---
+        self.page_formula = QWidget()
+        formula_layout = QFormLayout(self.page_formula)
+        self.formula_expr = QLineEdit("")
+        self.formula_expr.setPlaceholderText("请输入计算公式，例如: STEP4 * 1.5 - STEP3")
+        self.formula_var = QComboBox()
+        self.formula_var.setEditable(True)
+        self.formula_var.lineEdit().setPlaceholderText("可选，输入共享变量名以保存计算结果")
+        self.formula_var.addItems(preset_vars)
+        
+        formula_layout.addRow("公式表达式:", self.formula_expr)
+        formula_layout.addRow("写入变量名:", self.formula_var)
+        self.param_stack.addWidget(self.page_formula) # 10
 
 
         # 3. 策略与判定设置
@@ -605,6 +620,9 @@ class StepDialog(QDialog):
         self._set_param_combo(self.eol_param1, self.eol_param1_label, "参数1:", [])
         self._set_param_combo(self.eol_param2, self.eol_param2_label, "参数2:", [])
         self.eol_args.setPlaceholderText("可选，格式 KEY:VALUE / KEY2:VALUE2")
+        self.eol_args.setVisible(False)
+        if hasattr(self, "eol_args_label"):
+            self.eol_args_label.setVisible(False)
         
         # 默认隐藏参数3和参数4及其他特殊选项，并重置标签名称
         if hasattr(self, "eol_param3"):
@@ -643,6 +661,10 @@ class StepDialog(QDialog):
         elif "0x06" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "ADC选择:", self._adc_items())
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取模式:", [("转换值", "VALUE"), ("原始值", "RAW")])
+            self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
+            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5")
         elif "0x05" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM通道:", self._index_items(16, "PWM "))
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取内容:", [("占空比", "DUTY"), ("频率", "FREQ")])
@@ -686,6 +708,8 @@ class StepDialog(QDialog):
                 self.eol_param4_label.setVisible(False)
                 self.eol_param4.setVisible(False)
             self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
             self.eol_args.setPlaceholderText("可选校验，格式 MIN_V:2.5,MAX_V:4.5")
             if hasattr(self, "eol_fix_adjacent"):
                 self.eol_fix_adjacent.setVisible(True)
@@ -711,6 +735,10 @@ class StepDialog(QDialog):
             if hasattr(self, "eol_param4"):
                 self.eol_param4_label.setVisible(True)
                 self.eol_param4.setVisible(True)
+            self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
+            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5")
         elif "0x10" in op:
             self._set_param_combo(
                 self.eol_param1,
@@ -733,15 +761,25 @@ class StepDialog(QDialog):
         elif "0x08" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "模式参数:", [("0x01 占空比", "0x01"), ("0x02 频率", "0x02"), ("0x03 阻抗", "0x03"), ("0x04 脉宽", "0x04")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "索引:", [("sig1", "0"), ("sig3", "1")])
+            self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
+            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5")
         elif "EEPROM测试" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "块大小 (字节):", [("32 字节", "32"), ("16 字节", "16"), ("64 字节", "64"), ("8 字节", "8")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "地址ADDRESS:", [("1 (0x01)", "1"), ("0 (0x00)", "0"), ("4 (0x04)", "4"), ("8 (0x08)", "8")])
             self.eol_args.setPlaceholderText("无需额外参数")
         elif "0x0A" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作:", [("读取数据", "READ"), ("写入数据", "WRITE"), ("设置地址", "SET_ADDR")])
+            self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
             self.eol_args.setPlaceholderText("ADDRESS:0x00, DATA:00000000")
         elif "0x09" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "RTC功能:", [("读取时间", "READ"), ("设置时间", "SET_TIME"), ("设置唤醒", "SET_WAKEUP")])
+            self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
             self.eol_args.setPlaceholderText("DATA:YYYYMMDDHHMMSS")
         elif "0xFF" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "读取项:", [
@@ -787,7 +825,7 @@ class StepDialog(QDialog):
                     category = "特殊执行"
                 else:
                     category = "三方协议"
-            elif "等待" in device or "固定延时" in action or "变量操作" in device or "读取变量" in step_type: category = "通用交互"
+            elif "等待" in device or "固定延时" in action or "变量操作" in device or "读取变量" in step_type or "公式计算" in device or "公式计算" in step_type: category = "通用交互"
             
             self.category_combo.setCurrentText(category)
             self.on_category_changed()
@@ -907,6 +945,32 @@ class StepDialog(QDialog):
                 if "VAR" in kv: self.var_name.setCurrentText(kv["VAR"])
             except: pass
 
+            # --- 公式计算 (Page 10) ---
+            try:
+                if "公式计算" in step_type or "公式计算" in device or "FORMULA" in kv:
+                    formula_val = ""
+                    var_name = ""
+                    if "FORMULA:" in params_str:
+                        if "VAR:" in params_str:
+                            if params_str.find("FORMULA:") < params_str.find("VAR:"):
+                                f_part, v_part = params_str.split("VAR:", 1)
+                                formula_val = f_part.replace("FORMULA:", "").strip()
+                                var_name = v_part.strip()
+                            else:
+                                v_part, f_part = params_str.split("FORMULA:", 1)
+                                var_name = v_part.replace("VAR:", "").strip()
+                                formula_val = f_part.strip()
+                        else:
+                            formula_val = params_str.replace("FORMULA:", "").strip()
+                    else:
+                        formula_val = params_str.strip()
+                    
+                    formula_val = formula_val.strip(",").strip(";").strip("/").strip()
+                    var_name = var_name.strip(",").strip(";").strip("/").strip()
+                    self.formula_expr.setText(formula_val)
+                    self.formula_var.setCurrentText(var_name)
+            except: pass
+
             # --- 延时参数 (Page 2) ---
             try:
                 ms_match = re.search(r'(\d+)ms', params_str)
@@ -1013,7 +1077,7 @@ class StepDialog(QDialog):
         elif category == "三方协议":
             self.device_combo.addItems(["3.5HEOL协议"])
         elif category == "通用交互":
-            self.device_combo.addItems(["等待 (Wait)", "变量操作 (Variable)"])
+            self.device_combo.addItems(["等待 (Wait)", "变量操作 (Variable)", "公式计算 (Calculate)"])
         elif category == "特殊执行":
             self.device_combo.addItems(["3.5HEOL协议"])
         
@@ -1066,6 +1130,8 @@ class StepDialog(QDialog):
             self.action_combo.addItems(["固定延时"])
         elif "变量操作" in device_text:
             self.action_combo.addItems(["读取变量"])
+        elif "公式计算" in device_text:
+            self.action_combo.addItems(["公式计算"])
         elif "Easy320" in device_text:
             self.action_combo.addItems(["闭合勾选通道", "断开勾选通道", "全部断开"])
         elif "老化" in device_text:
@@ -1084,7 +1150,7 @@ class StepDialog(QDialog):
                 is_excluded = "老化功能板继电器" in device_text
                 self.cb_sync.setChecked(not is_excluded)
                 self.cb_sync.setEnabled(is_excluded)
-            elif "等待" in device_text:
+            elif "等待" in device_text or "公式计算" in device_text:
                 self.cb_sync.setChecked(False)
                 self.cb_sync.setEnabled(False)
                 self.cb_seq.setChecked(False)
@@ -1125,6 +1191,8 @@ class StepDialog(QDialog):
             self.param_stack.setCurrentIndex(2)
         elif "变量操作" in device:
             self.param_stack.setCurrentIndex(9)
+        elif "公式计算" in device:
+            self.param_stack.setCurrentIndex(10)
         elif "同步屏障" in device:
             self.param_stack.setCurrentIndex(-1)
         elif "老化" in device:
@@ -1289,6 +1357,12 @@ class StepDialog(QDialog):
         elif idx == 9: # 变量操作
             step_type = "读取变量"
             params.append(f"VAR:{self.var_name.currentText().strip()}")
+        elif idx == 10: # 公式计算
+            step_type = "公式计算"
+            params.append(f"FORMULA:{self.formula_expr.text().strip()}")
+            var_txt = self.formula_var.currentText().strip()
+            if var_txt:
+                params.append(f"VAR:{var_txt}")
         elif idx == 2: # 等待
             step_type = "等待"
             params.append(f"{self.w_time.value()}ms")

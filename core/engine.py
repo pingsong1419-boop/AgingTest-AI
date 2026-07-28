@@ -33,6 +33,7 @@ class SubStepType(Enum):
     READ_VAR = "读取变量"
     ACQUIRE_SEQ_LOCK = "申请顺序锁"
     RELEASE_SEQ_LOCK = "释放顺序锁"
+    CALCULATE = "公式计算"
 
 class SubStepFailStrategy(Enum):
     STOP = "失败停止"
@@ -415,6 +416,39 @@ class ChannelWorker(QObject):
             board = self._get_can_board(mgr)
             from devices.eol_protocol import EOLProtocol
             eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
+            
+            # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
+            hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")
+            board.relays.set_relay_by_name("KL15", False)
+            board.relays.set_relay_by_name("CAN1", False)
+            
+            hw_logger("[CSC批量读取前置] 继电器已断开，开始延时 4 秒...")
+            import time
+            time.sleep(4.0)
+            
+            hw_logger("[CSC批量读取前置] 延时结束，正在闭合继电器 KL15 和 CAN1...")
+            board.relays.set_relay_by_name("KL15", True)
+            board.relays.set_relay_by_name("CAN1", True)
+            time.sleep(1.0)  # 物理建连延迟稳定
+            
+            hw_logger("[CSC批量读取前置] 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
+            node_cfg_kwargs = {
+                "PARAM1": "设置节点数目",
+                "PARAM3": "12",
+                "PARAM4": "0",
+                "TX_ID": "0x7F0",
+                "RX_ID": "0x7F8",
+                "TYPE": "0",
+                "DLC": "8"
+            }
+            for k in range(5):
+                hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
+                # 显式执行 0x07 节点配置，下位机就绪可能需要一点时间，此处不强制判断每次都必须返回成功
+                eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
+                time.sleep(0.5)
+            
+            hw_logger("[CSC批量读取前置] 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
+            time.sleep(4.0)
             
             start_idx = self._parse_int(eol_cfg["kwargs"].get("PARAM1"), 0)
             count = self._parse_int(eol_cfg["kwargs"].get("PARAM2"), 192)
@@ -997,6 +1031,74 @@ class ChannelWorker(QObject):
                     result_value = "变量未找到"
                     success = False
                 hw_logger(f"读取变量 [{var_name}] => {result_value}")
+
+            elif sub_step.type == SubStepType.CALCULATE:
+                params_str = params.get("params", "")
+                formula_val = ""
+                var_name = ""
+                if "FORMULA:" in params_str:
+                    if "VAR:" in params_str:
+                        if params_str.find("FORMULA:") < params_str.find("VAR:"):
+                            f_part, v_part = params_str.split("VAR:", 1)
+                            formula_val = f_part.replace("FORMULA:", "").strip()
+                            var_name = v_part.strip()
+                        else:
+                            v_part, f_part = params_str.split("FORMULA:", 1)
+                            var_name = v_part.replace("VAR:", "").strip()
+                            formula_val = f_part.strip()
+                    else:
+                        formula_val = params_str.replace("FORMULA:", "").strip()
+                else:
+                    formula_val = params_str.strip()
+                
+                # 清洗逗号、分号、斜杠
+                formula_val = formula_val.strip(",").strip(";").strip("/").strip()
+                var_name = var_name.strip(",").strip(";").strip("/").strip()
+                
+                if not formula_val:
+                    success = False
+                    result_value = "公式为空"
+                else:
+                    try:
+                        local_vars = {}
+                        for i, res_tuple in enumerate(self.current_step_results):
+                            step_name = f"STEP{i+1}"
+                            local_vars[step_name] = self._parse_numeric(res_tuple[0])
+                            
+                        for k, v in self.variables.items():
+                            if k.isidentifier():
+                                try:
+                                    local_vars[k] = float(v)
+                                except:
+                                    local_vars[k] = self._parse_numeric(v)
+                                    
+                        safe_dict = {
+                            "abs": abs,
+                            "round": round,
+                            "min": min,
+                            "max": max,
+                            "__builtins__": None
+                        }
+                        safe_dict.update(local_vars)
+                        
+                        expr = formula_val
+                        for i in range(len(self.current_step_results) + 5):
+                            expr = expr.replace(f"step{i+1}", f"STEP{i+1}")
+                            
+                        calc_val = eval(expr, safe_dict)
+                        
+                        if var_name:
+                            self.variables[var_name] = calc_val
+                            hw_logger(f"[公式计算] 公式: {formula_val} => 计算值: {calc_val:.4f}, 已写入变量: {var_name}")
+                        else:
+                            hw_logger(f"[公式计算] 公式: {formula_val} => 计算值: {calc_val:.4f}")
+                            
+                        result_value = f"{calc_val:.4f}"
+                        success = True
+                    except Exception as e:
+                        hw_logger(f"[公式计算] 计算异常: {e} (公式: {formula_val})")
+                        result_value = f"计算错误: {e}"
+                        success = False
 
             elif sub_step.type == SubStepType.ACQUIRE_SEQ_LOCK:
                 lock_name = params.get("lock_name", "seq_step_lock")
@@ -1727,7 +1829,12 @@ class TestEngine(QObject):
                     
                 dev_str, act_str = sub.get('device', ""), sub.get('action', "")
                 if "3.5HEOL" in t_str or "EOL协议" in t_str: stype = SubStepType.EOL_PROTOCOL
-                elif "读取变量" in t_str or "变量操作" in dev_str or "读取变量" in act_str or "VAR:" in p_str: stype = SubStepType.READ_VAR
+                elif "读取变量" in t_str or "变量操作" in dev_str or "读取变量" in act_str or "VAR:" in p_str: 
+                    if "FORMULA:" in p_str or "公式计算" in act_str or "公式计算" in t_str:
+                        stype = SubStepType.CALCULATE
+                    else:
+                        stype = SubStepType.READ_VAR
+                elif "公式计算" in t_str or "公式计算" in act_str or "FORMULA:" in p_str: stype = SubStepType.CALCULATE
                 elif "读取" in t_str: stype = SubStepType.READ_INSTRUMENT
                 elif "CAN发送" in t_str or "发送指令" in act_str: stype = SubStepType.CAN_SEND
                 elif "CAN接收" in t_str or "接收指定帧ID" in t_str or "接收指定帧ID" in act_str: stype = SubStepType.CAN_RECEIVE
