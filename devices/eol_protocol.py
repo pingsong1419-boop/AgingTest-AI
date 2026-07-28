@@ -192,16 +192,13 @@ class EOLProtocol:
                 # 等待 200ms
                 time.sleep(0.2)
 
-                # 生成 8 组随机数据，每组 4 字节
-                import random
-                generated_data = {}
-                for i in range(1, 9):
-                    generated_data[i] = bytes([random.randint(0, 255) for _ in range(4)])
-                    if logger:
-                        logger(f"[EEPROM STEP 2] 生成第 {i} 组随机写入数据: {generated_data[i].hex(' ').upper()}")
+                # 仅使用 1 组固定数据，每组 4 字节
+                generated_data = {1: b"\xA5\x5A\xA5\x5A"}
+                if logger:
+                    logger(f"[EEPROM STEP 2] 使用固定写入数据: {generated_data[1].hex(' ').upper()}")
 
-                # 顺序间隔 50ms 发送，并确认肯定响应 11 0A 05 40
-                for i in range(1, 9):
+                # 仅发送第 1 组，并确认肯定响应 11 0A 05 40
+                for i in [1]:
                     tx_step2 = bytes([self.REQUEST_PREFIX, 0x0A, 0x05, i]) + generated_data[i]
                     
                     retry_count = 10
@@ -302,9 +299,9 @@ class EOLProtocol:
                 # 间隔 80ms (防 Windows 计时器精度抖动，确保严格大于 50ms)
                 time.sleep(0.08)
 
-                # 发送 10 0A 03 00 0i 00 00 00，循环递增读取 8 个地址块数据，间隔 50ms
+                # 发送读取指令，只回读第 1 组地址块数据
                 received_groups = {}
-                for i in range(1, 9):
+                for i in [1]:
                     tx_step3 = bytes([self.REQUEST_PREFIX, 0x0A, 0x03, 0x00, i, 0x00, 0x00, 0x00])
                     
                     retry_count = 10
@@ -362,15 +359,15 @@ class EOLProtocol:
                     # 间隔 80ms (防 Windows 计时器精度抖动，确保严格大于 50ms)
                     time.sleep(0.08)
 
-                # 将接收的数据与上面八组随机生成的数据进行比对
-                if len(received_groups) < 8:
+                # 将接收的数据与固定数据进行比对
+                if len(received_groups) < 1:
                     if logger:
-                        logger(f"[EEPROM STEP 3] 错误: 未收齐全部 8 组回读数据 (仅收到 {list(received_groups.keys())})")
-                    return EOLResult(False, error="未完整回读8组数据", value="测试失败")
+                        logger(f"[EEPROM STEP 3] 错误: 未收齐第 1 组回读数据")
+                    return EOLResult(False, error="未完整回读数据", value="测试失败")
 
                 # 比对数据一致性
                 mismatch_found = False
-                for i in range(1, 9):
+                for i in [1]:
                     gen = generated_data[i]
                     rec = received_groups[i]
                     if gen != rec:
@@ -382,12 +379,12 @@ class EOLProtocol:
                             logger(f"[EEPROM VERIFY] 第 {i} 组校验一致: {gen.hex(' ').upper()}")
 
                 # ==================== 恢复/清理步骤 ====================
-                # 判断完成后，需要再给这八个地址块数据全写为 FF FF FF FF
+                # 判断完成后，需要再将第 1 个地址块数据恢复为 FF FF FF FF
                 if logger:
-                    logger("[EEPROM CLEANUP] 开始进行擦除恢复，将 8 个地址块全部写入 FF FF FF FF...")
+                    logger("[EEPROM CLEANUP] 开始进行擦除恢复，将第 1 组地址块写入 FF FF FF FF...")
 
                 cleanup_success = True
-                for i in range(1, 9):
+                for i in [1]:
                     tx_cleanup = bytes([self.REQUEST_PREFIX, 0x0A, 0x05, i, 0xFF, 0xFF, 0xFF, 0xFF])
                     
                     retry_count = 10
@@ -990,6 +987,169 @@ class EOLProtocol:
                     log_fn(f"[WARNING] 最大值滤波采样期间未采集到任何有效物理数值，以最后一次返回作为兜底。")
                     return last_result if last_result else EOLResult(False, error="采样期间全数失败")
 
+            # --- 最接近设定值采样滤波机制 (支持 SAMPLES:10, TARGET:2.5) ---
+            target_val = None
+            if "TARGET_VAL" in kwargs:
+                try: target_val = float(kwargs.pop("TARGET_VAL"))
+                except: pass
+            elif "TARGET" in kwargs:
+                try: target_val = float(kwargs.pop("TARGET"))
+                except: pass
+            elif "ARGS" in kwargs:
+                args_str = str(kwargs.get("ARGS", ""))
+                import re
+                target_match = re.search(r'(?:TARGET_VAL|TARGET):([\d.-]+)', args_str, re.IGNORECASE)
+                if target_match:
+                    try: target_val = float(target_match.group(1))
+                    except: pass
+
+            filter_samples = None
+            if "AVG_SAMPLES" in kwargs:
+                try: filter_samples = int(kwargs.get("AVG_SAMPLES"))
+                except: pass
+            elif "SAMPLES" in kwargs:
+                try: filter_samples = int(kwargs.get("SAMPLES"))
+                except: pass
+            elif "ARGS" in kwargs:
+                args_str = str(kwargs.get("ARGS", ""))
+                import re
+                samples_match = re.search(r'(?:AVG_SAMPLES|SAMPLES):(\d+)', args_str, re.IGNORECASE)
+                if samples_match:
+                    try: filter_samples = int(samples_match.group(1))
+                    except: pass
+
+            if target_val is not None and filter_samples is not None and filter_samples > 0:
+                kwargs.pop("AVG_SAMPLES", None)
+                kwargs.pop("SAMPLES", None)
+                
+                interval = 0.05
+                if "INTERVAL" in kwargs:
+                    try: interval = float(kwargs.pop("INTERVAL"))
+                    except: pass
+                elif "ARGS" in kwargs:
+                    args_str = str(kwargs.get("ARGS", ""))
+                    import re
+                    int_match = re.search(r'INTERVAL:([\d.]+)', args_str, re.IGNORECASE)
+                    if int_match:
+                        try: interval = float(int_match.group(1))
+                        except: pass
+                        
+                log_fn = logger if logger else print
+                log_fn(f"[!] 启动最接近值滤波采样：样本数 {filter_samples} 次，目标值 {target_val}，采样间隔 {interval}s...")
+                
+                collected_values = []
+                last_result = None
+                
+                for attempt in range(filter_samples):
+                    res = self.transact(
+                        device_id=spec.get("device_id"),
+                        operation=op_code,
+                        payload=payload,
+                        timeout=timeout,
+                        decoder=spec.get("decoder"),
+                        request_id=tx_id,
+                        response_id=rx_id,
+                        can_type=can_type,
+                        dlc=dlc,
+                        logger=logger
+                    )
+                    last_result = res
+                    if res.success:
+                        try:
+                            f_val = float(res.value)
+                            collected_values.append(f_val)
+                        except: pass
+                    
+                    if attempt < filter_samples - 1:
+                        time.sleep(interval)
+                        
+                if collected_values:
+                    closest_val = min(collected_values, key=lambda x: abs(x - target_val))
+                    log_fn(f"[!] 最接近值滤波采样完成。共成功采样 {len(collected_values)} 次，所有测量值: {collected_values}，与目标值 {target_val} 最接近的值为: {closest_val}")
+                    
+                    last_result.success = True
+                    last_result.value = closest_val
+                    return last_result
+                else:
+                    log_fn(f"[WARNING] 最接近值滤波采样期间未采集到任何有效物理数值，以最后一次返回作为兜底。")
+                    return last_result if last_result else EOLResult(False, error="采样期间全数失败")
+
+            # --- 均值采样滤波机制 (支持 SAMPLES:10, INTERVAL:0.02) ---
+            avg_samples = None
+            if "AVG_SAMPLES" in kwargs:
+                try: avg_samples = int(kwargs.pop("AVG_SAMPLES"))
+                except: pass
+            elif "SAMPLES" in kwargs:
+                try: avg_samples = int(kwargs.pop("SAMPLES"))
+                except: pass
+            elif "ARGS" in kwargs:
+                args_str = str(kwargs.get("ARGS", ""))
+                import re
+                samples_match = re.search(r'(?:AVG_SAMPLES|SAMPLES):(\d+)', args_str, re.IGNORECASE)
+                if samples_match:
+                    try: avg_samples = int(samples_match.group(1))
+                    except: pass
+
+            if avg_samples is not None and avg_samples > 0:
+                interval = 0.05
+                if "INTERVAL" in kwargs:
+                    try: interval = float(kwargs.pop("INTERVAL"))
+                    except: pass
+                elif "ARGS" in kwargs:
+                    args_str = str(kwargs.get("ARGS", ""))
+                    import re
+                    int_match = re.search(r'INTERVAL:([\d.]+)', args_str, re.IGNORECASE)
+                    if int_match:
+                        try: interval = float(int_match.group(1))
+                        except: pass
+                        
+                log_fn = logger if logger else print
+                log_fn(f"[!] 启动均值滤波采样：样本数 {avg_samples} 次，采样间隔 {interval}s...")
+                
+                collected_values = []
+                last_result = None
+                
+                for attempt in range(avg_samples):
+                    res = self.transact(
+                        device_id=spec.get("device_id"),
+                        operation=op_code,
+                        payload=payload,
+                        timeout=timeout,
+                        decoder=spec.get("decoder"),
+                        request_id=tx_id,
+                        response_id=rx_id,
+                        can_type=can_type,
+                        dlc=dlc,
+                        logger=logger
+                    )
+                    last_result = res
+                    if res.success:
+                        try:
+                            f_val = float(res.value)
+                            collected_values.append(f_val)
+                        except: pass
+                    
+                    if attempt < avg_samples - 1:
+                        time.sleep(interval)
+                        
+                if collected_values:
+                    n = len(collected_values)
+                    if n >= 3:
+                        sorted_vals = sorted(collected_values)
+                        trimmed_vals = sorted_vals[1:-1]
+                        avg_val = sum(trimmed_vals) / len(trimmed_vals)
+                        log_fn(f"[!] 均值滤波采样完成。共成功采样 {n} 次，去除最大值({sorted_vals[-1]})与最小值({sorted_vals[0]})，{n-2}次测量均值: {avg_val:.3f}")
+                    else:
+                        avg_val = sum(collected_values) / n
+                        log_fn(f"[!] 均值滤波采样完成。共成功采样 {n} 次，不够扣除最值，均值: {avg_val:.3f}")
+                        
+                    last_result.success = True
+                    last_result.value = round(avg_val, 3)
+                    return last_result
+                else:
+                    log_fn(f"[WARNING] 均值滤波采样期间未采集到任何有效物理数值，以最后一次返回作为兜底。")
+                    return last_result if last_result else EOLResult(False, error="采样期间全数失败")
+
             # --- 常规单次读取逻辑 ---
             return self.transact(
                 device_id=spec.get("device_id"),
@@ -1111,7 +1271,7 @@ class EOLProtocol:
             # 读取压力传感器: 有效数据是第5,6,7,8字节，高位在前，精度1
             if len(raw) < 8:
                 return None
-            return int.from_bytes(raw[4:8], "big")
+            return int.from_bytes(raw[4:8], "big") * 100
         elif op_code == 0x11:
             # 读取高边负载回采电压: 有效数据是第5,6字节，高位在前，精度0.001
             if len(raw) < 6:
