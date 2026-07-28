@@ -11,7 +11,7 @@ class StepDialog(QDialog):
         self.is_loading = False # 状态位：标记是否处于数据加载还原中
         self.parent_exec_mode = parent_exec_mode
         self.setWindowTitle("编辑指令 (子工步)")
-        self.resize(620, 550)
+        self.resize(620, 680)
         self.setStyleSheet("""
             QDialog { background-color: #1A1A2E; color: #E0E0E0; }
             QLabel { font-size: 14px; color: #B0B0B0; }
