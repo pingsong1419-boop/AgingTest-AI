@@ -33,7 +33,7 @@ class EOLProtocol:
                  timeout: float = 1.0, decoder: Optional[Callable[[bytes], Any]] = None,
                  request_id: Optional[int] = None, response_id: Optional[int] = None,
                  can_type: int = 0, dlc: int = 8,
-                 logger: Callable[[str], None] = None) -> EOLResult:
+                 logger: Callable[[str], None] = None, retries: int = 3) -> EOLResult:
         req_id = request_id if request_id is not None else self.REQUEST_ID
         resp_id = response_id if response_id is not None else self.RESPONSE_ID
         payload_data = (payload or b"")[:4].ljust(4, b"\x00")
@@ -68,7 +68,7 @@ class EOLProtocol:
             else: print(msg)
 
         # 增加重试机制，应对网络抖动或硬件繁忙
-        for attempt in range(2):
+        for attempt in range(retries):
             if attempt > 0:
                 local_log(f"EOL 重试 {attempt}...")
                 time.sleep(0.2) # 重试前稍作等待
@@ -81,7 +81,7 @@ class EOLProtocol:
                 
             send_time = time.time()
             if not self.can_driver.send_can_message(self.channel_id, req_id, can_type, dlc, request_data):
-                if attempt == 1: return EOLResult(False, error="CAN发送失败")
+                if attempt == retries - 1: return EOLResult(False, error="CAN发送失败")
                 continue
 
             msg = self.can_driver.wait_for_message(

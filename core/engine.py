@@ -422,6 +422,7 @@ class ChannelWorker(QObject):
             
             step_delay = 30  # 默认电芯间延时 30ms，防止总线拥堵导致下位机故障降级返回 2.5V 假数据
             min_v, max_v = None, None
+            fix_adjacent = False
             args_str = eol_cfg["kwargs"].get("ARGS", "")
             if args_str:
                 # 将英文逗号和分号临时转换为 / 供 _parse_key_values 正确切分
@@ -436,10 +437,14 @@ class ChannelWorker(QObject):
                 if "STEP_DELAY" in kv_args:
                     try: step_delay = int(kv_args["STEP_DELAY"])
                     except: pass
+                if "FIX_ADJACENT" in kv_args:
+                    fix_adjacent = kv_args["FIX_ADJACENT"].strip() in ("1", "true", "True", "ON", "on")
             
             hw_logger(f"[CSC批量读取] 开始批量读取单体电压. 范围: {start_idx} 到 {start_idx + count - 1}, 重试上限: {retry_limit}次, 电芯间延时: {step_delay}ms")
             if min_v is not None or max_v is not None:
                 hw_logger(f"[CSC批量读取] 校验电压区间: {min_v if min_v else '-inf'}V ~ {max_v if max_v else 'inf'}V")
+            if fix_adjacent:
+                hw_logger(f"[CSC批量读取] 开启相邻电芯异常电压 (0V 和 5V) 自动修正逻辑 (修正值 2.499V)")
                 
             success = False
             result_dict = {}
@@ -490,6 +495,38 @@ class ChannelWorker(QObject):
                         rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
                         self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
                         
+                        current_round_data[cell_idx] = val
+                    except Exception as e:
+                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
+                        hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")
+                        attempt_ok = False
+                        break
+                
+                # 只有在本轮所有电芯都成功获取到数据后，才进行相邻电芯异常值修正与电压范围判定
+                if attempt_ok:
+                    if fix_adjacent:
+                        for offset in range(count - 1):
+                            idx1 = start_idx + offset
+                            idx2 = start_idx + offset + 1
+                            val1 = current_round_data.get(idx1)
+                            val2 = current_round_data.get(idx2)
+                            
+                            if val1 is not None and val2 is not None:
+                                is_val1_zero = val1 < 0.1
+                                is_val2_zero = val2 < 0.1
+                                is_val1_high = 4.9 <= val1 <= 5.1
+                                is_val2_high = 4.9 <= val2 <= 5.1
+                                
+                                if (is_val1_zero and is_val2_high) or (is_val1_high and is_val2_zero):
+                                    hw_logger(f"[CSC批量读取] 检测到相邻异常电芯: 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
+                                    self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 自动修正为 2.499V")
+                                    current_round_data[idx1] = 2.499
+                                    current_round_data[idx2] = 2.499
+
+                    # 统一进行电压区间校验
+                    for offset in range(count):
+                        cell_idx = start_idx + offset
+                        val = current_round_data[cell_idx]
                         if min_v is not None and val < min_v:
                             hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 电压 {val}V 低于下限 {min_v}V")
                             attempt_ok = False
@@ -498,13 +535,6 @@ class ChannelWorker(QObject):
                             hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 电压 {val}V 高于上限 {max_v}V")
                             attempt_ok = False
                             break
-                            
-                        current_round_data[cell_idx] = val
-                    except Exception as e:
-                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
-                        hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")
-                        attempt_ok = False
-                        break
                 
                 if attempt_ok:
                     success = True
@@ -576,8 +606,7 @@ class ChannelWorker(QObject):
                 self.last_hw_log = msg
                 text = str(msg)
                 noisy_prefixes = (
-                    "[DEBUG]", "CAN TX", "CAN RX", "CAN REQ", "Waiting for EOL",
-                    "[EEPROM CONFIG]", "[EEPROM STEP", "[EEPROM VERIFY]", "[EEPROM CLEANUP]"
+                    "[DEBUG]",
                 )
                 is_noisy = text.startswith(noisy_prefixes)
                 if os.environ.get("AGING_TRACE_HW_LOG") == "1" or not is_noisy:
@@ -928,8 +957,13 @@ class ChannelWorker(QObject):
                     timeout=cfg["timeout"]
                 )
                 success = msg is not None
-                result_value = "PASS" if success else "FAIL"
-                hw_logger(f"CAN RX_WAIT CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} => {result_value}")
+                if success:
+                    rx_data = msg.get("data", b"").hex(" ").upper()
+                    result_value = rx_data
+                    hw_logger(f"CAN RX_WAIT CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} => PASS DATA: {rx_data}")
+                else:
+                    result_value = "TIMEOUT"
+                    hw_logger(f"CAN RX_WAIT CH:{cfg['channel_id']} ID=0x{cfg['can_id']:X} => FAIL")
 
             elif sub_step.type == SubStepType.EOL_PROTOCOL:
                 success, result_value = self._execute_eol_protocol(mgr, params, hw_logger)

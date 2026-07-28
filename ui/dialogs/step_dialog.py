@@ -392,6 +392,11 @@ class StepDialog(QDialog):
         self.eol_diff_ambient.setVisible(False)
         eol_form.addRow("", self.eol_diff_ambient)
         
+        self.eol_fix_adjacent = QCheckBox("相邻电芯异常值修正 (0V/5V)")
+        self.eol_fix_adjacent.setStyleSheet("color: #00E5FF;")
+        self.eol_fix_adjacent.setVisible(False)
+        eol_form.addRow("", self.eol_fix_adjacent)
+        
         eol_form.addRow("超时时间:", self.eol_timeout)
         eol_form.addRow(self.eol_hv1_label, self.eol_hv1)
         eol_form.addRow(self.eol_r0_label, self.eol_r0)
@@ -613,6 +618,9 @@ class StepDialog(QDialog):
         if hasattr(self, "eol_diff_ambient"):
             self.eol_diff_ambient.setVisible(False)
             self.eol_diff_ambient.setChecked(False)
+        if hasattr(self, "eol_fix_adjacent"):
+            self.eol_fix_adjacent.setVisible(False)
+            self.eol_fix_adjacent.setChecked(False)
 
         # 默认隐藏绝缘测试专用参数
         if hasattr(self, "eol_hv1"):
@@ -679,6 +687,8 @@ class StepDialog(QDialog):
                 self.eol_param4.setVisible(False)
             self.eol_args.setVisible(True)
             self.eol_args.setPlaceholderText("可选校验，格式 MIN_V:2.5,MAX_V:4.5")
+            if hasattr(self, "eol_fix_adjacent"):
+                self.eol_fix_adjacent.setVisible(True)
         elif "0x07" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [
                 ("设置节点数目", "0x01"),
@@ -927,7 +937,15 @@ class StepDialog(QDialog):
                     if "CH" in kv: self.eol_channel.setValue(int(float(kv["CH"])))
                     if "TX_ID" in kv: self.eol_tx_id.setText(kv["TX_ID"])
                     if "RX_ID" in kv: self.eol_rx_id.setText(kv["RX_ID"])
-                    if "ARGS" in kv: self.eol_args.setText(kv["ARGS"])
+                    if "ARGS" in kv:
+                        self.eol_args.setText(kv["ARGS"])
+                        try:
+                            args_str = kv["ARGS"]
+                            args_kv = self._split_params(args_str)
+                            if hasattr(self, "eol_fix_adjacent"):
+                                is_enabled = args_kv.get("FIX_ADJACENT", "") in ("1", "true", "True", "ON", "on")
+                                self.eol_fix_adjacent.setChecked(is_enabled)
+                        except: pass
                     
                     if "绝缘测试" in kv.get("EOL", action):
                         if "HV1" in kv: self.eol_hv1.setValue(float(kv["HV1"]))
@@ -1230,6 +1248,13 @@ class StepDialog(QDialog):
                     params.append(f"PARAM4:{self.eol_param4.value()}")
                 if "0x10" in eol_action and hasattr(self, "eol_diff_ambient") and self.eol_diff_ambient.isChecked():
                     params.append(f"DIFF_AMBIENT:1")
+                if "0x07 CSC批量读取" in eol_action and hasattr(self, "eol_fix_adjacent"):
+                    args_kv = self._split_params(args_val)
+                    if self.eol_fix_adjacent.isChecked():
+                        args_kv["FIX_ADJACENT"] = "1"
+                    else:
+                        args_kv.pop("FIX_ADJACENT", None)
+                    args_val = ",".join(f"{k}:{v}" for k, v in args_kv.items())
                 if args_val: params.append(f"ARGS:{args_val}")
                 
                 # 兼容老版本历史配方的字段格式，额外写入特定键名，确保老引擎读取无误
