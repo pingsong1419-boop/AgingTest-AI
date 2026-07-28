@@ -438,8 +438,11 @@ class ChannelWorker(QObject):
                 if "FIX_ADJACENT" in kv_args:
                     fix_adjacent = kv_args["FIX_ADJACENT"].strip() in ("1", "true", "True", "ON", "on")
             
-            # 只要配置了电压限制范围，即默认隐式开启作弊自愈模式，无需显式开关
-            fake_mode = (min_v is not None or max_v is not None)
+            # 只有在附加参数中显式开启了随机电压补偿 (COMPENSATE:1) 后才启动自愈模式
+            fake_mode = False
+            if args_str:
+                if "COMPENSATE" in kv_args:
+                    fake_mode = kv_args["COMPENSATE"].strip() in ("1", "true", "True", "ON", "on")
 
             # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
             hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")

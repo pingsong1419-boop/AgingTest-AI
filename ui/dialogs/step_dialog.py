@@ -398,6 +398,11 @@ class StepDialog(QDialog):
         self.eol_fix_adjacent.setVisible(False)
         eol_form.addRow("", self.eol_fix_adjacent)
         
+        self.eol_compensate_random = QCheckBox("开启异常电压随机补偿")
+        self.eol_compensate_random.setStyleSheet("color: #00E5FF;")
+        self.eol_compensate_random.setVisible(False)
+        eol_form.addRow("", self.eol_compensate_random)
+        
         eol_form.addRow("超时时间:", self.eol_timeout)
         eol_form.addRow(self.eol_hv1_label, self.eol_hv1)
         eol_form.addRow(self.eol_r0_label, self.eol_r0)
@@ -639,6 +644,9 @@ class StepDialog(QDialog):
         if hasattr(self, "eol_fix_adjacent"):
             self.eol_fix_adjacent.setVisible(False)
             self.eol_fix_adjacent.setChecked(False)
+        if hasattr(self, "eol_compensate_random"):
+            self.eol_compensate_random.setVisible(False)
+            self.eol_compensate_random.setChecked(False)
 
         # 默认隐藏绝缘测试专用参数
         if hasattr(self, "eol_hv1"):
@@ -713,6 +721,8 @@ class StepDialog(QDialog):
             self.eol_args.setPlaceholderText("可选校验，格式 MIN_V:2.5,MAX_V:4.5")
             if hasattr(self, "eol_fix_adjacent"):
                 self.eol_fix_adjacent.setVisible(True)
+            if hasattr(self, "eol_compensate_random"):
+                self.eol_compensate_random.setVisible(True)
         elif "0x07" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作类别:", [
                 ("设置节点数目", "0x01"),
@@ -1009,6 +1019,9 @@ class StepDialog(QDialog):
                             if hasattr(self, "eol_fix_adjacent"):
                                 is_enabled = args_kv.get("FIX_ADJACENT", "") in ("1", "true", "True", "ON", "on")
                                 self.eol_fix_adjacent.setChecked(is_enabled)
+                            if hasattr(self, "eol_compensate_random"):
+                                is_comp = args_kv.get("COMPENSATE", "") in ("1", "true", "True", "ON", "on")
+                                self.eol_compensate_random.setChecked(is_comp)
                         except: pass
                     
                     if "绝缘测试" in kv.get("EOL", action):
@@ -1322,6 +1335,11 @@ class StepDialog(QDialog):
                         args_kv["FIX_ADJACENT"] = "1"
                     else:
                         args_kv.pop("FIX_ADJACENT", None)
+                    if hasattr(self, "eol_compensate_random"):
+                        if self.eol_compensate_random.isChecked():
+                            args_kv["COMPENSATE"] = "1"
+                        else:
+                            args_kv.pop("COMPENSATE", None)
                     args_val = ",".join(f"{k}:{v}" for k, v in args_kv.items())
                 if args_val: params.append(f"ARGS:{args_val}")
                 
