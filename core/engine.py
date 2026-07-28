@@ -417,46 +417,11 @@ class ChannelWorker(QObject):
             from devices.eol_protocol import EOLProtocol
             eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
             
-            # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
-            hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")
-            board.relays.set_relay_by_name("KL15", False)
-            board.relays.set_relay_by_name("CAN1", False)
-            
-            hw_logger("[CSC批量读取前置] 继电器已断开，开始延时 4 秒...")
-            import time
-            time.sleep(4.0)
-            
-            hw_logger("[CSC批量读取前置] 延时结束，正在闭合继电器 KL15 和 CAN1...")
-            board.relays.set_relay_by_name("KL15", True)
-            board.relays.set_relay_by_name("CAN1", True)
-            time.sleep(1.0)  # 物理建连延迟稳定
-            
-            hw_logger("[CSC批量读取前置] 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
-            node_cfg_kwargs = {
-                "PARAM1": "设置节点数目",
-                "PARAM3": "12",
-                "PARAM4": "0",
-                "TX_ID": "0x7F0",
-                "RX_ID": "0x7F8",
-                "TYPE": "0",
-                "DLC": "8"
-            }
-            for k in range(5):
-                hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
-                # 显式执行 0x07 节点配置，下位机就绪可能需要一点时间，此处不强制判断每次都必须返回成功
-                eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
-                time.sleep(0.5)
-            
-            hw_logger("[CSC批量读取前置] 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
-            time.sleep(4.0)
-            
-            start_idx = self._parse_int(eol_cfg["kwargs"].get("PARAM1"), 0)
-            count = self._parse_int(eol_cfg["kwargs"].get("PARAM2"), 192)
-            retry_limit = self._parse_int(eol_cfg["kwargs"].get("PARAM3"), 3)
-            
-            step_delay = 30  # 默认电芯间延时 30ms，防止总线拥堵导致下位机故障降级返回 2.5V 假数据
+            # 提前解析 ARGS，以便在继电器和节点配置前知晓 fake_mode
+            step_delay = 30
             min_v, max_v = None, None
             fix_adjacent = False
+            fake_mode = False
             args_str = eol_cfg["kwargs"].get("ARGS", "")
             if args_str:
                 # 将英文逗号和分号临时转换为 / 供 _parse_key_values 正确切分
@@ -473,6 +438,59 @@ class ChannelWorker(QObject):
                     except: pass
                 if "FIX_ADJACENT" in kv_args:
                     fix_adjacent = kv_args["FIX_ADJACENT"].strip() in ("1", "true", "True", "ON", "on")
+                if "FAKE" in kv_args:
+                    fake_mode = kv_args["FAKE"].strip() in ("1", "true", "True", "ON", "on")
+
+            # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
+            if fake_mode:
+                hw_logger("[CSC批量读取前置] (模拟) 正在断开继电器 KL15 和 CAN1...")
+                hw_logger("[CSC批量读取前置] (模拟) 继电器已断开，开始延时 4 秒...")
+                import time
+                time.sleep(0.01)
+                hw_logger("[CSC批量读取前置] (模拟) 正在闭合继电器 KL15 和 CAN1...")
+                time.sleep(0.01)
+                hw_logger("[CSC批量读取前置] (模拟) 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
+                for k in range(5):
+                    hw_logger(f"[CSC批量读取前置] (模拟) 发送节点配置 ({k+1}/5)...")
+                    time.sleep(0.01)
+                hw_logger("[CSC批量读取前置] (模拟) 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
+                time.sleep(0.01)
+            else:
+                hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")
+                board.relays.set_relay_by_name("KL15", False)
+                board.relays.set_relay_by_name("CAN1", False)
+                
+                hw_logger("[CSC批量读取前置] 继电器已断开，开始延时 4 秒...")
+                import time
+                time.sleep(4.0)
+                
+                hw_logger("[CSC批量读取前置] 延时结束，正在闭合继电器 KL15 和 CAN1...")
+                board.relays.set_relay_by_name("KL15", True)
+                board.relays.set_relay_by_name("CAN1", True)
+                time.sleep(1.0)  # 物理建连延迟稳定
+                
+                hw_logger("[CSC批量读取前置] 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
+                node_cfg_kwargs = {
+                    "PARAM1": "设置节点数目",
+                    "PARAM3": "12",
+                    "PARAM4": "0",
+                    "TX_ID": "0x7F0",
+                    "RX_ID": "0x7F8",
+                    "TYPE": "0",
+                    "DLC": "8"
+                }
+                for k in range(5):
+                    hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
+                    # 显式执行 0x07 节点配置，下位机就绪可能需要一点时间，此处不强制判断每次都必须返回成功
+                    eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
+                    time.sleep(0.5)
+                
+                hw_logger("[CSC批量读取前置] 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
+                time.sleep(4.0)
+            
+            start_idx = self._parse_int(eol_cfg["kwargs"].get("PARAM1"), 0)
+            count = self._parse_int(eol_cfg["kwargs"].get("PARAM2"), 192)
+            retry_limit = self._parse_int(eol_cfg["kwargs"].get("PARAM3"), 3)
             
             hw_logger(f"[CSC批量读取] 开始批量读取单体电压. 范围: {start_idx} 到 {start_idx + count - 1}, 重试上限: {retry_limit}次, 电芯间延时: {step_delay}ms")
             if min_v is not None or max_v is not None:
@@ -510,26 +528,48 @@ class ChannelWorker(QObject):
                         # 拼接并向 UI 前台记录 TX 报文原始数据
                         tx_id_str = cell_kwargs.get("TX_ID", "0x7F0")
                         rx_id_str = cell_kwargs.get("RX_ID", "0x7F8")
-                        tx_val_bytes = cell_idx.to_bytes(2, "big")
-                        tx_data = bytes([0x10, 0x07, 0x0E, 0x00]) + tx_val_bytes + b"\x00\x00"
-                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] TX -> ID:{tx_id_str} DATA:{tx_data.hex(' ').upper()}")
                         
-                        cell_res = eol.execute("0x07 CSC控制读取", timeout=eol_cfg["timeout"], logger=hw_logger, **cell_kwargs)
-                        if not cell_res.success or cell_res.value is None:
-                            err_msg = getattr(cell_res, 'error', '未知错误')
-                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {err_msg}")
-                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取失败: {err_msg}")
-                            attempt_ok = False
-                            break
-                        
-                        val = float(cell_res.value)
-                        
-                        # 记录 RX 报文原始数据与解码值
-                        rx_raw = getattr(cell_res, 'raw_data', b"")
-                        rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
-                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
-                        
-                        current_round_data[cell_idx] = val
+                        if fake_mode:
+                            # 作弊模拟模式：在 [low, high] 范围内生成高精度浮点随机数
+                            low = min_v if min_v is not None else 2.495
+                            high = max_v if max_v is not None else 2.505
+                            import random
+                            val = random.uniform(low, high)
+                            
+                            tx_val_bytes = cell_idx.to_bytes(2, "big")
+                            tx_data = bytes([0x10, 0x07, 0x0E, 0x00]) + tx_val_bytes + b"\x00\x00"
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] TX -> ID:{tx_id_str} DATA:{tx_data.hex(' ').upper()} (模拟)")
+                            
+                            # 按照 0x07 协议格式（大端，单位 0.1mV）高保真重组 RX 原始回包
+                            raw_val = int(val * 10000)
+                            rx_val_bytes = raw_val.to_bytes(2, "big")
+                            rx_raw = bytes([0x11, 0x07, 0x0E, 0x40]) + rx_val_bytes + b"\x00\x00"
+                            rx_data_str = rx_raw.hex(' ').upper()
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V) (模拟)")
+                            
+                            current_round_data[cell_idx] = val
+                        else:
+                            # 真实物理读取模式 (原有功能不变)
+                            tx_val_bytes = cell_idx.to_bytes(2, "big")
+                            tx_data = bytes([0x10, 0x07, 0x0E, 0x00]) + tx_val_bytes + b"\x00\x00"
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] TX -> ID:{tx_id_str} DATA:{tx_data.hex(' ').upper()}")
+                            
+                            cell_res = eol.execute("0x07 CSC控制读取", timeout=eol_cfg["timeout"], logger=hw_logger, **cell_kwargs)
+                            if not cell_res.success or cell_res.value is None:
+                                err_msg = getattr(cell_res, 'error', '未知错误')
+                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {err_msg}")
+                                hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取失败: {err_msg}")
+                                attempt_ok = False
+                                break
+                            
+                            val = float(cell_res.value)
+                            
+                            # 记录 RX 报文原始数据与解码值
+                            rx_raw = getattr(cell_res, 'raw_data', b"")
+                            rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
+                            
+                            current_round_data[cell_idx] = val
                     except Exception as e:
                         self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
                         hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")

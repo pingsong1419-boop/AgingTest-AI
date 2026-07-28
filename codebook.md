@@ -199,3 +199,9 @@
 
 - **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)，在 `on_eol_op_changed` 中增加了针对 `"0x07 CSC控制读取"`（单次操作）动作的判断，使其显示“附加参数”输入框。
 - **修改原因**: 满足用户在配置 0x07 CSC控制读取 时，也能在界面端直观填入采样滤波参数 `SAMPLES` 以便多次读取过滤总线噪声的需求。
+
+- **修改内容**: 修改 [chamber_tab.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/tabs/chamber_tab.py)，引入警报处理状态标志 `self._alarm_sequence_active` 并实现了安全应急处理方法 `execute_alarm_safety_sequence`。在 `sync_plc_data` 故障检测处若遇硬故障警报，切断多通道测试与被测物 AFE 供电，将温箱工步强制重构为两步（升温至 80.0℃，再降温至 25.0℃），启动温控升降温并在完全达标后彻底关停。
+- **修改原因**: 满足用户在老化房自检异常时，能够实现多通道自动拉断停测、被测物防短路保护以及对老化房加热至 80℃ 再安全回温降至 25℃ 的全自动防灾避险要求。
+
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)，在 `"0x07 CSC批量读取"` 拦截器中加入了 `FAKE` 作弊仿真的功能。若在工步附加参数配置了 `FAKE:1`，将跳过真实总线通讯，而是依据 `MIN_V` 和 `MAX_V` 生成该区间内的随机电压，并高保真模拟生成 EOL CAN 标准十六进制报文在前台滚动日志打印，原有的真实测试读取功能不受任何影响。
+- **修改原因**: 满足用户针对物理实验良率调试的作弊校验需要，能够提供高度逼真的通信流，同时保证原系统核心功能原封不动。

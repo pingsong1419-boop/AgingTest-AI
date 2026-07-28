@@ -34,7 +34,8 @@ class ChamberTab(QWidget):
         self._last_safe_power_down_ok = False
         self._last_safe_power_down_context = ""
         self._last_safe_power_down_ts = 0.0
-
+        self._alarm_sequence_active = False
+ 
         self._init_ui()
         
         # 定时器：每 1 秒查询一次 PLC 数据，驱动工步控制，刷新 UI
@@ -1716,6 +1717,70 @@ class ChamberTab(QWidget):
         elif msg_box.clickedButton() == btn_return:
             self.execute_return_to_normal()
 
+    def execute_alarm_safety_sequence(self):
+        """执行层级一报警后的安全保护策略：立刻结束多通道测试，先升温至80℃，再回温至25℃"""
+        import datetime
+        print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Chamber] 触发报警安全回温防护序列")
+        
+        # 1. 安全下电 AFE 并关闭辅助电源
+        self._safe_power_down_sim_afe(
+            self._get_shutdown_power_config(),
+            show_errors=False,
+            context="报警触发安全下电"
+        )
+        self._safe_power_down_aux_sources("报警触发辅助电源关闭")
+
+        # 2. 结束当前的所有多通道测试，防止短路或过载
+        overview_tab = self.get_overview_tab()
+        if overview_tab and overview_tab.engine:
+            with overview_tab.engine._lock:
+                for worker in overview_tab.engine.workers.values():
+                    worker.is_suspended = False
+            for cid in list(overview_tab.engine.workers.keys()):
+                overview_tab.engine.stop_channel_test(cid)
+                idx = cid - 1
+                if 0 <= idx < len(overview_tab.channel_widgets):
+                    overview_tab.channel_widgets[idx].set_status("测试中止", "#DC3545")
+                        
+        # 3. 将温控工步序列强制重构为两步安全时序：升温至80.0℃，再降温至25.0℃
+        self.steps_data = [
+            {
+                "step_id": "ALARM_HEAT_80",
+                "name": "升温至目标温度",
+                "temp": 80.0,
+                "hours": 0.0,
+                "end_cond": "到达目标温度终止",
+                "status": "等待中"
+            },
+            {
+                "step_id": "ALARM_COOL_25",
+                "name": "降温至目标温度",
+                "temp": 25.0,
+                "hours": 0.0,
+                "end_cond": "到达目标温度终止",
+                "status": "等待中"
+            }
+        ]
+        
+        # 4. 初始化工步引擎执行状态并触发停机等待保护
+        self.active_step_idx = 0
+        self.step_elapsed_sec = 0.0
+        self._current_step_init_idx = -1
+        self.sequence_running = True
+        
+        # 强制关机保护 PLC (重用 20s 停机，保证压缩机物理寿命)
+        self._compressor_waiting = True
+        self._compressor_wait_sec = 0.0
+        self._temperature_startup_phase = "before_target"
+        self._wait_target_sec = 20.0
+        
+        self.write_plc_bit("V0.5", False, sync=False)
+        self.write_plc_bit("V0.6", True, sync=False)
+        self.write_plc_bit("V699.2", False, sync=False)
+        
+        self.refresh_steps_table()
+        self.lbl_active_step.setText("当前阶段: 警报回温处理 (停机保护中...)")
+
     def execute_return_to_normal(self):
         """执行回温至 25℃ 安全策略"""
         import datetime
@@ -1765,6 +1830,8 @@ class ChamberTab(QWidget):
         """停止工步测试"""
         import datetime
         print(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}] [Chamber] 收到“停止工步测试”指令")
+        
+        self._alarm_sequence_active = False # 重置报警处理状态
 
         self._safe_power_down_sim_afe(
             self._get_shutdown_power_config(),
@@ -2007,10 +2074,13 @@ class ChamberTab(QWidget):
                 lamp.setStyleSheet("color: #777777; font-size: 9px; background-color: #1A121A; border: 1px solid #2D1B2D; border-radius: 4px; padding: 4px;")
                 lamp.setText(f"⚪ {point}\n{desc}")
                 
-        # 如系统触发急停或重大报警，且未开启屏蔽模式，强制自动终止老化测试工步 (保障物理实验安全)
-        if has_any_alarm and self.sequence_running and not getattr(self, "_is_bypass_chamber", False):
-            self.stop_aging_sequence()
-            QMessageBox.critical(self, "安全报警拦截", "PLC 底层自检监测到严重安全故障警报！老化测试工步已自动触发紧急安全中止！")
+        # 如系统触发急停或重大报警，且未开启屏蔽模式，且未处于报警安全处理序列中，强制自动终止老化测试并转入安全防护温控序列 (80℃ -> 25℃)
+        if has_any_alarm and self.sequence_running and not getattr(self, "_is_bypass_chamber", False) and not getattr(self, "_alarm_sequence_active", False):
+            self._alarm_sequence_active = True
+            # 转入紧急安全防护温控序列 (先升至80℃，再降至25℃，并在序列开始时自动终止多通道测试)
+            self.execute_alarm_safety_sequence()
+            # 弹出原有的阻断式警告框 (原有的策略不变)
+            QMessageBox.critical(self, "安全报警拦截", "PLC 底层自检监测到严重安全故障警报！老化测试工步已自动触发紧急安全中止并转入安全防护时序 (80℃ -> 25℃)！")
 
     def apply_bms_load_for_channels(self, cids):
         target_cids = sorted({int(cid) for cid in (cids or [])})
@@ -2988,6 +3058,7 @@ class ChamberTab(QWidget):
                 self.sequence_running = False
                 self.active_step_idx = -1
                 self._is_bypass_chamber = False
+                self._alarm_sequence_active = False
                 self.write_plc_bit("V0.5", False) # 停止系统
                 self.write_plc_bit("V0.6", True)
                 
