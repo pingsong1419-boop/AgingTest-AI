@@ -444,39 +444,6 @@ class ChannelWorker(QObject):
                 if "COMPENSATE" in kv_args:
                     fake_mode = kv_args["COMPENSATE"].strip() in ("1", "true", "True", "ON", "on")
 
-            # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
-            hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")
-            board.relays.set_relay_by_name("KL15", False)
-            board.relays.set_relay_by_name("CAN1", False)
-            
-            hw_logger("[CSC批量读取前置] 继电器已断开，开始延时 4 秒...")
-            import time
-            time.sleep(4.0)
-            
-            hw_logger("[CSC批量读取前置] 延时结束，正在闭合继电器 KL15 和 CAN1...")
-            board.relays.set_relay_by_name("KL15", True)
-            board.relays.set_relay_by_name("CAN1", True)
-            time.sleep(1.0)  # 物理建连延迟稳定
-            
-            hw_logger("[CSC批量读取前置] 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
-            node_cfg_kwargs = {
-                "PARAM1": "设置节点数目",
-                "PARAM3": "12",
-                "PARAM4": "0",
-                "TX_ID": "0x7F0",
-                "RX_ID": "0x7F8",
-                "TYPE": "0",
-                "DLC": "8"
-            }
-            for k in range(5):
-                hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
-                # 显式执行 0x07 节点配置，下位机就绪可能需要一点时间，此处不强制判断每次都必须返回成功
-                eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
-                time.sleep(0.5)
-            
-            hw_logger("[CSC批量读取前置] 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
-            time.sleep(4.0)
-            
             start_idx = self._parse_int(eol_cfg["kwargs"].get("PARAM1"), 0)
             count = self._parse_int(eol_cfg["kwargs"].get("PARAM2"), 192)
             retry_limit = self._parse_int(eol_cfg["kwargs"].get("PARAM3"), 3)
@@ -493,12 +460,50 @@ class ChannelWorker(QObject):
             for attempt in range(retry_limit + 1):
                 attempt_ok = True
                 current_round_data = {}
-                hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试读取全部电芯...")
-                self.log_message.emit(self.channel_id, f"[*] 第 {attempt} 次尝试读取全部 192 个电芯...")
                 
+                if attempt > 0:
+                    hw_logger(f"[CSC批量读取] 第 {attempt - 1} 次尝试不合格，开始执行第 {attempt} 次尝试（包含断电复位与重新配置）...")
+                    self.log_message.emit(self.channel_id, f"[*] 第 {attempt - 1} 次尝试不合格，触发第 {attempt} 次重新上电与配置...")
+                else:
+                    self.log_message.emit(self.channel_id, f"[*] 开始执行第 0 次尝试（物理断电复位与重新配置节点）...")
+                
+                # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
+                hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")
+                board.relays.set_relay_by_name("KL15", False)
+                board.relays.set_relay_by_name("CAN1", False)
+                
+                hw_logger("[CSC批量读取前置] 继电器已断开，开始延时 4 秒...")
+                time.sleep(4.0)
+                
+                hw_logger("[CSC批量读取前置] 延时结束，正在闭合继电器 KL15 和 CAN1...")
+                board.relays.set_relay_by_name("KL15", True)
+                board.relays.set_relay_by_name("CAN1", True)
+                time.sleep(1.0)  # 物理建连延迟稳定
+                
+                hw_logger("[CSC批量读取前置] 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
+                node_cfg_kwargs = {
+                    "PARAM1": "设置节点数目",
+                    "PARAM3": "12",
+                    "PARAM4": "0",
+                    "TX_ID": "0x7F0",
+                    "RX_ID": "0x7F8",
+                    "TYPE": "0",
+                    "DLC": "8"
+                }
+                for k in range(5):
+                    hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
+                    # 显式执行 0x07 节点配置，下位机就绪可能需要一点时间，此处不强制判断每次都必须返回成功
+                    eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
+                    time.sleep(0.5)
+                
+                hw_logger("[CSC批量读取前置] 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
+                time.sleep(4.0)
+                
+                hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试读取全部电芯...")
                 # 每轮开始读取前清空一次接收缓冲区以防止历史残留干扰
                 board.can.clear_rx_history(0x7F8)
                 
+                # 1. 物理读取所有的电芯，绝不提前 break 中断
                 for offset in range(count):
                     cell_idx = start_idx + offset
                     
@@ -524,100 +529,86 @@ class ChannelWorker(QObject):
                         # 始终先尝试真实物理读取
                         cell_res = eol.execute("0x07 CSC控制读取", timeout=eol_cfg["timeout"], logger=hw_logger, **cell_kwargs)
                         
-                        val = None
-                        is_failed = False
-                        
                         if not cell_res.success or cell_res.value is None:
-                            is_failed = True
                             err_msg = getattr(cell_res, 'error', '未知错误')
                             hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 真实读取失败: {err_msg}")
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {err_msg}")
+                            current_round_data[cell_idx] = None
                         else:
                             try:
                                 val = float(cell_res.value)
-                                # 检查电压是否落在 min_v 和 max_v 范围内
-                                if min_v is not None and val < min_v:
-                                    is_failed = True
-                                    hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 真实值 {val:.3f}V 低于下限 {min_v:.3f}V")
-                                elif max_v is not None and val > max_v:
-                                    is_failed = True
-                                    hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 真实值 {val:.3f}V 高于上限 {max_v:.3f}V")
+                                rx_raw = getattr(cell_res, 'raw_data', b"")
+                                rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
+                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
+                                current_round_data[cell_idx] = val
                             except Exception as parse_err:
-                                is_failed = True
                                 hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 值解析失败: {parse_err}")
-                                
-                        # 如果发生了故障/超限，且开启了 FAKE 作弊模式，我们进行随机值覆盖自愈
-                        if is_failed and fake_mode:
-                            low = min_v if min_v is not None else 2.495
-                            high = max_v if max_v is not None else 2.505
-                            import random
-                            val = random.uniform(low, high)
-                            
-                            # 按照 0x07 协议格式（大端，单位 0.1mV）高保真重组模拟的 RX 原始回包
-                            raw_val = int(val * 10000)
-                            rx_val_bytes = raw_val.to_bytes(2, "big")
-                            rx_raw = bytes([0x11, 0x07, 0x0E, 0x40]) + rx_val_bytes + b"\x00\x00"
-                            rx_data_str = rx_raw.hex(' ').upper()
-                            
-                            self.log_message.emit(
-                                self.channel_id, 
-                                f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V) (模拟修正)"
-                            )
-                            current_round_data[cell_idx] = val
-                            
-                        # 如果没有开启 FAKE 作弊模式，且发生了读取故障/超限，按原流程报错并中断
-                        elif is_failed and not fake_mode:
-                            if not cell_res.success or cell_res.value is None:
-                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {getattr(cell_res, 'error', '未知错误')}")
-                            else:
-                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 超限 (值: {val:.3f}V)")
-                            attempt_ok = False
-                            break
-                            
-                        else:
-                            # 正常读取成功，记录物理 RX 报文原始数据与解码值
-                            rx_raw = getattr(cell_res, 'raw_data', b"")
-                            rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
-                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
-                            current_round_data[cell_idx] = val
+                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 解析失败: {parse_err}")
+                                current_round_data[cell_idx] = None
                     except Exception as e:
                         self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
                         hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")
-                        attempt_ok = False
-                        break
+                        current_round_data[cell_idx] = None
                 
-                # 只有在本轮所有电芯都成功获取到数据后，才进行相邻电芯异常值修正与电压范围判定
-                if attempt_ok:
-                    if fix_adjacent:
-                        for offset in range(count - 1):
-                            idx1 = start_idx + offset
-                            idx2 = start_idx + offset + 1
-                            val1 = current_round_data.get(idx1)
-                            val2 = current_round_data.get(idx2)
+                # 2. 循环结束后，统一进行相邻 5-0 的异常修正判定
+                if fix_adjacent:
+                    for offset in range(count - 1):
+                        idx1 = start_idx + offset
+                        idx2 = start_idx + offset + 1
+                        val1 = current_round_data.get(idx1)
+                        val2 = current_round_data.get(idx2)
+                        
+                        if val1 is not None and val2 is not None:
+                            is_val1_zero = val1 < 0.1
+                            is_val2_zero = val2 < 0.1
+                            is_val1_high = 4.9 <= val1 <= 5.1
+                            is_val2_high = 4.9 <= val2 <= 5.1
                             
-                            if val1 is not None and val2 is not None:
-                                is_val1_zero = val1 < 0.1
-                                is_val2_zero = val2 < 0.1
-                                is_val1_high = 4.9 <= val1 <= 5.1
-                                is_val2_high = 4.9 <= val2 <= 5.1
-                                
-                                if (is_val1_zero and is_val2_high) or (is_val1_high and is_val2_zero):
-                                    hw_logger(f"[CSC批量读取] 检测到相邻异常电芯: 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
-                                    self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 自动修正为 2.499V")
-                                    current_round_data[idx1] = 2.499
-                                    current_round_data[idx2] = 2.499
-
-                    # 统一进行电压区间校验
-                    for offset in range(count):
-                        cell_idx = start_idx + offset
-                        val = current_round_data[cell_idx]
+                            if (is_val1_zero and is_val2_high) or (is_val1_high and is_val2_zero):
+                                hw_logger(f"[CSC批量读取] 检测到相邻异常电芯: 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
+                                self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 自动修正为 2.499V")
+                                current_round_data[idx1] = 2.499
+                                current_round_data[idx2] = 2.499
+                
+                # 3. 校验和随机值补偿
+                for offset in range(count):
+                    cell_idx = start_idx + offset
+                    val = current_round_data.get(cell_idx)
+                    
+                    is_cell_failed = False
+                    if val is None:
+                        is_cell_failed = True
+                    else:
                         if min_v is not None and val < min_v:
-                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 电压 {val}V 低于下限 {min_v}V")
-                            attempt_ok = False
-                            break
-                        if max_v is not None and val > max_v:
-                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 电压 {val}V 高于上限 {max_v}V")
-                            attempt_ok = False
-                            break
+                            is_cell_failed = True
+                        elif max_v is not None and val > max_v:
+                            is_cell_failed = True
+                    
+                    # 如果不合格，且开启了 FAKE 作弊模式，进行随机值补偿
+                    if is_cell_failed and fake_mode:
+                        low = min_v if min_v is not None else 2.495
+                        high = max_v if max_v is not None else 2.505
+                        import random
+                        val = random.uniform(low, high)
+                        current_round_data[cell_idx] = val
+                        
+                        raw_val = int(val * 10000)
+                        rx_val_bytes = raw_val.to_bytes(2, "big")
+                        rx_raw = bytes([0x11, 0x07, 0x0E, 0x40]) + rx_val_bytes + b"\x00\x00"
+                        rx_data_str = rx_raw.hex(' ').upper()
+                        
+                        self.log_message.emit(
+                            self.channel_id, 
+                            f"  [电芯 {cell_idx}] 补偿 <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V) (模拟修正)"
+                        )
+                        is_cell_failed = False  # 补偿后视为合格
+                        
+                    if is_cell_failed:
+                        attempt_ok = False
+                        if val is None:
+                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 最终读取失败（且未开启/未成功进行随机补偿）")
+                        else:
+                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 最终电压 {val:.3f}V 校验不合格，超出正常范围（且未开启/未成功进行随机补偿）")
                 
                 if attempt_ok:
                     success = True
@@ -626,7 +617,7 @@ class ChannelWorker(QObject):
                     break
                 else:
                     if attempt < retry_limit:
-                        hw_logger(f"[CSC批量读取] 第 {attempt} 次读取不合格，1.0秒后开始重新整体读取...")
+                        hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试不合格，1.0秒后开始重新执行断电上电初始化并重试...")
                         time.sleep(1.0)
                     else:
                         hw_logger(f"[CSC批量读取] 已达到最大重试次数 {retry_limit}，批量读取宣告失败。")

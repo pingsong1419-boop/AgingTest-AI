@@ -214,3 +214,16 @@
 
 - **修改内容**: 修改 [test_item_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/test_item_dialog.py)，将编辑测试项对话框的默认大小由硬编码固定的 `380x600` 放大为 `450x760`；并优化布局，设置 `spacing` 为紧凑的 `5`。
 - **修改原因**: 解决在配置测试项判定条件时由于字段过多且高度限制太死，导致 Qt 自动挤压所有输入框和下拉框，使内部文字被上下截断显示不全的 UI 缺陷。
+
+## 2026-07-29
+- **修改内容**:
+  1. 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)：在“最接近设定值采样滤波”逻辑中增加双阈值控制。支持从 `ARGS` 中提取 `COMP_LIMIT` 和 `COMP_MAX` 参数。如果最接近测量值与目标的绝对差值 $\le COMP\_LIMIT$，则直接输出原测量值不作任何补偿；如果绝对差值介于 $(COMP\_LIMIT, COMP\_MAX]$ 之间，则自动执行逼近补偿修正为 `TARGET` 设定值；若绝对差值超过 `COMP_MAX`，则同样不执行修正，直接输出原值以防遮掩真实硬件故障。
+  2. 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：更新工步配置时 `0x06 ADC读取`、`0x07` 和 `0x08` 等动作中附加参数的占位词 `PlaceholderText` 提示，加入 `COMP_LIMIT` 和 `COMP_MAX` 的示例，提升操作便易性。
+- **修改原因**: 满足用户针对逼近特定设定值时仍有微小偏差的逼近补偿需求。允许在工步上灵活配置，同时限制了补偿的应用条件，使其对小误差保持原样输出，对温和偏差点做自动补偿，对超出上限的大故障则保留原值报错，保证安全与可靠性。
+
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 中的 `"0x07 CSC批量读取"` 工步执行逻辑。
+- **修改原因**: 解决在读取到某个不合格电芯（如 158 电芯）后程序立刻 `break` 中断、导致 192 个电芯后续的电芯无法继续被物理读取 and 记录的缺陷。重构为在完成全部电芯物理读取后，统一进行相邻 5-0 的异常修正判定与 FAKE 随机自愈补偿，并进行最终通过性校验。
+
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 的 `"0x07 CSC批量读取"` 工步执行逻辑。
+- **修改原因**: 解决在单轮尝试不合格重试时不能物理重置通信的缺陷。将原本只在循环外执行一次的前置继电器下电复位和发送配置参数的逻辑包入重试循环内部，使每一次重试均以“断电复位与重新配置”重新开始。
+
