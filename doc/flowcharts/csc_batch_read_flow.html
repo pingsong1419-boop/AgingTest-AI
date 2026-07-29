@@ -34,6 +34,7 @@
             graph TD
                 Start["开始工步"]
                 ResetInit["物理断电复位并下发节点配置"]
+                NodeConfigCheck{"节点配置是否有成功响应?"}
                 ReadLoop["物理读取所有电芯(192个)"]
                 FixAdjacent["进行相邻电芯5-0异常修正"]
                 CheckPass{"最终判定是否全部合格?"}
@@ -45,7 +46,9 @@
                 End["结束工步"]
 
                 Start --> ResetInit
-                ResetInit --> ReadLoop
+                ResetInit --> NodeConfigCheck
+                NodeConfigCheck -- "是" --> ReadLoop
+                NodeConfigCheck -- "否" --> RetryLimit
                 ReadLoop --> FixAdjacent
                 FixAdjacent --> CheckPass
                 CheckPass -- "是" --> AttemptSuccess
@@ -65,7 +68,7 @@
                 classDef green fill:#D5E8D4,stroke:#82B366,stroke-width:2px;
 
                 class Start,End purple;
-                class CheckPass,FakeMode,RetryLimit yellow;
+                class NodeConfigCheck,CheckPass,FakeMode,RetryLimit yellow;
                 class ResetInit,ReadLoop,FixAdjacent,Compensate blue;
                 class AttemptFailed red;
                 class AttemptSuccess green;

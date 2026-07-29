@@ -490,125 +490,134 @@ class ChannelWorker(QObject):
                     "TYPE": "0",
                     "DLC": "8"
                 }
+                node_ok = False
                 for k in range(5):
                     hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
-                    # 显式执行 0x07 节点配置，下位机就绪可能需要一点时间，此处不强制判断每次都必须返回成功
-                    eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
+                    res = eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
+                    if res.success:
+                        node_ok = True
+                        hw_logger(f"[CSC批量读取前置] 节点配置成功！(在第 {k+1} 次下发时收到肯定响应)")
                     time.sleep(0.5)
                 
-                hw_logger("[CSC批量读取前置] 节点配置全部发送完成，等待 4 秒后执行电芯电压读取...")
-                time.sleep(4.0)
+                if not node_ok:
+                    hw_logger("[CSC批量读取前置] 节点配置发送全部失败（5次尝试皆无响应或回复否定响应）！")
+                    self.log_message.emit(self.channel_id, "  [错误] 前置节点配置全部发送失败，跳过电芯读取，直接重试")
+                    attempt_ok = False
+                else:
+                    hw_logger("[CSC批量读取前置] 节点配置发送完成，等待 4 秒后执行电芯电压读取...")
+                    time.sleep(4.0)
                 
-                hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试读取全部电芯...")
-                # 每轮开始读取前清空一次接收缓冲区以防止历史残留干扰
-                board.can.clear_rx_history(0x7F8)
-                
-                # 1. 物理读取所有的电芯，绝不提前 break 中断
-                for offset in range(count):
-                    cell_idx = start_idx + offset
+                if attempt_ok:
+                    hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试读取全部电芯...")
+                    # 每轮开始读取前清空一次接收缓冲区以防止历史残留干扰
+                    board.can.clear_rx_history(0x7F8)
                     
-                    # 循环间隔延时保护，避免总线拥堵或下位机繁忙返回故障2.5V数据
-                    if offset > 0 and step_delay > 0:
-                        time.sleep(step_delay / 1000.0)
+                    # 1. 物理读取所有的电芯，绝不提前 break 中断
+                    for offset in range(count):
+                        cell_idx = start_idx + offset
                         
-                    cell_kwargs = eol_cfg["kwargs"].copy()
-                    cell_kwargs["PARAM1"] = "0x0E"
-                    cell_kwargs["PARAM4"] = str(cell_idx)
-                    cell_kwargs["OP"] = "0x0E"
-                    cell_kwargs["INDEX"] = str(cell_idx)
-                    cell_kwargs.pop("ARGS", None)
-                    
-                    try:
-                        # 拼接并向 UI 前台记录 TX 报文原始数据
-                        tx_id_str = cell_kwargs.get("TX_ID", "0x7F0")
-                        rx_id_str = cell_kwargs.get("RX_ID", "0x7F8")
-                        tx_val_bytes = cell_idx.to_bytes(2, "big")
-                        tx_data = bytes([0x10, 0x07, 0x0E, 0x00]) + tx_val_bytes + b"\x00\x00"
-                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] TX -> ID:{tx_id_str} DATA:{tx_data.hex(' ').upper()}")
-                        
-                        # 始终先尝试真实物理读取
-                        cell_res = eol.execute("0x07 CSC控制读取", timeout=eol_cfg["timeout"], logger=hw_logger, **cell_kwargs)
-                        
-                        if not cell_res.success or cell_res.value is None:
-                            err_msg = getattr(cell_res, 'error', '未知错误')
-                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 真实读取失败: {err_msg}")
-                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {err_msg}")
-                            current_round_data[cell_idx] = None
-                        else:
-                            try:
-                                val = float(cell_res.value)
-                                rx_raw = getattr(cell_res, 'raw_data', b"")
-                                rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
-                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
-                                current_round_data[cell_idx] = val
-                            except Exception as parse_err:
-                                hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 值解析失败: {parse_err}")
-                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 解析失败: {parse_err}")
-                                current_round_data[cell_idx] = None
-                    except Exception as e:
-                        self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
-                        hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")
-                        current_round_data[cell_idx] = None
-                
-                # 2. 循环结束后，统一进行相邻 5-0 的异常修正判定
-                if fix_adjacent:
-                    for offset in range(count - 1):
-                        idx1 = start_idx + offset
-                        idx2 = start_idx + offset + 1
-                        val1 = current_round_data.get(idx1)
-                        val2 = current_round_data.get(idx2)
-                        
-                        if val1 is not None and val2 is not None:
-                            is_val1_zero = val1 < 0.1
-                            is_val2_zero = val2 < 0.1
-                            is_val1_high = 4.9 <= val1 <= 5.1
-                            is_val2_high = 4.9 <= val2 <= 5.1
+                        # 循环间隔延时保护，避免总线拥堵或下位机繁忙返回故障2.5V数据
+                        if offset > 0 and step_delay > 0:
+                            time.sleep(step_delay / 1000.0)
                             
-                            if (is_val1_zero and is_val2_high) or (is_val1_high and is_val2_zero):
-                                hw_logger(f"[CSC批量读取] 检测到相邻异常电芯: 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
-                                self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 自动修正为 2.499V")
-                                current_round_data[idx1] = 2.499
-                                current_round_data[idx2] = 2.499
-                
-                # 3. 校验和随机值补偿
-                for offset in range(count):
-                    cell_idx = start_idx + offset
-                    val = current_round_data.get(cell_idx)
+                        cell_kwargs = eol_cfg["kwargs"].copy()
+                        cell_kwargs["PARAM1"] = "0x0E"
+                        cell_kwargs["PARAM4"] = str(cell_idx)
+                        cell_kwargs["OP"] = "0x0E"
+                        cell_kwargs["INDEX"] = str(cell_idx)
+                        cell_kwargs.pop("ARGS", None)
+                        
+                        try:
+                            # 拼接并向 UI 前台记录 TX 报文原始数据
+                            tx_id_str = cell_kwargs.get("TX_ID", "0x7F0")
+                            rx_id_str = cell_kwargs.get("RX_ID", "0x7F8")
+                            tx_val_bytes = cell_idx.to_bytes(2, "big")
+                            tx_data = bytes([0x10, 0x07, 0x0E, 0x00]) + tx_val_bytes + b"\x00\x00"
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] TX -> ID:{tx_id_str} DATA:{tx_data.hex(' ').upper()}")
+                            
+                            # 始终先尝试真实物理读取
+                            cell_res = eol.execute("0x07 CSC控制读取", timeout=eol_cfg["timeout"], logger=hw_logger, **cell_kwargs)
+                            
+                            if not cell_res.success or cell_res.value is None:
+                                err_msg = getattr(cell_res, 'error', '未知错误')
+                                hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 真实读取失败: {err_msg}")
+                                self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 失败: {err_msg}")
+                                current_round_data[cell_idx] = None
+                            else:
+                                try:
+                                    val = float(cell_res.value)
+                                    rx_raw = getattr(cell_res, 'raw_data', b"")
+                                    rx_data_str = rx_raw.hex(' ').upper() if rx_raw else "NONE"
+                                    self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V)")
+                                    current_round_data[cell_idx] = val
+                                except Exception as parse_err:
+                                    hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 值解析失败: {parse_err}")
+                                    self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] RX <- 解析失败: {parse_err}")
+                                    current_round_data[cell_idx] = None
+                        except Exception as e:
+                            self.log_message.emit(self.channel_id, f"  [电芯 {cell_idx}] 异常: {e}")
+                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 读取异常: {e}")
+                            current_round_data[cell_idx] = None
                     
-                    is_cell_failed = False
-                    if val is None:
-                        is_cell_failed = True
-                    else:
-                        if min_v is not None and val < min_v:
-                            is_cell_failed = True
-                        elif max_v is not None and val > max_v:
-                            is_cell_failed = True
+                    # 2. 循环结束后，统一进行相邻 5-0 的异常修正判定
+                    if fix_adjacent:
+                        for offset in range(count - 1):
+                            idx1 = start_idx + offset
+                            idx2 = start_idx + offset + 1
+                            val1 = current_round_data.get(idx1)
+                            val2 = current_round_data.get(idx2)
+                            
+                            if val1 is not None and val2 is not None:
+                                is_val1_zero = val1 < 0.1
+                                is_val2_zero = val2 < 0.1
+                                is_val1_high = 4.9 <= val1 <= 5.1
+                                is_val2_high = 4.9 <= val2 <= 5.1
+                                
+                                if (is_val1_zero and is_val2_high) or (is_val1_high and is_val2_zero):
+                                    hw_logger(f"[CSC批量读取] 检测到相邻异常电芯: 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
+                                    self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 自动修正为 2.499V")
+                                    current_round_data[idx1] = 2.499
+                                    current_round_data[idx2] = 2.499
                     
-                    # 如果不合格，且开启了 FAKE 作弊模式，进行随机值补偿
-                    if is_cell_failed and fake_mode:
-                        low = min_v if min_v is not None else 2.495
-                        high = max_v if max_v is not None else 2.505
-                        import random
-                        val = random.uniform(low, high)
-                        current_round_data[cell_idx] = val
+                    # 3. 校验和随机值补偿
+                    for offset in range(count):
+                        cell_idx = start_idx + offset
+                        val = current_round_data.get(cell_idx)
                         
-                        raw_val = int(val * 10000)
-                        rx_val_bytes = raw_val.to_bytes(2, "big")
-                        rx_raw = bytes([0x11, 0x07, 0x0E, 0x40]) + rx_val_bytes + b"\x00\x00"
-                        rx_data_str = rx_raw.hex(' ').upper()
-                        
-                        self.log_message.emit(
-                            self.channel_id, 
-                            f"  [电芯 {cell_idx}] 补偿 <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V) (模拟修正)"
-                        )
-                        is_cell_failed = False  # 补偿后视为合格
-                        
-                    if is_cell_failed:
-                        attempt_ok = False
+                        is_cell_failed = False
                         if val is None:
-                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 最终读取失败（且未开启/未成功进行随机补偿）")
+                            is_cell_failed = True
                         else:
-                            hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 最终电压 {val:.3f}V 校验不合格，超出正常范围（且未开启/未成功进行随机补偿）")
+                            if min_v is not None and val < min_v:
+                                is_cell_failed = True
+                            elif max_v is not None and val > max_v:
+                                is_cell_failed = True
+                        
+                        # 如果不合格，且开启了 FAKE 作弊模式，进行随机值补偿
+                        if is_cell_failed and fake_mode:
+                            low = min_v if min_v is not None else 2.495
+                            high = max_v if max_v is not None else 2.505
+                            import random
+                            val = random.uniform(low, high)
+                            current_round_data[cell_idx] = val
+                            
+                            raw_val = int(val * 10000)
+                            rx_val_bytes = raw_val.to_bytes(2, "big")
+                            rx_raw = bytes([0x11, 0x07, 0x0E, 0x40]) + rx_val_bytes + b"\x00\x00"
+                            rx_data_str = rx_raw.hex(' ').upper()
+                            
+                            self.log_message.emit(
+                                self.channel_id, 
+                                f"  [电芯 {cell_idx}] 补偿 <- ID:{rx_id_str} DATA:{rx_data_str} (值: {val:.3f}V) (模拟修正)"
+                            )
+                            is_cell_failed = False  # 补偿后视为合格
+                            
+                        if is_cell_failed:
+                            attempt_ok = False
+                            if val is None:
+                                hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 最终读取失败（且未开启/未成功进行随机补偿）")
+                            else:
+                                hw_logger(f"[CSC批量读取] 电芯 {cell_idx} 最终电压 {val:.3f}V 校验不合格，超出正常范围（且未开启/未成功进行随机补偿）")
                 
                 if attempt_ok:
                     success = True
