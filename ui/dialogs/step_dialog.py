@@ -393,7 +393,7 @@ class StepDialog(QDialog):
         self.eol_diff_ambient.setVisible(False)
         eol_form.addRow("", self.eol_diff_ambient)
         
-        self.eol_fix_adjacent = QCheckBox("相邻电芯异常值修正 (0V/5V)")
+        self.eol_fix_adjacent = QCheckBox("相邻电芯异常值修正 (之和为4.9~5.1V)")
         self.eol_fix_adjacent.setStyleSheet("color: #00E5FF;")
         self.eol_fix_adjacent.setVisible(False)
         eol_form.addRow("", self.eol_fix_adjacent)
@@ -672,7 +672,7 @@ class StepDialog(QDialog):
             self.eol_args.setVisible(True)
             if hasattr(self, "eol_args_label"):
                 self.eol_args_label.setVisible(True)
-            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5")
+            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5, COMP_LIMIT:0.02, COMP_MAX:0.05")
         elif "0x05" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "PWM通道:", self._index_items(16, "PWM "))
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "读取内容:", [("占空比", "DUTY"), ("频率", "FREQ")])
@@ -748,7 +748,7 @@ class StepDialog(QDialog):
             self.eol_args.setVisible(True)
             if hasattr(self, "eol_args_label"):
                 self.eol_args_label.setVisible(True)
-            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5")
+            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5, COMP_LIMIT:0.02, COMP_MAX:0.05")
         elif "0x10" in op:
             self._set_param_combo(
                 self.eol_param1,
@@ -774,7 +774,7 @@ class StepDialog(QDialog):
             self.eol_args.setVisible(True)
             if hasattr(self, "eol_args_label"):
                 self.eol_args_label.setVisible(True)
-            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5")
+            self.eol_args.setPlaceholderText("可选采样滤波，例 SAMPLES:10, TARGET:2.5, COMP_LIMIT:0.02, COMP_MAX:0.05")
         elif "EEPROM测试" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "块大小 (字节):", [("32 字节", "32"), ("16 字节", "16"), ("64 字节", "64"), ("8 字节", "8")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "地址ADDRESS:", [("1 (0x01)", "1"), ("0 (0x00)", "0"), ("4 (0x04)", "4"), ("8 (0x08)", "8")])
@@ -806,9 +806,13 @@ class StepDialog(QDialog):
         elif "0x0B" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "霍尔通道:", [("通道1", "0x01"), ("通道2", "0x03")])
 
-    def _split_params(self, params_str):
+    def _split_params(self, params_str, is_args_level=False):
         values = {}
-        for part in str(params_str).replace("；", "/").replace("，", "/").split("/"):
+        if is_args_level:
+            normalized = str(params_str).replace("；", "/").replace("，", "/").replace(",", "/").replace(";", "/")
+        else:
+            normalized = str(params_str).replace("；", "/").replace("，", "/")
+        for part in normalized.split("/"):
             part = part.strip()
             if not part or ":" not in part:
                 continue
@@ -1015,7 +1019,7 @@ class StepDialog(QDialog):
                         self.eol_args.setText(kv["ARGS"])
                         try:
                             args_str = kv["ARGS"]
-                            args_kv = self._split_params(args_str)
+                            args_kv = self._split_params(args_str, is_args_level=True)
                             if hasattr(self, "eol_fix_adjacent"):
                                 is_enabled = args_kv.get("FIX_ADJACENT", "") in ("1", "true", "True", "ON", "on")
                                 self.eol_fix_adjacent.setChecked(is_enabled)
@@ -1306,7 +1310,7 @@ class StepDialog(QDialog):
                 params.append(f"CH:{self.c_channel.value()}")
         elif idx == 7: # 3.5H EOL 协议
             step_type = "3.5HEOL协议"
-            eol_action = action
+            eol_action = self.eol_op.currentText()
             params.append(f"EOL:{eol_action}")
             
             if "绝缘测试" in eol_action:
@@ -1330,7 +1334,7 @@ class StepDialog(QDialog):
                 if "0x10" in eol_action and hasattr(self, "eol_diff_ambient") and self.eol_diff_ambient.isChecked():
                     params.append(f"DIFF_AMBIENT:1")
                 if "0x07 CSC批量读取" in eol_action and hasattr(self, "eol_fix_adjacent"):
-                    args_kv = self._split_params(args_val)
+                    args_kv = self._split_params(args_val, is_args_level=True)
                     if self.eol_fix_adjacent.isChecked():
                         args_kv["FIX_ADJACENT"] = "1"
                     else:

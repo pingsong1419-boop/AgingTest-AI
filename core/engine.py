@@ -339,9 +339,13 @@ class ChannelWorker(QObject):
             return float(res[0]) if res else 0.0
         except: return 0.0
 
-    def _parse_key_values(self, params: str) -> Dict[str, str]:
+    def _parse_key_values(self, params: str, is_args_level: bool = False) -> Dict[str, str]:
         values = {}
-        for part in str(params).replace("；", "/").replace("，", "/").replace("  ", " ").split("/"):
+        if is_args_level:
+            normalized = str(params).replace("；", "/").replace("，", "/").replace(",", "/").replace(";", "/").replace("  ", " ")
+        else:
+            normalized = str(params).replace("；", "/").replace("，", "/").replace("  ", " ")
+        for part in normalized.split("/"):
             part = part.strip()
             if not part: continue
             part = part.replace("：", ":")
@@ -412,7 +416,7 @@ class ChannelWorker(QObject):
         if not eol_cfg: raise ValueError("EOL参数缺失")
         
         # 拦截 0x07 CSC批量读取
-        if eol_cfg["op_name"] == "0x07 CSC读取":
+        if eol_cfg["op_name"] in ("0x07 CSC读取", "0x07 CSC批量读取"):
             board = self._get_can_board(mgr)
             from devices.eol_protocol import EOLProtocol
             eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
@@ -423,9 +427,7 @@ class ChannelWorker(QObject):
             fix_adjacent = False
             args_str = eol_cfg["kwargs"].get("ARGS", "")
             if args_str:
-                # 将英文逗号和分号临时转换为 / 供 _parse_key_values 正确切分
-                clean_args = str(args_str).replace(",", "/").replace(";", "/")
-                kv_args = self._parse_key_values(clean_args)
+                kv_args = self._parse_key_values(args_str, is_args_level=True)
                 if "MIN_V" in kv_args:
                     try: min_v = float(kv_args["MIN_V"])
                     except: pass
@@ -452,7 +454,7 @@ class ChannelWorker(QObject):
             if min_v is not None or max_v is not None:
                 hw_logger(f"[CSC批量读取] 校验电压区间: {min_v if min_v else '-inf'}V ~ {max_v if max_v else 'inf'}V")
             if fix_adjacent:
-                hw_logger(f"[CSC批量读取] 开启相邻电芯异常电压 (0V 和 5V) 自动修正逻辑 (修正值 2.499V)")
+                hw_logger(f"[CSC批量读取] 开启相邻电芯异常电压 (两通道之和在 4.9V~5.1V 之间) 自动修正逻辑 (修正值 2.499V)")
                 
             success = False
             result_dict = {}
@@ -568,16 +570,18 @@ class ChannelWorker(QObject):
                             val2 = current_round_data.get(idx2)
                             
                             if val1 is not None and val2 is not None:
-                                is_val1_zero = val1 < 0.1
-                                is_val2_zero = val2 < 0.1
-                                is_val1_high = 4.9 <= val1 <= 5.1
-                                is_val2_high = 4.9 <= val2 <= 5.1
+                                check_min = min_v if min_v is not None else 2.495
+                                check_max = max_v if max_v is not None else 2.505
+                                is_v1_ng = (val1 < check_min) or (val1 > check_max)
+                                is_v2_ng = (val2 < check_min) or (val2 > check_max)
                                 
-                                if (is_val1_zero and is_val2_high) or (is_val1_high and is_val2_zero):
-                                    hw_logger(f"[CSC批量读取] 检测到相邻异常电芯: 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
-                                    self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 自动修正为 2.499V")
-                                    current_round_data[idx1] = 2.499
-                                    current_round_data[idx2] = 2.499
+                                if is_v1_ng and is_v2_ng:
+                                    total_val = val1 + val2
+                                    if 4.9 <= total_val <= 5.1:
+                                        hw_logger(f"[CSC批量读取] 检测到相邻异常电芯且至少一个不合格 (两通道之和={total_val:.3f}V): 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
+                                        self.log_message.emit(self.channel_id, f"  [修正] 电芯 {idx1} ({val1}V) 和 电芯 {idx2} ({val2}V) 电压之和为 {total_val:.3f}V，自动修正为 2.499V")
+                                        current_round_data[idx1] = 2.499
+                                        current_round_data[idx2] = 2.499
                     
                     # 3. 校验和随机值补偿
                     for offset in range(count):

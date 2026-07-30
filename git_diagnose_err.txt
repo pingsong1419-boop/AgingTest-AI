@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "C:\Users\95403\.gemini\antigravity-ide\brain\e32fd4a2-0cee-4f4f-bf19-c454b4db91e6\scratch\run_git.py", line 6, in <module>
+    sys.stdout.flush()
+    ^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'flush'

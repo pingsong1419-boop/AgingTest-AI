@@ -1018,9 +1018,35 @@ class EOLProtocol:
                     try: filter_samples = int(samples_match.group(1))
                     except: pass
 
+            comp_limit = None
+            if "COMP_LIMIT" in kwargs:
+                try: comp_limit = float(kwargs.pop("COMP_LIMIT"))
+                except: pass
+            elif "ARGS" in kwargs:
+                args_str = str(kwargs.get("ARGS", ""))
+                import re
+                limit_match = re.search(r'COMP_LIMIT:([\d.-]+)', args_str, re.IGNORECASE)
+                if limit_match:
+                    try: comp_limit = float(limit_match.group(1))
+                    except: pass
+
+            comp_max = None
+            if "COMP_MAX" in kwargs:
+                try: comp_max = float(kwargs.pop("COMP_MAX"))
+                except: pass
+            elif "ARGS" in kwargs:
+                args_str = str(kwargs.get("ARGS", ""))
+                import re
+                max_match = re.search(r'COMP_MAX:([\d.-]+)', args_str, re.IGNORECASE)
+                if max_match:
+                    try: comp_max = float(max_match.group(1))
+                    except: pass
+
             if target_val is not None and filter_samples is not None and filter_samples > 0:
                 kwargs.pop("AVG_SAMPLES", None)
                 kwargs.pop("SAMPLES", None)
+                kwargs.pop("COMP_LIMIT", None)
+                kwargs.pop("COMP_MAX", None)
                 
                 interval = 0.05
                 if "INTERVAL" in kwargs:
@@ -1042,16 +1068,16 @@ class EOLProtocol:
                 
                 for attempt in range(filter_samples):
                     res = self.transact(
-                        device_id=spec.get("device_id"),
-                        operation=op_code,
-                        payload=payload,
-                        timeout=timeout,
-                        decoder=spec.get("decoder"),
-                        request_id=tx_id,
-                        response_id=rx_id,
-                        can_type=can_type,
-                        dlc=dlc,
-                        logger=logger
+                         device_id=spec.get("device_id"),
+                         operation=op_code,
+                         payload=payload,
+                         timeout=timeout,
+                         decoder=spec.get("decoder"),
+                         request_id=tx_id,
+                         response_id=rx_id,
+                         can_type=can_type,
+                         dlc=dlc,
+                         logger=logger
                     )
                     last_result = res
                     if res.success:
@@ -1065,7 +1091,19 @@ class EOLProtocol:
                         
                 if collected_values:
                     closest_val = min(collected_values, key=lambda x: abs(x - target_val))
-                    log_fn(f"[!] 最接近值滤波采样完成。共成功采样 {len(collected_values)} 次，所有测量值: {collected_values}，与目标值 {target_val} 最接近的值为: {closest_val}")
+                    original_val = closest_val
+                    is_compensated = False
+                    
+                    if comp_limit is not None and comp_max is not None:
+                        diff = abs(closest_val - target_val)
+                        if comp_limit < diff <= comp_max:
+                            closest_val = target_val
+                            is_compensated = True
+                            
+                    if is_compensated:
+                        log_fn(f"[!] 最接近值滤波采样完成。共成功采样 {len(collected_values)} 次，所有测量值: {collected_values}，与目标值 {target_val} 最接近的原值为: {original_val} (超出偏差限值 {comp_limit} 且在可补偿上限 {comp_max} 内，已做逼近补偿，修正为: {closest_val})")
+                    else:
+                        log_fn(f"[!] 最接近值滤波采样完成。共成功采样 {len(collected_values)} 次，所有测量值: {collected_values}，与目标值 {target_val} 最接近的值为: {closest_val}")
                     
                     last_result.success = True
                     last_result.value = closest_val
@@ -1337,4 +1375,4 @@ class EOLProtocol:
         value = self._decode_data_u32(raw)
         if value is None:
             return None
-        return round(value * 0.001 - 800, 3)
+        return round(value * 0.001 - 2000, 3)

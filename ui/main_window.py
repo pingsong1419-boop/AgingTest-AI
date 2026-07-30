@@ -177,6 +177,10 @@ class MainWindow(QMainWindow):
             print("正在停止所有测试引擎...")
             self.engine.stop_all()
             
+        if hasattr(self, 'tab_overview'):
+            print("正在停止 AFE 供电监控线程...")
+            self.tab_overview.stop_monitor()
+
         if hasattr(self, 'device_manager'):
             print("正在断开所有硬件设备连接...")
             self.device_manager.disconnect_all()

@@ -1,0 +1,40 @@
+--- TEST CASE 1: Under COMP_LIMIT ---
+LOG: [!] 启动最接近值滤波采样：样本数 2 次，目标值 2.5，采样间隔 0.05s...
+LOG: CAN TX CH:0 ID=0X7F0 DATA=10 06 02 00 17 00 00 00
+LOG: Waiting for EOL response (ID=0x7F8, timeout=1.0s)...
+LOG: CAN RX CH:0 ID=0X7F8 DATA=11 06 02 40 00 09 BA 00
+LOG: CAN TX CH:0 ID=0X7F0 DATA=10 06 02 00 17 00 00 00
+LOG: Waiting for EOL response (ID=0x7F8, timeout=1.0s)...
+LOG: CAN RX CH:0 ID=0X7F8 DATA=11 06 02 40 00 09 B0 00
+LOG: [!] 最接近值滤波采样完成。共成功采样 2 次，所有测量值: [2.49, 2.48]，与目标值 2.5 最接近的值为: 2.49
+Result success: True
+Result value: 2.49
+Result error: 
+
+--- TEST CASE 2: Within compensation range ---
+LOG: [!] 启动最接近值滤波采样：样本数 2 次，目标值 2.5，采样间隔 0.05s...
+LOG: CAN TX CH:0 ID=0X7F0 DATA=10 06 02 00 17 00 00 00
+LOG: Waiting for EOL response (ID=0x7F8, timeout=1.0s)...
+LOG: CAN RX CH:0 ID=0X7F8 DATA=11 06 02 40 00 09 A6 00
+LOG: CAN TX CH:0 ID=0X7F0 DATA=10 06 02 00 17 00 00 00
+LOG: Waiting for EOL response (ID=0x7F8, timeout=1.0s)...
+LOG: CAN RX CH:0 ID=0X7F8 DATA=11 06 02 40 00 09 9C 00
+LOG: [!] 最接近值滤波采样完成。共成功采样 2 次，所有测量值: [2.47, 2.46]，与目标值 2.5 最接近的原值为: 2.47 (超出偏差限值 0.02 且在可补偿上限 0.05 内，已做逼近补偿，修正为: 2.5)
+Result success: True
+Result value: 2.5
+Result error: 
+
+--- TEST CASE 3: Over COMP_MAX ---
+LOG: [!] 启动最接近值滤波采样：样本数 2 次，目标值 2.5，采样间隔 0.05s...
+LOG: CAN TX CH:0 ID=0X7F0 DATA=10 06 02 00 17 00 00 00
+LOG: Waiting for EOL response (ID=0x7F8, timeout=1.0s)...
+LOG: CAN RX CH:0 ID=0X7F8 DATA=11 06 02 40 00 09 88 00
+LOG: CAN TX CH:0 ID=0X7F0 DATA=10 06 02 00 17 00 00 00
+LOG: Waiting for EOL response (ID=0x7F8, timeout=1.0s)...
+LOG: CAN RX CH:0 ID=0X7F8 DATA=11 06 02 40 00 09 7E 00
+LOG: [!] 最接近值滤波采样完成。共成功采样 2 次，所有测量值: [2.44, 2.43]，与目标值 2.5 最接近的值为: 2.44
+Result success: True
+Result value: 2.44
+Result error: 
+
+ALL TEST CASES PASSED SUCCESSFULLY!

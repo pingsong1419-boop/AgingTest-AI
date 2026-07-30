@@ -1,0 +1,6 @@
+﻿
+CommandType     Name                                               Version    Source                                   
+-----------     ----                                               -------    ------                                   
+Application     git.exe                                            2.53.0.2   C:\Program Files\Git\cmd\git.exe         
+
+
