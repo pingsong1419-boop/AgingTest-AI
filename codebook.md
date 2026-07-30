@@ -26,8 +26,9 @@
   - [ui/tabs/overview_tab.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/tabs/overview_tab.py)：将 `SimulatorCurrentMonitorThread` 类中的通信信号 `sim_data_updated = Signal(dict)` 修改为了 `Signal(object)`。
 - **修改原因**: 解决在特定 PySide / Shiboken 底层封装机制下，跨线程传输包含复杂非字符串键和嵌套 tuple 数据的 dict 时，由于 `pythonToCpp` 类型强转缺陷抛出 Shiboken 转换报错，导致槽函数在主线程根本收不到自检刷新信号，状态栏常态误报离线的问题。
 
-## 2026-07-30: 新增“DTU 诊断”工步及其 29 项故障变量自动映射功能
+## 2026-07-30: 新增“DTU 诊断”工步及其 29 项故障变量自动映射与 UI 编辑配置支持功能
 - **修改文件**:
   - [devices/eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)：在 `execute` 方法中新增 `DTU诊断` 特例逻辑。实现了连续两次发送 `10 13 00 00 00`，单次未成功接收肯定响应 `10 13 00 40` 时支持最多 **5 次自动重发** 并每次避让 `100ms` 的机制。最终返回拼接好的 8 字节原始故障数据。
-  - [core/engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：拦截并解析 EOL 执行步骤中的 `DTU诊断` 工步。将返回的 8 字节故障数据对应的 29 项具体故障 bit（如气压传感器异常、继电器故障等）一一解析为 `0` 或 `1`，写入系统全局变量字典 `self.variables` 中，并提供判定结果返回。
-- **修改原因**: 满足老化配方测试中通过 CAN UDS 诊断指令高可靠获取被测物 BMS 内部所有具体故障，并自动记录入系统变量方便后序逻辑自主判定分支的要求。
+  - [core/engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：拦截并解析 EOL 执行步骤中的 `DTU诊断` 工步。将返回的 8 字节故障数据对应的 29 项具体故障 bit 一一解析为 `0` 或 `1`，写入系统全局变量字典 `self.variables` 中，并提供判定结果返回。
+  - [ui/dialogs/step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：在工步编辑对话框中，将 `DTU诊断` 正式编入 3.5HEOL 的“特殊执行”可选列表中。实现了参数布局的自适应切换、隐藏冗余输入控件以及工步加载逆向还原。
+- **修改原因**: 满足老化配方测试中通过 CAN UDS 诊断指令高可靠获取被测物 BMS 内部所有具体故障，自动记录入系统变量方便后序逻辑自主判定分支，并在测试配方 UI 界面中直接支持该工步创建与编辑的要求。

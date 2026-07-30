@@ -370,7 +370,7 @@ class StepDialog(QDialog):
             "0x08 CRASH读取", "0x09 RTC控制读取", "0x09 RTC控制写入",
             "0x10 NTC读取", "0x0A EEPROM控制读取", "0x0A EEPROM控制写入",
             "0x0B 霍尔电流读取", "0xFF 扩展指令",
-            "EEPROM测试", "绝缘测试"
+            "EEPROM测试", "绝缘测试", "DTU诊断"
         ])
         self.eol_op.setVisible(False)
         self.eol_args = QLineEdit("")
@@ -699,6 +699,11 @@ class StepDialog(QDialog):
                 self.eol_r3_label.setVisible(True)
                 self.eol_r4.setVisible(True)
                 self.eol_r4_label.setVisible(True)
+        elif "DTU诊断" in op:
+            self.eol_param1.setVisible(False)
+            self.eol_param1_label.setVisible(False)
+            self.eol_param2.setVisible(False)
+            self.eol_param2_label.setVisible(False)
         elif "0x07 CSC批量读取" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "起始索引:", [
                 (str(i), str(i)) for i in range(256)
@@ -779,6 +784,8 @@ class StepDialog(QDialog):
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "块大小 (字节):", [("32 字节", "32"), ("16 字节", "16"), ("64 字节", "64"), ("8 字节", "8")])
             self._set_param_combo(self.eol_param2, self.eol_param2_label, "地址ADDRESS:", [("1 (0x01)", "1"), ("0 (0x00)", "0"), ("4 (0x04)", "4"), ("8 (0x08)", "8")])
             self.eol_args.setPlaceholderText("无需额外参数")
+        elif "DTU诊断" in op:
+            self.eol_args.setPlaceholderText("无需额外参数")
         elif "0x0A" in op:
             self._set_param_combo(self.eol_param1, self.eol_param1_label, "操作:", [("读取数据", "READ"), ("写入数据", "WRITE"), ("设置地址", "SET_ADDR")])
             self.eol_args.setVisible(True)
@@ -835,7 +842,7 @@ class StepDialog(QDialog):
             if "CAN" in device or "报文" in device: category = "报文交互"
             # BUG-15修复: 统一用step_type和device字段判断，不再依赖kv字典的键名匹配
             elif "3.5HEOL" in device or "EOL" in step_type:
-                if action in ["EEPROM测试", "绝缘测试"]:
+                if action in ["EEPROM测试", "绝缘测试", "DTU诊断"]:
                     category = "特殊执行"
                 else:
                     category = "三方协议"
@@ -1134,7 +1141,7 @@ class StepDialog(QDialog):
         if "3.5HEOL" in device_text:
             category = self.category_combo.currentText()
             if category == "特殊执行":
-                self.action_combo.addItems(["EEPROM测试", "绝缘测试"])
+                self.action_combo.addItems(["EEPROM测试", "绝缘测试", "DTU诊断"])
             else:
                 self.action_combo.addItems([
                     "0x03 绝缘控制读取", "0x04 GPIO控制读取", "0x05 PWM读取", "0x06 ADC读取",
