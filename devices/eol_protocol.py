@@ -118,6 +118,120 @@ class EOLProtocol:
         # 兼容老配方中原先的 "0xFF 唤醒源读取" 名称
         if op_name == "0xFF 唤醒源读取":
             op_name = "0xFF 扩展指令"
+        
+        if op_name == "DTU诊断":
+            try:
+                # 提取 CAN ID
+                def _get_id(val, default):
+                    if val is None: return default
+                    val_str = str(val).strip()
+                    try:
+                        if val_str.lower().startswith("0x"):
+                            return int(val_str, 16)
+                        return int(val_str)
+                    except:
+                        return default
+
+                req_id = _get_id(kwargs.get("TX_ID") or kwargs.get("发送ID"), 0x7F0)
+                resp_id = _get_id(kwargs.get("RX_ID") or kwargs.get("接收ID"), 0x7F8)
+
+                if logger:
+                    logger(f"[*] 启动 DTU 诊断读取... 发送ID=0x{req_id:X}, 接收ID=0x{resp_id:X}")
+
+                tx_cmd = bytes([self.REQUEST_PREFIX, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+
+                # ==================== 1. 读取第一组数据 (Byte 0~3) ====================
+                group1_data = None
+                for attempt in range(1, 6):
+                    if logger:
+                        logger(f"[DTU STEP 1] 发送诊断请求 (尝试 {attempt}/5) CAN TX CH:{self.channel_id} DATA={tx_cmd.hex(' ').upper()}")
+
+                    if hasattr(self.can_driver, 'clear_rx_history'):
+                        self.can_driver.clear_rx_history(resp_id)
+
+                    send_time = time.time()
+                    if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_cmd):
+                        time.sleep(0.1)
+                        continue
+
+                    msg = self.can_driver.wait_for_message(
+                        can_id=resp_id,
+                        channel_id=None,
+                        predicate=lambda m: (
+                            len(m.get("data", b"")) >= 8
+                            and m.get("data", b"")[0] == self.REQUEST_PREFIX
+                            and m.get("data", b"")[1] == 0x13
+                            and m.get("data", b"")[2] == 0x00
+                            and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
+                        ),
+                        timeout=timeout,
+                        since_time=send_time,
+                        consume=True
+                    )
+                    if msg:
+                        raw_data = msg.get("data", b"")
+                        if logger:
+                            logger(f"[DTU STEP 1] 收到肯定响应 CAN RX CH:{self.channel_id} DATA={raw_data.hex(' ').upper()}")
+                        group1_data = raw_data[4:8]
+                        break
+                    else:
+                        time.sleep(0.1)
+
+                if group1_data is None:
+                    if logger: logger("[DTU STEP 1] 错误: 第一组读取超时且重试均失败")
+                    return EOLResult(False, error="DTU第一组诊断超时", value="测试失败")
+
+                # 间隔延时
+                time.sleep(0.2)
+
+                # ==================== 2. 读取第二组数据 (Byte 4~7) ====================
+                group2_data = None
+                for attempt in range(1, 6):
+                    if logger:
+                        logger(f"[DTU STEP 2] 发送诊断请求 (尝试 {attempt}/5) CAN TX CH:{self.channel_id} DATA={tx_cmd.hex(' ').upper()}")
+
+                    if hasattr(self.can_driver, 'clear_rx_history'):
+                        self.can_driver.clear_rx_history(resp_id)
+
+                    send_time = time.time()
+                    if not self.can_driver.send_can_message(self.channel_id, req_id, 0, 8, tx_cmd):
+                        time.sleep(0.1)
+                        continue
+
+                    msg = self.can_driver.wait_for_message(
+                        can_id=resp_id,
+                        channel_id=None,
+                        predicate=lambda m: (
+                            len(m.get("data", b"")) >= 8
+                            and m.get("data", b"")[0] == self.REQUEST_PREFIX
+                            and m.get("data", b"")[1] == 0x13
+                            and m.get("data", b"")[2] == 0x00
+                            and m.get("data", b"")[3] == self.POSITIVE_RESPONSE
+                        ),
+                        timeout=timeout,
+                        since_time=send_time,
+                        consume=True
+                    )
+                    if msg:
+                        raw_data = msg.get("data", b"")
+                        if logger:
+                            logger(f"[DTU STEP 2] 收到肯定响应 CAN RX CH:{self.channel_id} DATA={raw_data.hex(' ').upper()}")
+                        group2_data = raw_data[4:8]
+                        break
+                    else:
+                        time.sleep(0.1)
+
+                if group2_data is None:
+                    if logger: logger("[DTU STEP 2] 错误: 第二组读取超时且重试均失败")
+                    return EOLResult(False, error="DTU第二组诊断超时", value="测试失败")
+
+                # 返回拼接后的 8 字节 bytes
+                full_bytes = bytes(group1_data) + bytes(group2_data)
+                return EOLResult(True, value=full_bytes)
+            except Exception as ex:
+                if logger: logger(f"[DTU] 异常: {ex}")
+                return EOLResult(False, error=str(ex), value="测试异常")
+        
         elif op_name == "EEPROM测试":
             try:
                 if logger:

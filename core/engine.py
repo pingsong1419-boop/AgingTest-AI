@@ -652,6 +652,82 @@ class ChannelWorker(QObject):
         from devices.eol_protocol import EOLProtocol
         eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
         result = eol.execute(eol_cfg["op_name"], timeout=eol_cfg["timeout"], logger=hw_logger, **eol_cfg["kwargs"])
+        
+        if eol_cfg["op_name"] == "DTU诊断":
+            DTU_FAULT_MAP = {
+                0: {
+                    0: "气压传感器唤醒BMS异常断线故障",
+                    1: "气压传感器通讯丢失故障"
+                },
+                1: {
+                    0: "电源芯片自检故障",
+                    1: "电源芯片给BMU板内供电一级故障",
+                    2: "电源芯片给BMU板内供电二级故障",
+                    3: "电源芯片给BMU板外供电一级故障",
+                    4: "电源芯片给BMU板外供电二级故障"
+                },
+                2: {
+                    0: "以G0为基准点的高压采样功能的SPI通讯异常",
+                    1: "BatteryToGo0采样超范围",
+                    2: "BMU和CMC之间E2E故障",
+                    3: "BMS检测到均衡回路出现故障",
+                    4: "BMU过温故障",
+                    5: "AFE自检故障"
+                },
+                3: {
+                    0: "主正继电器线圈短地故障",
+                    1: "主正继电器线圈短电源故障",
+                    2: "主正继电器线圈开路故障",
+                    3: "主负继电器线圈短地故障",
+                    4: "主负继电器线圈短电源故障",
+                    5: "主负继电器线圈开路故障"
+                },
+                4: {
+                    0: "预充继电器线圈短地故障",
+                    1: "预充继电器线圈短电源故障",
+                    3: "直流充正继电器线圈短地故障",
+                    4: "直流充正继电器线圈短电源故障"
+                },
+                5: {
+                    0: "直流充正继电器线圈开路故障",
+                    1: "直流充负继电器线圈短地故障",
+                    3: "直流充负继电器线圈短电源故障",
+                    4: "直流充负继电器线圈开路故障"
+                },
+                6: {
+                    0: "碰撞信号短电源或开路故障（来自硬线PWM波信号）",
+                    1: "碰撞信号短地故障（来自硬线PWM波信号）"
+                }
+            }
+
+            if result.success and isinstance(result.value, bytes) and len(result.value) >= 8:
+                data_bytes = result.value
+                active_faults = []
+                for byte_idx, bit_dict in DTU_FAULT_MAP.items():
+                    byte_val = data_bytes[byte_idx]
+                    for bit_idx, fault_name in bit_dict.items():
+                        is_active = bool((byte_val >> bit_idx) & 0x01)
+                        self.variables[fault_name] = 1 if is_active else 0
+                        if is_active:
+                            active_faults.append(fault_name)
+                
+                # 初始化 Byte 7 对应故障变量 (保留)
+                self.variables["DTU_RFU_FAULT"] = 0
+                
+                if active_faults:
+                    result_value = f"PASS:诊断完成，检测到故障: {active_faults}"
+                else:
+                    result_value = "PASS:未检测到故障"
+                hw_logger(f"[DTU诊断] {result_value}")
+            else:
+                for byte_idx, bit_dict in DTU_FAULT_MAP.items():
+                    for bit_idx, fault_name in bit_dict.items():
+                        self.variables[fault_name] = 0
+                result_value = f"FAIL: {result.error}"
+            
+            hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
+            return result.success, result_value
+
         result_value = result.value if result.success else result.error
         if result.success and eol_cfg["op_name"] == "绝缘测试":
             self.variables["正极绝缘"] = getattr(result, "rp", 0.0)
