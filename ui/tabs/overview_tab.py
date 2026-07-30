@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QGridLayout, QHBoxLayout, Q
 
                                QLabel, QScrollArea, QFrame)
 
-from PySide6.QtCore import Qt, Slot, QTimer
+from PySide6.QtCore import Qt, Slot, QTimer, QThread, Signal
 
 import re
 import os
@@ -10,6 +10,144 @@ import json
 import datetime
 from core.debug_trace import trace
 
+
+
+class AFEPowerMonitorThread(QThread):
+    data_updated = Signal(list)
+
+    def __init__(self, device_manager):
+        super().__init__()
+        self.device_manager = device_manager
+        self.running = True
+
+    def run(self):
+        while self.running:
+            results = []
+            powers = [
+                ("1# AFE电源", getattr(self.device_manager, "afe_power_1", None)),
+                ("2# AFE电源", getattr(self.device_manager, "afe_pwr_2", None)),
+                ("3# AFE电源", getattr(self.device_manager, "afe_pwr_3", None)),
+            ]
+            for name, dev in powers:
+                if not dev:
+                    results.append({
+                        "name": name,
+                        "connected": False,
+                        "voltage": -1.0,
+                        "current": -1.0,
+                        "state": None
+                    })
+                    continue
+                
+                connected = dev.is_connected
+                if not connected:
+                    try:
+                        connected = dev.connect()
+                    except Exception:
+                        connected = False
+                
+                if connected:
+                    try:
+                        v = dev.measure_voltage()
+                        c = dev.measure_current()
+                        state = dev.read_output_state()
+                        results.append({
+                            "name": name,
+                            "connected": True,
+                            "voltage": v,
+                            "current": c,
+                            "state": state
+                        })
+                    except Exception:
+                        results.append({
+                            "name": name,
+                            "connected": False,
+                            "voltage": -1.0,
+                            "current": -1.0,
+                            "state": None
+                        })
+                else:
+                    results.append({
+                        "name": name,
+                        "connected": False,
+                        "voltage": -1.0,
+                        "current": -1.0,
+                        "state": None
+                    })
+            
+            self.data_updated.emit(results)
+            for _ in range(15):
+                if not self.running:
+                    break
+                self.msleep(100)
+
+    def stop(self):
+        self.running = False
+        self.wait()
+
+
+class SimulatorCurrentMonitorThread(QThread):
+    sim_data_updated = Signal(dict)
+
+    def __init__(self, device_manager):
+        super().__init__()
+        self.device_manager = device_manager
+        self.running = True
+
+    def run(self):
+        while self.running:
+            if not self.device_manager or not hasattr(self.device_manager, "simulators"):
+                self.msleep(1000)
+                continue
+
+            simulators = getattr(self.device_manager, "simulators", []) or []
+            if not simulators:
+                self.msleep(1000)
+                continue
+
+            # 1. 自动连接离线模拟器，保证后续 24 通道的 measure 无多重超时卡顿
+            for sim in simulators:
+                if not sim.is_connected:
+                    try:
+                        sim.connect()
+                    except Exception:
+                        pass
+
+            ch_data = {}
+            # 2. 遍历读取通道数据
+            for global_ch in range(1, 49):
+                if not self.running:
+                    break
+
+                unit_index = (global_ch - 1) // 24
+                local_ch = (global_ch - 1) % 24 + 1
+
+                if unit_index >= len(simulators):
+                    continue
+
+                sim = simulators[unit_index]
+                if sim and sim.is_connected:
+                    try:
+                        volt = sim.measure_voltage(local_ch)
+                        curr = sim.measure_current(local_ch)
+                        ch_data[global_ch] = (volt, curr)
+                    except Exception:
+                        sim.is_connected = False
+                        ch_data[global_ch] = (-1.0, -1.0)
+                else:
+                    ch_data[global_ch] = (-1.0, -1.0)
+
+            self.sim_data_updated.emit(ch_data)
+
+            # 3. 性能保护：每 3-5 秒轮询一次 (这里休眠 3 秒)
+            for _ in range(30):
+                if not self.running:
+                    break
+                self.msleep(100)
+
+    def stop(self):
+        self.running = False
+        self.wait()
 
 
 class ChannelWidget(QFrame):
@@ -275,6 +413,29 @@ class OverviewTab(QWidget):
 
         self._init_ui()
 
+        # 初始化并启动 AFE 供电电源监控后台线程
+        self.afe_monitor_thread = None
+        self.simulator_monitor_thread = None
+        self.high_curr_channels = []
+        self.current_display_idx = 0
+        
+        if self.engine and getattr(self.engine, "device_manager", None):
+            self.afe_monitor_thread = AFEPowerMonitorThread(self.engine.device_manager)
+            self.afe_monitor_thread.data_updated.connect(self.on_afe_data_updated)
+            self.afe_monitor_thread.start()
+
+            # 初始化并启动电池模拟器电流监控后台线程
+            self.simulator_monitor_thread = SimulatorCurrentMonitorThread(self.engine.device_manager)
+            self.simulator_monitor_thread.sim_data_updated.connect(self.on_sim_data_updated)
+            self.simulator_monitor_thread.start()
+
+            # 定时器用于在界面上循环显示异常电流通道
+            self.cycle_timer = QTimer(self)
+            self.cycle_timer.setInterval(2000) # 2秒切换一次
+            self.cycle_timer.timeout.connect(self.cycle_high_curr_display)
+            self.cycle_timer.start()
+
+
         
 
     def _init_ui(self):
@@ -533,6 +694,71 @@ class OverviewTab(QWidget):
         scroll.setWidget(container)
 
         main_layout.addWidget(scroll)
+
+        # --- 新增：底部 AFE 电源实时监控面板 ---
+        afe_monitor_group = QFrame()
+        afe_monitor_group.setStyleSheet("""
+            QFrame {
+                background-color: #1A1A2E;
+                border: 1px solid #3A3A5E;
+                border-radius: 8px;
+            }
+            QLabel {
+                border: none;
+                background-color: transparent;
+                font-family: 'Segoe UI', 'Microsoft YaHei';
+            }
+        """)
+        afe_monitor_layout = QHBoxLayout(afe_monitor_group)
+        afe_monitor_layout.setContentsMargins(15, 6, 15, 6)
+        afe_monitor_layout.setSpacing(25)
+
+        # 标题标签
+        lbl_title = QLabel("⚡ AFE供电电源实时监控:")
+        lbl_title.setStyleSheet("color: #4ECCA3; font-weight: bold; font-size: 13px;")
+        afe_monitor_layout.addWidget(lbl_title)
+
+        # 准备三台电源的显示控件
+        self.afe_labels = []
+        for i in range(3):
+            p_container = QWidget()
+            p_container.setStyleSheet("background-color: transparent; border: none;")
+            p_layout = QHBoxLayout(p_container)
+            p_layout.setContentsMargins(0, 0, 0, 0)
+            p_layout.setSpacing(10)
+
+            name_lbl = QLabel(f"{i+1}# AFE电源:")
+            name_lbl.setStyleSheet("color: #FFFFFF; font-weight: bold; font-size: 12px;")
+            
+            status_lbl = QLabel("离线")
+            status_lbl.setStyleSheet("color: #DC3545; font-weight: bold; font-size: 12px;")
+            
+            val_lbl = QLabel("-- V / -- A")
+            val_lbl.setStyleSheet("color: #808080; font-family: Consolas, monospace; font-size: 12px;")
+
+            p_layout.addWidget(name_lbl)
+            p_layout.addWidget(status_lbl)
+            p_layout.addWidget(val_lbl)
+            
+            afe_monitor_layout.addWidget(p_container)
+            
+            self.afe_labels.append((status_lbl, val_lbl))
+
+        # 新增：电池模拟器电流监控标签
+        sim_container = QWidget()
+        sim_container.setStyleSheet("background-color: transparent; border: none;")
+        sim_layout = QHBoxLayout(sim_container)
+        sim_layout.setContentsMargins(0, 0, 0, 0)
+        sim_layout.setSpacing(10)
+        
+        self.sim_curr_label = QLabel("🔋 模拟器电流: 正常 (<10mA)")
+        self.sim_curr_label.setStyleSheet("color: #28A745; font-weight: bold; font-size: 12px; margin-left: 20px;")
+        sim_layout.addWidget(self.sim_curr_label)
+        afe_monitor_layout.addWidget(sim_container)
+
+        afe_monitor_layout.addStretch()
+        main_layout.addWidget(afe_monitor_group)
+
 
 
 
@@ -1841,4 +2067,96 @@ class OverviewTab(QWidget):
         except Exception as e:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.critical(self, "打开失败", f"无法打开文件夹：{dir_path}\n错误信息：{e}")
+
+    @Slot(list)
+    def on_afe_data_updated(self, results):
+        """更新底部 AFE 供电电源的状态标签"""
+        for i, res in enumerate(results):
+            if i >= len(self.afe_labels):
+                break
+            status_lbl, val_lbl = self.afe_labels[i]
+            
+            connected = res.get("connected", False)
+            voltage = res.get("voltage", -1.0)
+            current = res.get("current", -1.0)
+            state = res.get("state", None)
+
+            if not connected:
+                status_lbl.setText("离线")
+                status_lbl.setStyleSheet("color: #DC3545; font-weight: bold; font-size: 12px;")
+                val_lbl.setText("-- V / -- A")
+                val_lbl.setStyleSheet("color: #808080; font-family: Consolas, monospace; font-size: 12px;")
+            else:
+                if state is True:
+                    status_lbl.setText("输出: 开启")
+                    status_lbl.setStyleSheet("color: #28A745; font-weight: bold; font-size: 12px;")
+                elif state is False:
+                    status_lbl.setText("输出: 关闭")
+                    status_lbl.setStyleSheet("color: #E65100; font-weight: bold; font-size: 12px;")
+                else:
+                    status_lbl.setText("就绪")
+                    status_lbl.setStyleSheet("color: #00E5FF; font-weight: bold; font-size: 12px;")
+                
+                v_disp = max(0.0, voltage)
+                c_disp = max(0.0, current)
+                val_lbl.setText(f"{v_disp:.3f} V / {c_disp:.3f} A")
+                val_lbl.setStyleSheet("color: #00FF00; font-family: Consolas, monospace; font-size: 12px; font-weight: bold;")
+
+    @Slot(dict)
+    def on_sim_data_updated(self, ch_data):
+        """接收后台读取的 48 个通道电压和电流，过滤大电流通道"""
+        # 如果所有通道返回均为 -1.0，代表模拟器全部离线
+        all_offline = all(c == -1.0 for _, c in ch_data.values()) if ch_data else True
+        if all_offline:
+            if hasattr(self, "sim_curr_label"):
+                self.sim_curr_label.setText("🔌 模拟器: 离线")
+                self.sim_curr_label.setStyleSheet("color: #DC3545; font-weight: bold; font-size: 12px; margin-left: 20px;")
+            self.high_curr_channels = []
+            return
+
+        high_curr = []
+        for ch, (v, c) in ch_data.items():
+            if c is None or c < 0:
+                continue
+            
+            # 自适应识别电流单位：如果 < 2.0 认为是 A，转换为 mA
+            c_ma = c * 1000.0 if c < 2.0 else c
+            # 自适应识别电压单位：如果 < 20.0 认为是 V，转换为 mV
+            v_mv = v * 1000.0 if v < 20.0 else v
+            
+            if c_ma > 10.0:
+                high_curr.append((ch, v_mv, c_ma))
+                
+        self.high_curr_channels = high_curr
+        
+        # 无异常通道则显示正常状态
+        if not self.high_curr_channels:
+            if hasattr(self, "sim_curr_label"):
+                self.sim_curr_label.setText("🔋 模拟器电流: 正常 (<10mA)")
+                self.sim_curr_label.setStyleSheet("color: #28A745; font-weight: bold; font-size: 12px; margin-left: 20px;")
+            self.current_display_idx = 0
+
+    def cycle_high_curr_display(self):
+        """异常大电流通道在底部循环滚动显示"""
+        if not self.high_curr_channels or not hasattr(self, "sim_curr_label"):
+            return
+            
+        if self.current_display_idx >= len(self.high_curr_channels):
+            self.current_display_idx = 0
+            
+        ch, v_mv, c_ma = self.high_curr_channels[self.current_display_idx]
+        self.sim_curr_label.setText(f"⚠️ 模拟器电流异常: {ch}CH 电压: {v_mv:.0f}mv 电流: {c_ma:.1f}ma")
+        self.sim_curr_label.setStyleSheet("color: #FFC107; font-weight: bold; font-size: 12px; margin-left: 20px;")
+        
+        self.current_display_idx = (self.current_display_idx + 1) % len(self.high_curr_channels)
+
+    def stop_monitor(self):
+        """安全停止监控线程"""
+        if hasattr(self, "afe_monitor_thread") and self.afe_monitor_thread:
+            self.afe_monitor_thread.stop()
+            self.afe_monitor_thread = None
+        if hasattr(self, "simulator_monitor_thread") and self.simulator_monitor_thread:
+            self.simulator_monitor_thread.stop()
+            self.simulator_monitor_thread = None
+
 

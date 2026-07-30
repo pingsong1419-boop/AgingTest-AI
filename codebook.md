@@ -160,10 +160,13 @@
 - **修改内容**: 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py) 中的 `transact` 传输函数，增加可配置的 `retries` 参数并默认其值为 `3`。同时更新重试循环条件以及发送/接收超时返回的判定逻辑。
 - **修改原因**: 将所有 3.5H EOL 协议功能动作（GPIO、绝缘、PWM、ADC、NTC、RTC、EEPROM 等）在底层的物理交互尝试次数由原本死锁的最多 2 次升级为 3 次，防止物理总线瞬时拥堵或继电器抖动时过早判定失败，有效提升自动化测试流程的运行稳定性与容错率。
 
-- **修改内容**: 修改新配方文件 [DJ2513_Aging22222222.json](file:///c:/Users/95403/Desktop/AgingTest-AI/recipes/DJ2513_Aging22222222.json)，在单体电压读取前插入一个总的 `"单体电压批量读取"` 测试工步（动作设定为 `0x07 CSC批量读取`，限制区间 `MIN_V:2.495,MAX_V:2.505`）；并把后面的 192 个 `单体电压读取_01` 至 `单体电压读取_192` 的物理 CAN 读取子工步批量替换为 `"读取变量"` 子工步（分别读取变量 `CSC_CELL_0` 至 `CSC_CELL_191`），同时将其复测次数改为 `"不复测"`。
-- **修改原因**: 配合底层的 CSC 批量读取与重试防抖机制，将该新配方的单体电芯电压读取方式全部升级为高性能、高稳定性的批量读取与本地变量回读模式。
-
-- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 中 `"0x07 CSC批量读取"` 的拦截执行逻辑，新增支持 `FIX_ADJACENT` 配置选项。将原本在读取过程中直接执行的区间校验剥离，改为每轮在全部 192 个单体电芯都读取成功后，再进行后置判定。如果启用 `FIX_ADJACENT` 且检测到相邻电芯电压符合一个 $< 0.1\text{V}$、另一个在 $4.9\text{V} \sim 5.1\text{V}$ 之间的物理线路松动特征，自动在内存中将这两者修正为正常的 `2.499V`，并在最后统一执行范围限值校验。
+- **修改内容**: 修改新配方文件 [DJ2513_Aging22222222.json](file:///c:/Users/95403/Desktop/AgingTest-AI/recipes/DJ2513_Aging22222222.json)，在单体电压读取前插入一个总的 `"单体电压批量读取"` 测试工步（动作设定为 `0x07 CSC批量读取`，限制区间 `MIN_V:2.495,MAX_V:2.505`）；并把    7. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：
+      - 在 `_parse_key_values` 方法中引入 `is_args_level` 分层级解析。默认 `is_args_level=False` 时不对英文逗号和英文分号做切分，防止在一级解析子工步参数时将 `ARGS:MIN_V:2.495,MAX_V:2.505,FIX_ADJACENT:1` 内部的逗号切开导致参数流失。
+      - 仅在二级解析 `ARGS` 属性内容时传入 `is_args_level=True`，此时才正常按逗号切分，从而让引擎自愈逻辑能够获取到 `FIX_ADJACENT` 键。
+      - 在 `_execute_eol_protocol` 里的拦截器动作名称匹配中兼容匹配新老动作名 `in ("0x07 CSC读取", "0x07 CSC批量读取")`。
+      - 优化相邻电芯电压之和的自愈修正判定条件：**仅在相邻的两个电芯中至少有一个是不合格（不在 `MIN_V ~ MAX_V` 区间内）的情况下才触发修正**；如果两电芯的物理读值本身都合格（例如两个都是 2.500V ），则跳过不作任何无意义的修改。
+    8. 再次运行 PyInstaller 打包生成最新二进制。
+- **修改原因**: 增加对相邻电芯异常值修正触发条件的限制，防止误修本来就合格正常的电芯数据，提升自愈测试业务逻辑的严密性。�执行逻辑，新增支持 `FIX_ADJACENT` 配置选项。将原本在读取过程中直接执行的区间校验剥离，改为每轮在全部 192 个单体电芯都读取成功后，再进行后置判定。如果启用 `FIX_ADJACENT` 且检测到相邻电芯电压符合一个 $< 0.1\text{V}$、另一个在 $4.9\text{V} \sim 5.1\text{V}$ 之间的物理线路松动特征，自动在内存中将这两者修正为正常的 `2.499V`，并在最后统一执行范围限值校验。
 - **修改原因**: 修复老化测试中由于物理通道线束抖动、瞬时接触不良导致相邻通道电压一个归零、另一个浮空叠加呈双倍电压从而引发批量 NG 的现象；实现物理线束抖动误差的动态自适应软件修正，极大提高了物理测试良率。
 
 - **修改内容**: 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)，在底层的编辑子工步参数窗口中新增了一个 `"相邻电芯异常值修正 (0V/5V)"` 复选框（`self.eol_fix_adjacent`）。此控件在且仅在选中 `"0x07 CSC批量读取"` 时才显示。加载配方时自动解析 `ARGS` 属性是否包含 `FIX_ADJACENT` 进行状态呈现；保存配方时自动根据勾选状态从 `ARGS` 参数列表里添加或移除该标签。
@@ -230,3 +233,51 @@
 - **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 的 `"0x07 CSC批量读取"` 工步执行逻辑。
 - **修改原因**: 解决节点配置阶段发送不响应时仍强制往后读取 192 个电芯的盲目读取问题。前置 5 次节点数目配置发送时加入响应结果校验（只要有 1 次肯定响应即通过），若 5 次下发全部失败则本轮直接设为 `attempt_ok = False` 并跳过后面的所有电芯读取和修正，以最快速度触发下电复位和重新配置重试。
 
+- **修改内容**: 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py) 的 EOL 拦截器匹配字。
+- **修改原因**: 修复由于拦截器命名不匹配导致批量读取流程完全失效的重大缺陷。在之前重构中我们误将拦截的 EOL 动作名称改为了 `"0x07 CSC批量读取"`，这与物理配方中的实际 EOL 动作名称 `"0x07 CSC读取"` 不一致，从而导致在运行测试时该拦截器从未被触发、批量电芯及自愈重试逻辑被全部跳过，因此后继单体电芯读取变量时报“变量未找到”进而全部返回 0.00V (NG) 的错误。现已将其改回 `"0x07 CSC读取"` 保持匹配。
+
+- **修改内容**:
+  1. 修改 [eol_protocol.py](file:///c:/Users/95403/Desktop/AgingTest-AI/devices/eol_protocol.py)：在 `_decode_current` 解码方法中，将霍尔电流公式从原本的 `value * 0.001 - 800` 修正为 `value * 0.001 - 2000`。
+  2. 修改主配方文件 [DJ2513_Aging66666.json](file:///c:/Users/95403/Desktop/AgingTest-AI/recipes/DJ2513_Aging66666.json)：在“大气压测试”之后、“测试完成”之前，新增一个新的“霍尔电流测试”工步。该工步配置为使用 `3.5HEOL协议` 设备的 `0x0B 霍尔电流读取`，通道默认为 `0x01`，判定限值默认为 `-10` 至 `10` A。
+- **修改原因**: 满足用户对霍尔电流测试项的物理量提取、正确公式缩放与范围自动化校验需求。
+
+- **修改内容**: 使用 PyInstaller 对项目进行重新打包编译，生成最新版本的 `AgingTest_BMS.exe` 可执行程序。
+- **修改原因**: 在完成了近期一系列针对 EOL 协议、0x07 CSC读取、霍尔电流测试及相关 UI 对话框与测试引擎逻辑的重要功能修改和稳定性优化后，重新构建并打包发布最新的上位机程序。
+
+## 2026-07-30
+- **修改内容**:
+  1. 修改 [overview_tab.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/tabs/overview_tab.py)：
+     - 新增并实现后台监控线程 `AFEPowerMonitorThread` 类，异步周期性（每隔 1.5 秒）读取 1#、2#、3# 三台 AFE 供电电源的连接状态、输出状态、测量电压和电流，且对离线的电源支持后台静默自动重连，消除了 Modbus TCP 读取物理卡顿（网络超时）对主界面流畅度的负面影响。
+     - 在“多通道监控”页面底部追加了专用的“AFE 供电电源实时监控”状态栏 UI（QFrame 布局卡片展示），支持优雅地以绿字/红字等色系展示连接和输出状态，以及采用等宽字体（Consolas）显示高精度的实时电压与电流数值。
+     - 在 `OverviewTab` 的构造函数中初始化并启动该监控线程，通过 Qt 信号 `data_updated` 进行数据跨线程 UI 传递。
+  2. 修改 [main_window.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/main_window.py)：
+     - 在 `closeEvent` 程序关闭清理逻辑中加入 `self.tab_overview.stop_monitor()` 显式调用，保证在用户退出程序时，安全退出 AFE 后台轮询线程，防止产生孤儿线程或资源泄漏。
+  3. 修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：
+     - 重构 `_split_params` 解析方法，标准化替换中英文逗号 `,` / `，` 和中英文分号 `;` / `；` 为斜杠 `/` 后进行切分。彻底修复因为英文逗号作为分隔符保存后，重新打开参数编辑框时无法解析子工步附加参数、导致复选框状态未能正常标记为选中的回显 Bug。
+  4. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：
+     - 重构 `"0x07 CSC读取"` 拦截器下的相邻通道自愈判定。由原来的“一个接近0V且另一个接近5V”特征修改为“相邻两通道电压之和处于 4.9V 到 5.1V 之间”，满足该特征的相邻两个电芯均在内存中安全修正为 2.499V 正常值，并打印相应的修正日志，提高了防线束抖动的自适应测试稳定性。
+   5. 再次修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：
+     - 在 `get_data` 保存方法中，将 `eol_action` 变量的取值从原先绑定的主工步动作名 `action`（如 `"3.5HEOL协议"`) 修复绑定为当前实际选中的具体子动作下拉框内容 `self.eol_op.currentText()`（如 `"0x07 CSC批量读取"`)。彻底解决了由于动作名绑定错误而过滤并丢失 `FIX_ADJACENT:1` 和 `COMPENSATE:1` 参数、导致复选框状态无法写入配方文件且下次打开重置为未勾选的隐藏大 Bug。
+    6. 再次修改 [step_dialog.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/dialogs/step_dialog.py)：
+      - 引入 `is_args_level` 分层级参数解析，保证特殊自愈开关正常回显。
+      - 修改复选框名称为 `相邻电芯异常值修正 (之和为4.9~5.1V)`。
+    7. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：
+      - 在 `_parse_key_values` 方法中引入 `is_args_level` 分层级解析。默认 `is_args_level=False` 时不对英文逗号和英文分号做切分，防止在一级解析子工步参数字符串时将 `ARGS:MIN_V:2.495,MAX_V:2.505,FIX_ADJACENT:1` 内部的逗号切开，导致 `FIX_ADJACENT` 参数流失。
+      - 仅在二级解析 `ARGS` 属性内容时传入 `is_args_level=True`，此时才正常按逗号切分，从而让引擎自愈逻辑能够百分百获取到 `FIX_ADJACENT` 键。
+      - 在 `_execute_eol_protocol` 里的拦截器动作名称匹配中兼容匹配新老动作名 `in ("0x07 CSC读取", "0x07 CSC批量读取")`。
+    8. 再次运行 PyInstaller 打包生成最新二进制。
+- **修改原因**: 解决由于引擎的通用参数解析方法在第一级解析时无差别切割英文逗号导致 `ARGS` 中的 `FIX_ADJACENT` 标签流失、使得相邻电芯修正未能生效的 Bug。
+
+- **修改内容**:
+  1. 修改 [engine.py](file:///c:/Users/95403/Desktop/AgingTest-AI/core/engine.py)：将相邻电芯自愈修正条件由原来的 is_v1_ng or is_v2_ng（其中之一不合格即触发）修改为 is_v1_ng and is_v2_ng（两个单体均不在正常范围内才触发）。
+  2. 新增 [fix_adjacent_flow.html](file:///c:/Users/95403/Desktop/AgingTest-AI/doc/flowcharts/fix_adjacent_flow.html) 业务逻辑流程图，描述修正判定和修正执行的业务逻辑。
+- **修改原因**: 确保当某个电芯单独合格（在正常的 [MIN_V, MAX_V] 范围内）时，直接判定为正常且保持原值，不被相邻的非正常电芯触发并误修改，提升自愈测试业务逻辑的严密性与准确性。
+
+- **�޸�����**:
+  1. �޸� [overview_tab.py](file:///c:/Users/95403/Desktop/AgingTest-AI/ui/tabs/overview_tab.py)��
+     - ������̨����߳� `SimulatorCurrentMonitorThread`���� 3 ��Ϊ�����첽�ض�ȫ�� 48 ��ͨ���ĵ�ѹ�͵������ݣ����ṩ����ģ�����ĵ��������ж������ʱ�����Լ����ӣ����������ض���ʱ�������������ȵĿ���Ӱ�졣
+     - �ڵײ���AFE�����Դ��ء����Ҳ������ˡ����ģ����������ء��ı�ǩ��������/��/����ɫ��������չʾ��
+     - �����ۺ��� `on_sim_data_updated` ���ղ����� 48 ͨ�����ݣ��Ե�����������Ӧ�ж������� < 2.0A �Զ�ת��Ϊ mA����ѹ < 20.0V �Զ�ת��Ϊ mV ��񣩣�ɸѡ���������� 10mA ��ͨ������ȫ����������ʾ��ģ����: ���ߡ���
+     - ������ʱ����2�����������ۺ��� `cycle_high_curr_display`���ڴ��ڳ��� 10mA ��ͨ��ʱѭ���ֲ�չʾÿһ���쳣ͨ����Ϣ���磺��1CH ��ѹ: 2500mv ����: 25ma�����������쳣����ʾ����������
+     - �� `stop_monitor` ������׷���˶� `SimulatorCurrentMonitorThread` ��̨�̵߳���ʽ��ȫ�ر�����ա�
+- **�޸�ԭ��**: �����û��������������ײ�ʵʱ�۲���ģ�����쳣������ 10mA��ͨ�������󣬲��ڲ��������̵߳������ʵ�������ֲ���ʾ��״̬��ء�

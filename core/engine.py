@@ -412,7 +412,7 @@ class ChannelWorker(QObject):
         if not eol_cfg: raise ValueError("EOL参数缺失")
         
         # 拦截 0x07 CSC批量读取
-        if eol_cfg["op_name"] == "0x07 CSC批量读取":
+        if eol_cfg["op_name"] == "0x07 CSC读取":
             board = self._get_can_board(mgr)
             from devices.eol_protocol import EOLProtocol
             eol = EOLProtocol(board.can, channel_id=eol_cfg["channel_id"])
@@ -641,7 +641,7 @@ class ChannelWorker(QObject):
             else:
                 result_value = "FAIL:电芯批量读取不合格或超时"
             
-            hw_logger(f"EOL 0x07 CSC批量读取 => {'PASS' if success else 'FAIL'} {result_value}")
+            hw_logger(f"EOL 0x07 CSC读取 => {'PASS' if success else 'FAIL'} {result_value}")
             return success, result_value
 
         board = self._get_can_board(mgr)
