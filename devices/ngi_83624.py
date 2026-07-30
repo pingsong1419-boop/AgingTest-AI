@@ -14,6 +14,7 @@ class NGI83624:
         self.sock = None
         self.is_connected = False
         self._lock = threading.Lock()
+        self._fail_count = 0
 
     def connect(self) -> bool:
         if self.is_connected:
@@ -29,6 +30,7 @@ class NGI83624:
             if not identity:
                 raise TimeoutError("TCP端口可连接，但设备未响应 *IDN? 查询")
             self.is_connected = True
+            self._fail_count = 0
             print(f"[*] NGI 83624A ({self.ip}) 通讯握手成功: {identity}")
             return True
         except Exception as e:
@@ -234,10 +236,14 @@ class NGI83624:
                 self.sock.send(cmd.encode())
                 data = self.sock.recv(1024).decode().strip()
                 if logger: logger(f"[IP: {self.ip}] [RX] {data} V")
-                return float(data)
+                val = float(data)
+                self._fail_count = 0  # 成功时清零计数器
+                return val
             except Exception as e:
-                self.is_connected = False
-                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电压异常: {e}")
+                self._fail_count += 1
+                if self._fail_count >= 5:
+                    self.is_connected = False
+                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电压异常 (连续失败 {self._fail_count} 次): {e}")
                 return -1.0
 
     def measure_current(self, channel: int, logger=None) -> float:
@@ -253,8 +259,12 @@ class NGI83624:
                 self.sock.send(cmd.encode())
                 data = self.sock.recv(1024).decode().strip()
                 if logger: logger(f"[IP: {self.ip}] [RX] {data} mA")
-                return float(data)
+                val = float(data)
+                self._fail_count = 0  # 成功时清零计数器
+                return val
             except Exception as e:
-                self.is_connected = False
-                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电流异常: {e}")
+                self._fail_count += 1
+                if self._fail_count >= 5:
+                    self.is_connected = False
+                if logger: logger(f"[IP: {self.ip}] [!] 读取设定电流异常 (连续失败 {self._fail_count} 次): {e}")
                 return -1.0

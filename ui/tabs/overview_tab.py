@@ -15,18 +15,19 @@ from core.debug_trace import trace
 class AFEPowerMonitorThread(QThread):
     data_updated = Signal(list)
 
-    def __init__(self, device_manager):
+    def __init__(self, engine):
         super().__init__()
-        self.device_manager = device_manager
+        self.engine = engine
         self.running = True
 
     def run(self):
         while self.running:
+            dev_mgr = getattr(self.engine, "device_manager", None) if self.engine else None
             results = []
             powers = [
-                ("1# AFE电源", getattr(self.device_manager, "afe_power_1", None)),
-                ("2# AFE电源", getattr(self.device_manager, "afe_pwr_2", None)),
-                ("3# AFE电源", getattr(self.device_manager, "afe_pwr_3", None)),
+                ("1# AFE电源", getattr(dev_mgr, "afe_power_1", None) if dev_mgr else None),
+                ("2# AFE电源", getattr(dev_mgr, "afe_pwr_2", None) if dev_mgr else None),
+                ("3# AFE电源", getattr(dev_mgr, "afe_pwr_3", None) if dev_mgr else None),
             ]
             for name, dev in powers:
                 if not dev:
@@ -87,20 +88,21 @@ class AFEPowerMonitorThread(QThread):
 
 
 class SimulatorCurrentMonitorThread(QThread):
-    sim_data_updated = Signal(dict)
+    sim_data_updated = Signal(object)
 
-    def __init__(self, device_manager):
+    def __init__(self, engine):
         super().__init__()
-        self.device_manager = device_manager
+        self.engine = engine
         self.running = True
 
     def run(self):
         while self.running:
-            if not self.device_manager or not hasattr(self.device_manager, "simulators"):
+            dev_mgr = getattr(self.engine, "device_manager", None) if self.engine else None
+            if not dev_mgr or not hasattr(dev_mgr, "simulators"):
                 self.msleep(1000)
                 continue
 
-            simulators = getattr(self.device_manager, "simulators", []) or []
+            simulators = getattr(dev_mgr, "simulators", []) or []
             if not simulators:
                 self.msleep(1000)
                 continue
@@ -132,10 +134,12 @@ class SimulatorCurrentMonitorThread(QThread):
                         curr = sim.measure_current(local_ch)
                         ch_data[global_ch] = (volt, curr)
                     except Exception:
-                        sim.is_connected = False
                         ch_data[global_ch] = (-1.0, -1.0)
                 else:
                     ch_data[global_ch] = (-1.0, -1.0)
+
+                # 避让延时，防止高频密集的 TCP 操作将仪器连接撑爆或引发互斥锁饥饿
+                self.msleep(15)
 
             self.sim_data_updated.emit(ch_data)
 
@@ -420,12 +424,12 @@ class OverviewTab(QWidget):
         self.current_display_idx = 0
         
         if self.engine and getattr(self.engine, "device_manager", None):
-            self.afe_monitor_thread = AFEPowerMonitorThread(self.engine.device_manager)
+            self.afe_monitor_thread = AFEPowerMonitorThread(self.engine)
             self.afe_monitor_thread.data_updated.connect(self.on_afe_data_updated)
             self.afe_monitor_thread.start()
 
             # 初始化并启动电池模拟器电流监控后台线程
-            self.simulator_monitor_thread = SimulatorCurrentMonitorThread(self.engine.device_manager)
+            self.simulator_monitor_thread = SimulatorCurrentMonitorThread(self.engine)
             self.simulator_monitor_thread.sim_data_updated.connect(self.on_sim_data_updated)
             self.simulator_monitor_thread.start()
 

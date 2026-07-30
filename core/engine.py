@@ -2002,3 +2002,14 @@ class TestEngine(QObject):
             while self.threads and time.time() - s < 2.0:
                 from PySide6.QtCore import QCoreApplication
                 QCoreApplication.processEvents(); time.sleep(0.1)
+
+    def report_system_step_info(self, step_idx: int, step_name: str):
+        """上报当前运行的老化测试全局系统工步信息给大屏后端"""
+        if self.api_client:
+            def do_post():
+                try:
+                    self.api_client._post("/api/system/step", {"step_index": step_idx, "step_name": step_name})
+                except Exception:
+                    pass
+            import threading
+            threading.Thread(target=do_post, daemon=True).start()
