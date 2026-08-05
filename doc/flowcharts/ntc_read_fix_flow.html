@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>相邻电芯异常电压自动修正业务流程图</title>
+    <title>NTC读取修正判定业务流程图</title>
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
     <script>
         mermaid.initialize({ startOnLoad: true, theme: 'dark' });
@@ -58,8 +58,8 @@
     </style>
 </head>
 <body>
-    <h1>相邻电芯异常电压自动修正业务流程图</h1>
-    <div class="desc">此图展示了在开启 FIX_ADJACENT 修正逻辑下，对相邻两单体电压之和为 4.9V~5.1V 的异常判定与修正流程。</div>
+    <h1>NTC读取修正判定业务流程图</h1>
+    <div class="desc">此图展示了在 NTC 读取完成后，基于 TARGET、TOL1、TOL2 参数实现的第一范围直接合格、第二范围自动修复及超出范围保持实际值的业务逻辑。</div>
     
     <div id="canvas">
         <pre class="mermaid">
@@ -70,43 +70,48 @@ graph TD
     classDef success fill:#10B981,stroke:#333,stroke-width:2px,color:#fff;
     classDef failed fill:#EF4444,stroke:#333,stroke-width:2px,color:#fff;
 
-    Start["开始判定当前相邻单体对 (idx1, idx2)"]
-    CheckNone["两单体读取值 val1, val2 是否均不为空?"]
-    CalcBound["获取判定上下限 check_min, check_max"]
-    CheckV1NG["单体1是否不在正常范围内? (val1 < check_min 或 val1 > check_max)"]
-    CheckV2NG["单体2是否不在正常范围内? (val2 < check_min 或 val2 > check_max)"]
-    CheckAnyNG["是否至少有一个单体不在正常范围内? (is_v1_ng 或 is_v2_ng)"]
-    CalcSum["计算两单体电压之和 total_val = val1 + val2"]
-    CheckSum["电压之和是否在 4.9V ~ 5.1V 之间?"]
-    ApplyFix["执行修正: 将两单体电压均设为 2.499V"]
-    KeepOrigin["保持原值: 不进行修正"]
-    End["结束当前单体对判定"]
+    Start["开始处理 NTC 读取结果"]
+    CheckSuccess["NTC 帧读取是否成功?"]
+    ParseParams["解析 ARGS 参数: TARGET, TOL1, TOL2"]
+    CheckHasConfig["是否配置了完整的修复参数 (TARGET, TOL1, TOL2)?"]
+    CalcDiff["计算绝对偏差 diff = abs(actual_value - TARGET)"]
+    CheckTol1["绝对偏差是否在第一范围之内? (diff <= TOL1)"]
+    CheckTol2["绝对偏差是否在第二范围之内? (diff <= TOL2)"]
+    KeepActual["保留实际读取的值作为结果"]
+    FixToTarget["修正结果值为 TARGET 目标值"]
+    CheckDiffAmbient["是否开启了环境温差计算? (DIFF_AMBIENT == 1)"]
+    CalcAmbientDiff["温差结果 = 实际值 - 环境温度"]
+    End["输出结果并结束"]
 
-    Start --> CheckNone
-    CheckNone -- "否" --> KeepOrigin
-    CheckNone -- "是" --> CalcBound
-    CalcBound --> CheckV1NG
-    CheckV1NG --> CheckV2NG
-    CheckV2NG --> CheckAnyNG
-    CheckAnyNG -- "否" --> KeepOrigin
-    CheckAnyNG -- "是" --> CalcSum
-    CalcSum --> CheckSum
-    CheckSum -- "是" --> ApplyFix
-    CheckSum -- "否" --> KeepOrigin
-    ApplyFix --> End
-    KeepOrigin --> End
+    Start --> CheckSuccess
+    CheckSuccess -- "否" --> End
+    CheckSuccess -- "是" --> ParseParams
+    ParseParams --> CheckHasConfig
+    CheckHasConfig -- "是" --> CalcDiff
+    CheckHasConfig -- "否" --> CheckDiffAmbient
+    CalcDiff --> CheckTol1
+    CheckTol1 -- "是" --> KeepActual
+    CheckTol1 -- "否" --> CheckTol2
+    CheckTol2 -- "是" --> FixToTarget
+    CheckTol2 -- "否" --> KeepActual
+    CheckDiffAmbient -- "是" --> CalcAmbientDiff
+    CheckDiffAmbient -- "否" --> End
+    KeepActual --> End
+    FixToTarget --> End
+    CalcAmbientDiff --> End
 
     class Start start_end;
     class End start_end;
-    class CalcBound normal;
-    class CheckV1NG normal;
-    class CheckV2NG normal;
-    class CalcSum normal;
-    class CheckNone condition;
-    class CheckAnyNG condition;
-    class CheckSum condition;
-    class ApplyFix success;
-    class KeepOrigin failed;
+    class ParseParams normal;
+    class CalcDiff normal;
+    class CalcAmbientDiff normal;
+    class KeepActual normal;
+    class CheckSuccess condition;
+    class CheckHasConfig condition;
+    class CheckTol1 condition;
+    class CheckTol2 condition;
+    class CheckDiffAmbient condition;
+    class FixToTarget success;
         </pre>
     </div>
 
@@ -115,7 +120,6 @@ graph TD
         <div class="legend-item"><div class="legend-color" style="background: #3B82F6;"></div> 常规执行 (蓝色)</div>
         <div class="legend-item"><div class="legend-color" style="background: #F59E0B;"></div> 条件判断 (黄色)</div>
         <div class="legend-item"><div class="legend-color" style="background: #10B981;"></div> 成功/修正 (绿色)</div>
-        <div class="legend-item"><div class="legend-color" style="background: #EF4444;"></div> 失败/不修正 (红色)</div>
     </div>
 </body>
 </html>

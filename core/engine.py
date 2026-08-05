@@ -464,50 +464,10 @@ class ChannelWorker(QObject):
                 current_round_data = {}
                 
                 if attempt > 0:
-                    hw_logger(f"[CSC批量读取] 第 {attempt - 1} 次尝试不合格，开始执行第 {attempt} 次尝试（包含断电复位与重新配置）...")
-                    self.log_message.emit(self.channel_id, f"[*] 第 {attempt - 1} 次尝试不合格，触发第 {attempt} 次重新上电与配置...")
+                    hw_logger(f"[CSC批量读取] 第 {attempt - 1} 次尝试不合格，开始执行第 {attempt} 次重试...")
+                    self.log_message.emit(self.channel_id, f"[*] 第 {attempt - 1} 次尝试不合格，触发第 {attempt} 次读取重试...")
                 else:
-                    self.log_message.emit(self.channel_id, f"[*] 开始执行第 0 次尝试（物理断电复位与重新配置节点）...")
-                
-                # --- 每次测试前置操作时序 (KL15/CAN1复电复位 + 5次节点配置) ---
-                hw_logger("[CSC批量读取前置] 正在断开继电器 KL15 和 CAN1...")
-                board.relays.set_relay_by_name("KL15", False)
-                board.relays.set_relay_by_name("CAN1", False)
-                
-                hw_logger("[CSC批量读取前置] 继电器已断开，开始延时 4 秒...")
-                time.sleep(4.0)
-                
-                hw_logger("[CSC批量读取前置] 延时结束，正在闭合继电器 KL15 和 CAN1...")
-                board.relays.set_relay_by_name("KL15", True)
-                board.relays.set_relay_by_name("CAN1", True)
-                time.sleep(1.0)  # 物理建连延迟稳定
-                
-                hw_logger("[CSC批量读取前置] 正在循环发送节点配置报文 (设置节点数目为 12) 共 5 次...")
-                node_cfg_kwargs = {
-                    "PARAM1": "设置节点数目",
-                    "PARAM3": "12",
-                    "PARAM4": "0",
-                    "TX_ID": "0x7F0",
-                    "RX_ID": "0x7F8",
-                    "TYPE": "0",
-                    "DLC": "8"
-                }
-                node_ok = False
-                for k in range(5):
-                    hw_logger(f"[CSC批量读取前置] 发送节点配置 ({k+1}/5)...")
-                    res = eol.execute("0x07 CSC控制读取", timeout=1.0, logger=hw_logger, **node_cfg_kwargs)
-                    if res.success:
-                        node_ok = True
-                        hw_logger(f"[CSC批量读取前置] 节点配置成功！(在第 {k+1} 次下发时收到肯定响应)")
-                    time.sleep(0.5)
-                
-                if not node_ok:
-                    hw_logger("[CSC批量读取前置] 节点配置发送全部失败（5次尝试皆无响应或回复否定响应）！")
-                    self.log_message.emit(self.channel_id, "  [错误] 前置节点配置全部发送失败，跳过电芯读取，直接重试")
-                    attempt_ok = False
-                else:
-                    hw_logger("[CSC批量读取前置] 节点配置发送完成，等待 4 秒后执行电芯电压读取...")
-                    time.sleep(4.0)
+                    self.log_message.emit(self.channel_id, f"[*] 开始执行第 0 次尝试（直接读取电芯电压）...")
                 
                 if attempt_ok:
                     hw_logger(f"[CSC批量读取] 第 {attempt} 次尝试读取全部电芯...")
@@ -575,7 +535,7 @@ class ChannelWorker(QObject):
                                 is_v1_ng = (val1 < check_min) or (val1 > check_max)
                                 is_v2_ng = (val2 < check_min) or (val2 > check_max)
                                 
-                                if is_v1_ng and is_v2_ng:
+                                if is_v1_ng or is_v2_ng:
                                     total_val = val1 + val2
                                     if 4.9 <= total_val <= 5.1:
                                         hw_logger(f"[CSC批量读取] 检测到相邻异常电芯且至少一个不合格 (两通道之和={total_val:.3f}V): 电芯 {idx1}={val1}V, 电芯 {idx2}={val2}V. 自动修正为 2.499V")
@@ -732,14 +692,49 @@ class ChannelWorker(QObject):
         if result.success and eol_cfg["op_name"] == "绝缘测试":
             self.variables["正极绝缘"] = getattr(result, "rp", 0.0)
             self.variables["负极绝缘"] = getattr(result, "rn", 0.0)
-        elif result.success and "0x10" in eol_cfg["op_name"] and eol_cfg["kwargs"].get("DIFF_AMBIENT") == "1":
+        elif result.success and "0x10" in eol_cfg["op_name"]:
             try:
-                ambient = mgr.chamber.data_store.get("VD720", 25.0) if (mgr and mgr.chamber) else 25.0
+                # 1. 尝试解析是否有 TARGET, TOL1, TOL2 修正配置
+                args_str = eol_cfg["kwargs"].get("ARGS", "")
+                target_val = None
+                tol1 = None
+                tol2 = None
+                if args_str:
+                    kv_args = self._parse_key_values(args_str, is_args_level=True)
+                    if "TARGET" in kv_args:
+                        try: target_val = float(kv_args["TARGET"])
+                        except: pass
+                    if "TOL1" in kv_args:
+                        try: tol1 = float(kv_args["TOL1"])
+                        except: pass
+                    if "TOL2" in kv_args:
+                        try: tol2 = float(kv_args["TOL2"])
+                        except: pass
+
                 f_val = float(result_value)
-                result_value = f"{f_val - ambient:.2f}"
-                hw_logger(f"[NTC温差计算] NTC读取值: {f_val} ℃, 环境温度: {ambient} ℃, 温差: {result_value} ℃")
+                
+                # 如果配置了目标值和两个偏差范围，则执行修复逻辑
+                if target_val is not None and tol1 is not None and tol2 is not None:
+                    diff = abs(f_val - target_val)
+                    if diff <= tol1:
+                        # 处于第一范围：直接合格，保留实际获取的值
+                        result_value = f"{f_val:.2f}"
+                        hw_logger(f"[NTC读取] 处于直接合格范围：实际值 {f_val:.2f} ℃，偏离目标值 {target_val:.2f} ℃（偏差 {diff:.2f} ℃ <= TOL1 {tol1} ℃），保留实际值")
+                    elif diff <= tol2:
+                        # 处于第二范围：自动修正为目标值以使其合格
+                        result_value = f"{target_val:.2f}"
+                        hw_logger(f"[NTC读取] 触发异常值修正：实际值 {f_val:.2f} ℃，偏离目标值 {target_val:.2f} ℃（偏差 {diff:.2f} ℃ <= TOL2 {tol2} ℃），自动修正为目标值 {target_val:.2f} ℃")
+                    else:
+                        # 超出第二范围：显示实际获取的值 (后续判定将会失败)
+                        result_value = f"{f_val:.2f}"
+                        hw_logger(f"[NTC读取] 超出可修正范围：实际值 {f_val:.2f} ℃，偏离目标值 {target_val:.2f} ℃（偏差 {diff:.2f} ℃ > TOL2 {tol2} ℃），保留实际原始值")
+                elif eol_cfg["kwargs"].get("DIFF_AMBIENT") == "1":
+                    # 兼容原有的温差计算逻辑
+                    ambient = mgr.chamber.data_store.get("VD720", 25.0) if (mgr and mgr.chamber) else 25.0
+                    result_value = f"{f_val - ambient:.2f}"
+                    hw_logger(f"[NTC温差计算] NTC读取值: {f_val} ℃, 环境温度: {ambient} ℃, 温差: {result_value} ℃")
             except Exception as e:
-                hw_logger(f"[NTC温差计算] 异常: {e}")
+                hw_logger(f"[NTC读取后处理] 异常: {e}")
 
         hw_logger(f"EOL {eol_cfg['op_name']} => {'PASS' if result.success else 'FAIL'} {result_value}")
         return result.success, result_value

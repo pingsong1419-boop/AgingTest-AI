@@ -770,7 +770,10 @@ class StepDialog(QDialog):
                 ("4 NTCF", "NTCF"),
                 ("5 FPCB_NTC", "FPCB_NTC")
             ])
-            self.eol_args.setPlaceholderText("无需额外参数")
+            self.eol_args.setVisible(True)
+            if hasattr(self, "eol_args_label"):
+                self.eol_args_label.setVisible(True)
+            self.eol_args.setPlaceholderText("可选参数，例 TARGET:25,TOL1:0.5,TOL2:2.0")
             if hasattr(self, "eol_diff_ambient"):
                 self.eol_diff_ambient.setVisible(True)
         elif "0x08" in op:
